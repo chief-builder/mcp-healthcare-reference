@@ -6,3 +6,4 @@ vault-data/
 *.tfstate*
 node_modules/
 __pycache__/
+.synthea/

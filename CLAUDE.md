@@ -20,4 +20,4 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 0 not started.
+Phase 0 complete (tests/phase0.sh green). Phase 1 not started.

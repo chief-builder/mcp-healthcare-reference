@@ -1,0 +1,96 @@
+{
+  "realm": "mcp-plane",
+  "enabled": true,
+  "displayName": "MCP Plane (hub realm)",
+  "sslRequired": "none",
+  "defaultSignatureAlgorithm": "PS256",
+  "accessTokenLifespan": 300,
+  "clientScopes": [
+    {
+      "name": "mcp-contract",
+      "description": "Stamps mcp_contract per docs/mcp-token-claims-contract.md §11",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp_contract",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "mcp_contract",
+            "claim.value": "1.0",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-tier-internal",
+      "description": "Internal-tier membership; stamps mcp_tier per claims contract §3 (naming per Appendix A.2)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp_tier",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "mcp_tier",
+            "claim.value": "internal",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "phase0-smoke",
+      "description": "Phase 0 acceptance client (client-credentials smoke test)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${PHASE0_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["mcp-contract", "mcp-tier-internal"],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "idp_origin",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "idp_origin",
+            "claim.value": "keycloak",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}
