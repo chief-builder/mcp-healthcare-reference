@@ -1,0 +1,111 @@
+{
+  "realm": "fake-ping",
+  "enabled": true,
+  "displayName": "Hospital SSO (fake PingID)",
+  "sslRequired": "none",
+  "groups": [
+    { "name": "hospital-clinical-tools", "path": "/hospital-clinical-tools" },
+    { "name": "hospital-analytics", "path": "/hospital-analytics" }
+  ],
+  "users": [
+    {
+      "username": "dr-alice",
+      "enabled": true,
+      "email": "alice@hospital.example",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Nguyen",
+      "groups": ["/hospital-clinical-tools"],
+      "credentials": [
+        { "type": "password", "value": "${FAKE_PING_PASSWORD}", "temporary": false }
+      ]
+    },
+    {
+      "username": "bob-analyst",
+      "enabled": true,
+      "email": "bob@hospital.example",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Okafor",
+      "groups": ["/hospital-analytics"],
+      "credentials": [
+        { "type": "password", "value": "${FAKE_PING_PASSWORD}", "temporary": false }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "mcp-plane-broker",
+      "description": "Broker client used by the mcp-plane hub realm (fake Ping upstream leg)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${FAKE_PING_BROKER_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://localhost:8080/realms/mcp-plane/broker/ping/endpoint"],
+      "defaultClientScopes": [],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "memberOf",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "memberOf",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "amr (simulated Ping)",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "amr",
+            "claim.value": "[\"pwd\",\"mfa\"]",
+            "jsonType.label": "JSON",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

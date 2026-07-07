@@ -7,3 +7,5 @@ vault-data/
 node_modules/
 __pycache__/
 .synthea/
+.venv/
+.DS_Store

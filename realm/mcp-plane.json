@@ -5,6 +5,14 @@
   "sslRequired": "none",
   "defaultSignatureAlgorithm": "PS256",
   "accessTokenLifespan": 300,
+  "groups": [
+    { "name": "mcp-platform-admin", "path": "/mcp-platform-admin" },
+    { "name": "mcp-clinical-tools", "path": "/mcp-clinical-tools" },
+    { "name": "mcp-scheduling-tools", "path": "/mcp-scheduling-tools" },
+    { "name": "mcp-analytics-readonly", "path": "/mcp-analytics-readonly" },
+    { "name": "mcp-external-curated", "path": "/mcp-external-curated" },
+    { "name": "mcp-agent-operators", "path": "/mcp-agent-operators" }
+  ],
   "clientScopes": [
     {
       "name": "mcp-contract",
@@ -34,7 +42,7 @@
     },
     {
       "name": "mcp-tier-internal",
-      "description": "Internal-tier membership; stamps mcp_tier per claims contract §3 (naming per Appendix A.2)",
+      "description": "Internal-tier membership; stamps mcp_tier + tier audience per claims contract §3/§4",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "false",
@@ -55,8 +63,354 @@
             "userinfo.token.claim": "false",
             "introspection.token.claim": "true"
           }
+        },
+        {
+          "name": "tier audience internal",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://tier/internal",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
         }
       ]
+    },
+    {
+      "name": "mcp-tier-external",
+      "description": "External-tier membership; stamps mcp_tier + tier audience per claims contract §3/§4",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp_tier",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "mcp_tier",
+            "claim.value": "external",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "tier audience external",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://tier/external",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "basic-claims",
+      "description": "sub for interactive tokens (KC 24+ gates sub behind a scope for non-service-account users)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-groups",
+      "description": "Normalized group vocabulary per claims contract §3.1 — flat mcp-* names only",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-amr",
+      "description": "amr propagated from the upstream IdP (claims contract §3, interactive paths)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "amr",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "amr",
+            "claim.name": "amr",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-idp-origin",
+      "description": "idp_origin from the per-principal attribute stamped by each identity provider's mapper",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "idp_origin",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "idp_origin",
+            "claim.name": "idp_origin",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp-fhir-patient",
+      "description": "fhir_patient from the customer↔patient linkage store (KC user attribute) per contract §6.5",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "fhir_patient",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fhir_patient",
+            "claim.name": "fhir_patient",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "patient/Patient.read",
+      "description": "SMART-style scope, Auth0 end-customer path only (contract §5)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      }
+    },
+    {
+      "name": "patient/Observation.read",
+      "description": "SMART-style scope, Auth0 end-customer path only (contract §5)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      }
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "ping",
+      "displayName": "Hospital SSO (fake PingID)",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "config": {
+        "issuer": "http://localhost:8080/realms/fake-ping",
+        "authorizationUrl": "http://localhost:8080/realms/fake-ping/protocol/openid-connect/auth",
+        "tokenUrl": "http://localhost:8080/realms/fake-ping/protocol/openid-connect/token",
+        "jwksUrl": "http://localhost:8080/realms/fake-ping/protocol/openid-connect/certs",
+        "userInfoUrl": "http://localhost:8080/realms/fake-ping/protocol/openid-connect/userinfo",
+        "logoutUrl": "http://localhost:8080/realms/fake-ping/protocol/openid-connect/logout",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "clientId": "mcp-plane-broker",
+        "clientSecret": "${FAKE_PING_BROKER_SECRET}",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "alias": "auth0",
+      "displayName": "Auth0 (end customers)",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "config": {
+        "issuer": "https://${AUTH0_DOMAIN}/",
+        "authorizationUrl": "https://${AUTH0_DOMAIN}/authorize",
+        "tokenUrl": "https://${AUTH0_DOMAIN}/oauth/token",
+        "jwksUrl": "https://${AUTH0_DOMAIN}/.well-known/jwks.json",
+        "userInfoUrl": "https://${AUTH0_DOMAIN}/userinfo",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "clientId": "${AUTH0_CLIENT_ID}",
+        "clientSecret": "${AUTH0_CLIENT_SECRET}",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid profile email",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "alias": "homegrown",
+      "displayName": "Homegrown AS (legacy, exchange-only)",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "issuer": "http://homegrown-issuer:7000",
+        "authorizationUrl": "http://homegrown-issuer:7000/authorize",
+        "tokenUrl": "http://homegrown-issuer:7000/token",
+        "jwksUrl": "http://homegrown-issuer:7000/jwks",
+        "userInfoUrl": "http://homegrown-issuer:7000/userinfo",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "clientId": "mcp-plane",
+        "clientSecret": "unused-exchange-only",
+        "defaultScope": "openid",
+        "hideOnLoginPage": "true",
+        "syncMode": "FORCE"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "idp_origin=ping",
+      "identityProviderAlias": "ping",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "attribute": "idp_origin",
+        "attribute.value": "ping",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "amr import",
+      "identityProviderAlias": "ping",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "amr",
+        "user.attribute": "amr",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "memberOf hospital-clinical-tools -> mcp-clinical-tools",
+      "identityProviderAlias": "ping",
+      "identityProviderMapper": "oidc-advanced-group-idp-mapper",
+      "config": {
+        "claims": "[{\"key\":\"memberOf\",\"value\":\"hospital-clinical-tools\"}]",
+        "are.claim.values.regex": "false",
+        "group": "/mcp-clinical-tools",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "memberOf hospital-analytics -> mcp-analytics-readonly",
+      "identityProviderAlias": "ping",
+      "identityProviderMapper": "oidc-advanced-group-idp-mapper",
+      "config": {
+        "claims": "[{\"key\":\"memberOf\",\"value\":\"hospital-analytics\"}]",
+        "are.claim.values.regex": "false",
+        "group": "/mcp-analytics-readonly",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "idp_origin=auth0",
+      "identityProviderAlias": "auth0",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "attribute": "idp_origin",
+        "attribute.value": "auth0",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "amr (auth0 password db)",
+      "identityProviderAlias": "auth0",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "attribute": "amr",
+        "attribute.value": "pwd",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "external-curated group",
+      "identityProviderAlias": "auth0",
+      "identityProviderMapper": "oidc-hardcoded-group-idp-mapper",
+      "config": {
+        "group": "/mcp-external-curated",
+        "syncMode": "FORCE"
+      }
+    },
+    {
+      "name": "idp_origin=homegrown",
+      "identityProviderAlias": "homegrown",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "attribute": "idp_origin",
+        "attribute.value": "homegrown",
+        "syncMode": "FORCE"
+      }
     }
   ],
   "clients": [
@@ -91,6 +445,76 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "claude-code",
+      "description": "Workforce MCP client (contract §6.1); pytest drives it in Phase 1, real Claude Code in Phase 3",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://localhost:8765/*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "basic-claims",
+        "mcp-contract",
+        "mcp-tier-internal",
+        "mcp-groups",
+        "mcp-amr",
+        "mcp-idp-origin"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "patient-agent",
+      "description": "Patient-facing agent client (contract §6.5, Auth0-brokered end customers)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://localhost:8766/*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "basic-claims",
+        "mcp-contract",
+        "mcp-tier-external",
+        "mcp-amr",
+        "mcp-idp-origin",
+        "mcp-fhir-patient"
+      ],
+      "optionalClientScopes": ["patient/Patient.read", "patient/Observation.read"]
+    },
+    {
+      "clientId": "legacy-exchange",
+      "description": "RFC 8693 exchange requester for the homegrown AS path (contract §6.2)",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${LEGACY_EXCHANGE_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "basic-claims",
+        "mcp-contract",
+        "mcp-tier-internal",
+        "mcp-idp-origin"
+      ],
+      "optionalClientScopes": []
     }
   ]
 }
