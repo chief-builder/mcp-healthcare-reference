@@ -131,7 +131,7 @@ Validators MUST verify `cnf` against the client certificate on the mTLS connecti
 
 ### 6.4 Third parties — Keycloak native (ChatGPT, B2B partners)
 
-Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; dynamic client registration is disabled on this realm. Per-user consent screens are retained deliberately.
+Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; Dynamic Client Registration is disabled (and is deprecated by the draft MCP authorization spec). Client ID Metadata Documents are accepted only from origin-allowlisted metadata URLs per Reference Architecture §5.1. Per-user consent screens are retained deliberately.
 
 | Claim | Value on this path |
 |---|---|
@@ -175,7 +175,9 @@ Rules: chains are at most two levels deep (`act.act` requires platform-admin app
 
 **MCP servers, on every tool call:** re-verify signature and `iss` (do not trust the DP blindly — defense in depth); `aud` contains this server's URI; scope authorizes this specific tool + verb; when `fhir_patient` present, compartment-filter; when absent on a path that requires it, reject.
 
-**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events.
+**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events. 401 challenges include `resource_metadata` and the operation's `scope`; insufficient-permission cases return 403 `error="insufficient_scope"` with the complete required scope set in one challenge (single-shot, never incremental), enabling the draft spec's step-up flow. PRM `scopes_supported` lists the minimal baseline only; `offline_access` never appears in PRM or challenges.
+
+**All OAuth clients on the plane (interactive clients, broker):** validate RFC 9207 `iss` on authorization responses — including error responses — against the issuer recorded from validated AS metadata, using strict string comparison without URI normalization, before any use of the authorization code. Keycloak advertises `authorization_response_iss_parameter_supported: true`.
 
 ## 9. Audit record mapping
 

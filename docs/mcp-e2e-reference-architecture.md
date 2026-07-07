@@ -29,6 +29,8 @@ In scope: MCP client connectivity, identity and token architecture, gateway topo
 | MCP extensions | Extensions framework (reverse-DNS negotiation) | `io.modelcontextprotocol/enterprise-managed-authorization` declared where client/vendor support exists |
 | Authorization discovery | RFC 9728 Protected Resource Metadata | Every first-party MCP server advertises Keycloak as its AS |
 | Token grammar | OAuth 2.1; RFC 8707 resource indicators; RFC 8693 token exchange; RFC 8705 mTLS client auth + certificate-bound tokens | Enforced per the Claims Contract |
+| Client identity | Client ID Metadata Documents (draft-ietf-oauth-client-id-metadata-document) > pre-registration > DCR (deprecated in the draft spec) | Per-tier policy in §5.1 |
+| Authorization response integrity | RFC 9207 issuer identification | Keycloak advertises `authorization_response_iss_parameter_supported`; every OAuth client we operate (broker included) validates `iss` with strict string comparison |
 | Client hardening | RFC 9700 OAuth Security BCP | Normative for the token broker and all confidential clients |
 | Workload identity | Athenz (ZMS/ZTS, Copper Argos, SIA), SPIFFE-compatible SVIDs | Cert lifetime ≤ 30 days |
 | Healthcare data | FHIR R4; SMART-style patient scopes | Patient compartment enforced in MCP servers |
@@ -66,6 +68,18 @@ Tier isolation is cryptographic, not just topological: tier audiences in every t
 
 **Diagram note:** the master diagram draws the egress feed from the internal-agents node for routing clarity; developer clients reach the egress tier through the same private ingress, and the external tier has no route to egress by construction.
 
+### 5.1 Client registration policy (draft authorization spec alignment)
+
+The draft spec reorders registration mechanisms: Client ID Metadata Documents (CIMD — the client_id is an HTTPS URL from which the AS fetches self-described metadata) is the SHOULD, pre-registration remains supported, and Dynamic Client Registration is **deprecated**. Our original "DCR disabled" stance is thereby validated by the spec's own direction. Per-tier policy:
+
+- **Internal tier:** pre-registered clients only. CIMD adds nothing where we control both sides.
+- **External tier:** pre-registration remains the baseline; CIMD is supported behind an **origin allowlist** — Keycloak (or a policy shim in front of it) accepts URL-form `client_id` values only from vetted metadata origins (e.g., the published metadata URLs of Claude, VS Code, ChatGPT). Open CIMD acceptance is equivalent to open DCR and is refused: in a healthcare context, "any HTTPS URL may become a client" is not a consent posture we accept. Redirect-URI validation follows the CIMD document exactly; metadata fetches are cached with the draft's freshness rules.
+- **Gap register:** native CIMD support in Keycloak is expected to trail the spec; until it lands, external-tier CIMD is implemented in the policy shim or deferred, and the gap is tracked in the lab (prototype plan Phase 7).
+
+### 5.2 Authorization responses and scope challenges
+
+All tiers implement the draft's error and step-up semantics: 401 challenges carry `resource_metadata` and a `scope` parameter naming the scopes for the attempted operation; runtime insufficient-permission responses are `403` with `error="insufficient_scope"` and the full required scope set in a **single challenge** (never incremental dribble). `scopes_supported` in each server's PRM lists the *minimal baseline* only — broad and clinical scopes are issued exclusively via challenge-driven step-up, which makes the spec's step-up flow our minimum-necessary mechanism rather than a UX afterthought: external and patient-facing clients start with the floor and escalate per operation, with every escalation consented and audited. `offline_access` never appears in PRM `scopes_supported` or WWW-Authenticate challenges. All OAuth clients we operate validate RFC 9207 `iss` on authorization responses (including error responses) against the recorded issuer before touching the code — strict string comparison, no URI normalization.
+
 ## 6. First-party MCP server platform
 
 Servers are generated from existing REST/FHIR APIs via Kong's MCP autogeneration where the API is already well-governed, and hand-built where tool semantics diverge from resource semantics. All servers:
@@ -75,6 +89,8 @@ Servers are generated from existing REST/FHIR APIs via Kong's MCP autogeneration
 - Re-validate tokens independently of the gateway (signature, `iss`, own `aud` URI, scope-per-tool, `fhir_patient` compartment where present) — defense in depth per Claims Contract §8.
 - Reach FHIR/EHR backends (Epic, Cerner R4) over Athenz-issued mTLS with least-privilege service credentials from vault references; model context is fetched per request, never cached across principals.
 - Emit the audit tuple on every tool invocation.
+- Enforce the draft spec's token isolation MUSTs: accept only tokens minted for their own `aud` by Keycloak, and **never transit an inbound token** to any downstream — FHIR calls use the server's own Athenz-backed service credential, and vendor-bound calls (egress tier) carry only the vendor's token. The hub JWT stops at the component that validated it.
+- Implement §5.2 challenge semantics: minimal `scopes_supported`, scope-bearing 401s, single-shot `insufficient_scope` 403s driving client step-up.
 
 Promotion gate: MCP conformance suite green, claims-contract validation tests green, and (for any PHI-bearing tool) compliance sign-off recorded in the tool registry.
 

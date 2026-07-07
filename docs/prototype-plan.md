@@ -46,7 +46,7 @@ Each phase ends with named acceptance checks; don't advance on red.
 
 **Phase 2 — Gateway tiers (1–2 weekends).** Konnect free CP; two local DP containers (internal on the tailnet, external via cloudflared); decK state in git; JWT validation + tier-audience enforcement; route-level ACLs from `groups`. ✅ Internal-tier token replayed at the external DP → 401; DPs keep proxying with CP uplink severed; all config changes are git commits.
 
-**Phase 3 — First-party MCP (2 weekends).** Generate the FHIR MCP server from HAPI's OpenAPI; hand-build a stateless `scheduling` server (explicit `slot_hold_id` handles); PRM documents pointing at Keycloak; scope-per-tool checks in-server; connect Claude Code through the internal tier. ✅ Claude Code lists only role-permitted tools; a patient-scoped (Auth0-origin) token retrieves exactly its own compartment; kill one server replica mid-conversation and the next tool call succeeds on the other (statelessness).
+**Phase 3 — First-party MCP (2 weekends).** Generate the FHIR MCP server from HAPI's OpenAPI; hand-build a stateless `scheduling` server (explicit `slot_hold_id` handles); PRM documents pointing at Keycloak; scope-per-tool checks in-server; connect Claude Code through the internal tier. ✅ Claude Code lists only role-permitted tools; a deliberately under-scoped token triggers the 403 `insufficient_scope` challenge and a working step-up re-authorization (draft-spec scope flow); a patient-scoped (Auth0-origin) token retrieves exactly its own compartment; kill one server replica mid-conversation and the next tool call succeeds on the other (statelessness).
 
 **Phase 4 — Cert-bound m2m (2 weekends).** k3d; step-ca/SPIRE issuing ≤24h SPIFFE-SAN certs to the loop agent; Keycloak `client-x509` + certificate-bound tokens; the `cnf`-thumbprint check as a small Kong serverless/Lua plugin (this bespoke plugin is a deliverable — it's on the production critical path too). Stretch 4b: swap step-ca for real Athenz. ✅ Agent obtains tokens with zero secrets in its manifest; token presented without mTLS or with a different cert → 401 + audit event; cert rotation happens without pod restart.
 
@@ -54,7 +54,7 @@ Each phase ends with named acceptance checks; don't advance on red.
 
 **Phase 6 — Audit spine (1 weekend).** OTel from DPs, servers, broker → Loki/Tempo; the Grafana "tuple" dashboard keyed by `jti`. ✅ Pick any GitHub issue created in Phase 5 and walk it back to the human, client, gateway decision, and DLP verdict in one query.
 
-**Phase 7 — Red-team weekend.** Run the acceptance list from the arch doc §13 plus: cross-tier replay, scope-ceiling probes, `state` replay on the broker callback (expect the security alert), STALE-storm simulation (uninstall the GitHub App), token in a log grep (expect zero hits). Findings become GitHub issues in this repo.
+**Phase 7 — Red-team weekend.** Run the acceptance list from the arch doc §13 plus: cross-tier replay, scope-ceiling probes, `state` replay on the broker callback (expect the security alert), STALE-storm simulation (uninstall the GitHub App), token in a log grep (expect zero hits). Also probe: RFC 9207 `iss` tampering on the broker callback (expect rejection + alert), and a CIMD experiment — attempt a URL-form `client_id` from a non-allowlisted origin at the external tier (expect refusal). Findings become GitHub issues in this repo.
 
 ## 4. Hardware and cost
 

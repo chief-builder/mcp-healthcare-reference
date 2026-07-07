@@ -21,6 +21,7 @@ The broker exists because most SaaS vendors' authorization servers do not yet ac
 | Acquisition | RFC 7636 PKCE | Verifier generated and held server-side per transaction |
 | Discovery | RFC 8414 AS metadata | Vendor endpoints resolved from `.well-known`; hardcoding forbidden where metadata exists |
 | Acquisition | RFC 9126 PAR | Used where the vendor advertises support |
+| Acquisition | RFC 9207 issuer identification | Callback validates `iss` (when present or advertised) against the issuer recorded at transaction creation — strict string comparison, no URI normalization; applies to error responses too |
 | Hardening | RFC 9700 OAuth 2.0 Security BCP | Normative checklist for the whole client stack; deviations documented per vendor |
 | Lifecycle | RFC 6749 §6 refresh | Single-flight refresh per entry (Section 9) |
 | Lifecycle | RFC 7009 revocation | Offboarding calls the vendor revocation endpoint before deleting the vault entry |
@@ -58,7 +59,7 @@ SLO: p99 ≤ 25 ms on cache hit; ≤ 400 ms when an inline refresh is required.
 Builds the vendor authorization URL: `state` = opaque handle to a server-side transaction record `{sub, vendor, nonce, pkce_verifier, created_at, requested_scopes}` (TTL 10 min, single use). `state` is never a JWT and never decodable client-side. Scopes requested = min(tool requirement, vendor scope ceiling from the registry). Redirects the browser to the vendor.
 
 ### 4.3 `GET /v1/callback/{vendor}?code=…&state=…`
-Validates `state` (exists, unexpired, unconsumed, vendor matches); exchanges `code` + PKCE verifier at the vendor token endpoint; captures the vendor account id from the token response or userinfo; writes the vault entry; marks the transaction consumed; renders a "connection complete — return to your client" page. A `state` mismatch or reuse is a security event (alert), not a 400.
+Validates `state` (exists, unexpired, unconsumed, vendor matches); validates RFC 9207 `iss` against the issuer recorded in the transaction (mix-up defense — a mismatch is a security alert and the code is never redeemed); exchanges `code` + PKCE verifier at the vendor token endpoint; captures the vendor account id from the token response or userinfo; writes the vault entry; marks the transaction consumed; renders a "connection complete — return to your client" page. A `state` mismatch or reuse is a security event (alert), not a 400.
 
 ### 4.4 `DELETE /v1/grants/{vendor}/{sub}`
 Callers: the user themself (sub match) or the offboarding automation (admin SVID). Order of operations: RFC 7009 revoke at vendor → delete vault entry → emit audit. Vendor revocation failure leaves the entry in `REVOKE_PENDING` with retry; the entry is unusable for resolve while pending.
