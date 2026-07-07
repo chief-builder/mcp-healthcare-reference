@@ -37,7 +37,7 @@ Every MCP-plane access token carries the claims below. `M` = mandatory on all pa
 | `aud` | M | array | Tier audience **plus** per-server resource URIs (Section 4). Minimum two entries. |
 | `azp` | M | string | The Keycloak client that requested the token — i.e., which application/agent is acting. For the Athenz path this equals the Athenz service identity (Section 6.3). |
 | `exp`, `iat` | M | number | Standard. `nbf` optional; if present, enforced. |
-| `jti` | M | string | UUID. Logged in every audit record; enables replay tracing across DP and MCP server logs. |
+| `jti` | M | string | Unique, opaque token identifier. Logged in every audit record; enables replay tracing across DP and MCP server logs. (Lab finding, Phase 1: Keycloak 26 emits a short type prefix plus UUID, e.g. `trrtcc:<uuid>` — consumers MUST treat `jti` as opaque, not parse it as a bare UUID.) |
 | `mcp_tier` | M | string | `internal` \| `external`. Redundant with `aud` by design — belt and suspenders for policy engines that match on simple claims. |
 | `idp_origin` | M | string | `ping` \| `athenz` \| `homegrown` \| `keycloak` \| `auth0`. Which upstream system authenticated the principal. Drives audit and anomaly detection (e.g., an `auth0` token at the internal tier is always an incident). |
 | `scope` | M | string | Space-delimited, per the grammar in Section 5. |

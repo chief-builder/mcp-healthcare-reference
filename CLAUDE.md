@@ -20,4 +20,6 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 0 complete (tests/phase0.sh green). Phase 1 not started.
+Phase 1 complete (tests/phase1.sh green: 68 passed, 4 xfailed for later
+phases; all three identity legs incl. real Auth0). Phase 2 not started.
+Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
