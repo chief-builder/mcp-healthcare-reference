@@ -24,6 +24,21 @@ docker compose up -d
 Keycloak exports its own traces to Tempo (via the collector), so the spine
 carries real data from first boot — check Grafana → Explore → Tempo.
 
+## Admin console over HTTP
+
+The `mcp-plane` realm export sets `sslRequired: none`, but the bootstrap
+`master` realm (which the admin console authenticates against) is not part
+of our export and defaults to requiring HTTPS. After a fresh bring-up
+(`down -v`), run once:
+
+```sh
+source .env
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080 --realm master \
+  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+```
+
 ## Notes
 
 - The realm export references `${PHASE0_CLIENT_SECRET}`; Keycloak substitutes

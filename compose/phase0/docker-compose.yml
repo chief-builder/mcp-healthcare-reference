@@ -49,8 +49,12 @@ services:
       "spring.datasource.driverClassName": org.postgresql.Driver
       "spring.jpa.properties.hibernate.dialect": ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
       "hapi.fhir.fhir_version": R4
+      # listen on 8081 inside the container too, so the tester UI's links
+      # (built from server_address) work both in-container and from the host
+      "server.port": "8081"
+      "hapi.fhir.tester.home.server_address": http://localhost:8081/fhir
     ports:
-      - "8081:8080"
+      - "8081:8081"
     depends_on:
       postgres:
         condition: service_healthy
