@@ -43,6 +43,16 @@ $KCADM get "clients/${rm_id}/authz/resource-server/permission/scope/${perm_id}" 
   | jq --arg p "$policy_id" '. + {policies: [$p]}' \
   | $KCADM update "clients/${rm_id}/authz/resource-server/permission/scope/${perm_id}" -r mcp-plane -f - > /dev/null
 
+echo "==> Wiring the built-in account console (needs roles/acr/basic-claims scopes)..."
+# our realm import declares clientScopes explicitly, so KC built-ins are absent;
+# the account console SPA breaks without role claims in its tokens
+console_id=$($KCADM get clients -r mcp-plane -q clientId=account-console --fields id | jq -r '.[0].id')
+for scope_name in roles acr basic-claims; do
+  scope_id=$($KCADM get client-scopes -r mcp-plane --fields id,name \
+    | jq -r --arg n "$scope_name" '.[] | select(.name==$n).id')
+  $KCADM update "clients/${console_id}/default-client-scopes/${scope_id}" -r mcp-plane -n -s realm=mcp-plane
+done
+
 echo "==> Allowing admin-edited unmanaged user attributes (fhir_patient linkage store)..."
 $KCADM get users/profile -r mcp-plane \
   | jq '.unmanagedAttributePolicy = "ADMIN_EDIT"' \
