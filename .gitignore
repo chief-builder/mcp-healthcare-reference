@@ -1,0 +1,8 @@
+.env
+*.pem
+*.key
+*.p12
+vault-data/
+*.tfstate*
+node_modules/
+__pycache__/

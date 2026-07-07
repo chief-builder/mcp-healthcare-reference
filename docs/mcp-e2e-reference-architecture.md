@@ -1,0 +1,171 @@
+# Enterprise MCP Platform — End-to-End Reference Architecture
+
+**Version:** 1.0-draft &nbsp;|&nbsp; **Status:** For architecture review &nbsp;|&nbsp; **Owner:** API Gateway Platform
+**Companion documents:** MCP Platform Token Claims Contract v1.0 · Vendor Token Broker Design v1.0 · SaaS Connector Onboarding Standard (TBD) · ADR set (TBD)
+
+---
+
+## 1. Executive summary
+
+This document defines the target architecture for deploying the Model Context Protocol (MCP) as governed enterprise infrastructure in a HIPAA-regulated environment. It connects four client populations (workforce developers, internal autonomous agents, external SaaS agents, and end customers) to two classes of MCP destination (first-party servers fronting clinical and business systems, and third-party SaaS MCP servers), through a Kong Konnect hybrid gateway estate, under a single-issuer token model anchored in Keycloak and a certificate-based workload identity layer anchored in Athenz.
+
+Five invariants define the design; every section below is an elaboration of one of them:
+
+1. **One token issuer for the MCP plane.** Keycloak mints every token that a Kong data plane or MCP server validates. PingID, Athenz, Auth0, and (transitionally) the homegrown AS authenticate their populations; none of their tokens reach the plane directly.
+2. **PHI stays inside the customer AWS boundary.** The Konnect control plane (Kong's AWS accounts) receives configuration and aggregate telemetry only; vendor clouds receive only DLP-screened, allowlisted tool traffic; audit flows to the customer SIEM, never through Konnect.
+3. **Stateless MCP from day one.** All first-party servers target the 2026-07-28 specification revision: no protocol session, identity and capabilities on every request, horizontal scaling behind ordinary load balancing.
+4. **Governance at two layers, never conflated.** EMA / identity-provider policy governs *connections*; Kong ACLs and MCP-server scope checks govern *tool calls*. No control assumes the other's job is done.
+5. **Every transitional component has a defined exit.** The homegrown AS sunsets into Athenz + Keycloak; the vendor token broker shrinks vendor-by-vendor as EMA/ID-JAG adoption spreads; PingID's brokered leg upgrades in place to ID-JAG.
+
+## 2. Scope
+
+In scope: MCP client connectivity, identity and token architecture, gateway topology (internal, external, egress tiers), first-party MCP server platform, SaaS MCP consumption, audit, and the HIPAA control mapping for all of the above. Out of scope: model/LLM selection and hosting, agent application design, EHR-side integration engineering, and the FHIR facade internals (owned by the clinical integration team).
+
+## 3. Specification and standards baseline
+
+| Layer | Baseline | Notes |
+|---|---|---|
+| MCP core | 2026-07-28 revision | Stateless transport; `_meta` version/capability carriage; `server/discover`; explicit state handles as tool arguments. Conformance suite in CI once Tier 1 SDKs land. |
+| MCP extensions | Extensions framework (reverse-DNS negotiation) | `io.modelcontextprotocol/enterprise-managed-authorization` declared where client/vendor support exists |
+| Authorization discovery | RFC 9728 Protected Resource Metadata | Every first-party MCP server advertises Keycloak as its AS |
+| Token grammar | OAuth 2.1; RFC 8707 resource indicators; RFC 8693 token exchange; RFC 8705 mTLS client auth + certificate-bound tokens | Enforced per the Claims Contract |
+| Client hardening | RFC 9700 OAuth Security BCP | Normative for the token broker and all confidential clients |
+| Workload identity | Athenz (ZMS/ZTS, Copper Argos, SIA), SPIFFE-compatible SVIDs | Cert lifetime ≤ 30 days |
+| Healthcare data | FHIR R4; SMART-style patient scopes | Patient compartment enforced in MCP servers |
+| Regulatory | HIPAA Security Rule incl. 2025 amendments | Mandatory encryption (FIPS 140-3), agent-inclusive risk analysis, audit controls |
+
+## 4. Identity plane
+
+Four authoritative identity systems converge on Keycloak (realm `mcp-plane`), which is the sole Resource Authorization Server for every MCP audience.
+
+**PingID (workforce).** Brokered into Keycloak via OIDC. Interactive clients (Claude Code, Codex CLI, VS Code) perform authorization code + PKCE through the brokered login. Claude-family clients are EMA-capable; the flow upgrades to ID-JAG grant presentation at Keycloak the day PingID ships issuance, with zero downstream change — this is a deferred upgrade, not a blocker.
+
+**Athenz (workloads — target state for all m2m).** ZTS issues short-lived X.509 SVIDs to attested workloads (Copper Argos, SIA rotation). Agents perform `tls_client_auth` client-credentials at Keycloak and receive certificate-bound tokens (`cnf.x5t#S256`). No client secrets exist on this path. On-behalf-of flows use RFC 8693 exchange producing `sub` = user, `act.sub` = agent.
+
+**Homegrown AS (transitional, frozen).** Registered as a trusted external issuer for RFC 8693 exchange only. No new onboarding; each service migrating to the Athenz path removes an issuer mapping; the leg is deleted when empty. Rationale: retire a bespoke token-issuance surface from HIPAA assessment scope. The team's OAuth expertise transfers to the Vendor Token Broker (companion doc §14).
+
+**Auth0 (end customers).** Brokered into Keycloak; tokens carry SMART-style `patient/...` scopes and a mandatory `fhir_patient` compartment claim resolved from the customer↔patient linkage store. Customer tokens are structurally incapable of reaching another patient's record. Auth0's Okta lineage means native XAA/ID-JAG support may arrive here before the workforce leg.
+
+**Third parties (ChatGPT, B2B).** Native Keycloak clients: pre-registered, pinned redirect URIs, dynamic client registration disabled, per-user consent retained deliberately. External-tier audience only.
+
+All tokens conform to the Claims Contract: `PS256`/`ES256` on FIPS modules, 5–10 minute lifetimes, two-level audiences (`mcp://tier/*` + `mcp://srv/*`), normalized `groups` vocabulary, no directory PII, `mcp_contract` version pinning.
+
+## 5. Gateway topology (Kong Konnect hybrid)
+
+**Control/data split.** Konnect control planes run in Kong's AWS accounts; all data planes run in customer AWS accounts. The cross-boundary channel is DP-initiated mTLS on 443 carrying configuration down and aggregate telemetry up; request payloads never cross (Konnect Debugger disabled by policy on these control planes; no PHI-adjacent strings in entity names or labels). DPs continue serving from cached config during CP unavailability — a Konnect outage degrades change management, not patient-facing traffic. DP local config cache resides on KMS-encrypted volumes; secrets resolve via vault references; DP fleet runs FIPS-mode Enterprise builds. All config flows through decK/Terraform in CI/CD (change-management evidence); CP↔DP major-version pinning is enforced in node groups.
+
+**Three data-plane tiers, one claims contract:**
+
+| Tier | Serves | Route set | Distinctive policy |
+|---|---|---|---|
+| Internal | Workforce clients via VPN + private NLB; internal agents east-west | Full first-party catalog | JWT + `cnf` thumbprint verification; role-scoped MCP ACLs; guardrails |
+| External | ChatGPT/B2B and patient apps via WAF + public ALB (edge controls: Appendix A) | Curated catalog only (PHI-free until per-tool compliance approval; patient-compartment tools for Auth0 tokens) | Aggressive rate/response limits; outbound PII guardrails; separate control plane so misconfig cannot expose internal tools |
+| Egress | Corporate clients and internal agents calling SaaS MCP servers | Brokered vendor routes (`mcp://egress/*` audiences) | Tool allowlists per vendor; outbound DLP tuned for PHI signatures; vendor-token injection via broker; hub JWT stripped upstream |
+
+Tier isolation is cryptographic, not just topological: tier audiences in every token make cross-tier replay fail signature-independent validation.
+
+**Diagram note:** the master diagram draws the egress feed from the internal-agents node for routing clarity; developer clients reach the egress tier through the same private ingress, and the external tier has no route to egress by construction.
+
+## 6. First-party MCP server platform
+
+Servers are generated from existing REST/FHIR APIs via Kong's MCP autogeneration where the API is already well-governed, and hand-built where tool semantics diverge from resource semantics. All servers:
+
+- Implement 2026-07-28 statelessness: any request to any replica; continuity via explicit handles (`case_id`, `worklist_id`) passed as tool arguments — which doubles as audit-friendly design, since every request is self-describing.
+- Publish RFC 9728 Protected Resource Metadata naming Keycloak; declare supported extensions via the extensions map.
+- Re-validate tokens independently of the gateway (signature, `iss`, own `aud` URI, scope-per-tool, `fhir_patient` compartment where present) — defense in depth per Claims Contract §8.
+- Reach FHIR/EHR backends (Epic, Cerner R4) over Athenz-issued mTLS with least-privilege service credentials from vault references; model context is fetched per request, never cached across principals.
+- Emit the audit tuple on every tool invocation.
+
+Promotion gate: MCP conformance suite green, claims-contract validation tests green, and (for any PHI-bearing tool) compliance sign-off recorded in the tool registry.
+
+## 7. SaaS MCP consumption (GitHub, Notion, ...)
+
+Two sanctioned patterns, stackable where the vendor supports both:
+
+**Pattern A — EMA direct.** For vendors whose AS accepts ID-JAG (current set includes Asana, Atlassian, Canva, Figma, Granola, Linear, Supabase; growing). IdP policy governs the connection centrally; traffic flows client→vendor. Granted per-vendor only after a risk assessment concludes the connector cannot plausibly carry PHI, and only for enterprise-managed clients.
+
+**Pattern B — governed egress (default).** All corporate SaaS MCP traffic routes through the egress tier: vendor tool allowlist, outbound DLP (MRN/name/code-pattern screening — the control that prevents reportable disclosures to non-BAA vendors), full audit tuple, and vendor-token injection. Credentials are acquired per-user through the Vendor Token Broker (companion doc): org-owned vendor apps, one-time OAuth consent, vault custody keyed by hub `sub`, single-flight rotating-refresh handling, RFC 7009 revocation on offboarding. No PATs, no shared service accounts, no credentials on laptops.
+
+External-tier clients (ChatGPT et al.) never receive SaaS passthrough. Approved vendors and their brokered endpoints publish to the Konnect MCP Registry, making the registry the single catalog of sanctioned connectivity for humans and agents alike.
+
+## 8. HIPAA control mapping
+
+| Requirement | Implementing control |
+|---|---|
+| Encryption in transit/at rest (2025: mandatory) | FIPS 140-3 modules end to end; TLS everywhere; KMS-encrypted DP caches and vault |
+| Access control / unique identification | Hub-issued tokens with `sub`+`act` on every request; per-user vendor credentials; no shared accounts on any path |
+| Minimum necessary | Tier catalogs → role-scoped tool ACLs → per-tool scopes → patient compartment filtering |
+| Audit controls / accounting of disclosures | Per-tool-call tuple (`jti`, `sub`, `act.sub`, `azp`, `idp_origin`, tier, tool, verb, `fhir_patient`, decision) from DPs and servers to customer SIEM |
+| Risk analysis incl. AI agents (2025) | Athenz ZMS as authoritative workload inventory; Konnect Registry as connectivity inventory; both change-managed into SIEM |
+| BAA chain | First-party plane: assessed with counsel (Konnect designed to carry no PHI); vendor SaaS: PHI egress prevented by DLP + allowlists, obviating vendor BAAs for Pattern B scope |
+| Workforce MFA | `amr` propagation from PingID; `mfa` required for clinical tool scopes |
+
+## 9. Audit and observability
+
+One vocabulary (Claims Contract §9) across gateway, servers, broker, and identity events; `jti` joins a vendor-side action to the exact tool call and human/agent that caused it. Konnect analytics is used for capacity and health only — never as the compliance record. OTel traces span client→DP→server→backend; SLO dashboards per tier; anomaly rules include: `auth0`-origin token at internal tier, `cnf` mismatch, mass-STALE broker events, external-tier scope-ceiling probes.
+
+## 10. Deployment and network
+
+DPs, MCP servers, Keycloak, broker, and Athenz components run on EKS across ≥2 AZs in the customer accounts; east-west over private DNS with Athenz mTLS; no public exposure except the WAF'd external ALB and the Konnect 443 egress (pinned to Kong's published regional endpoints, optionally via forward proxy). Private ingress via Client VPN with device posture. Vendor egress NAT is allowlisted to registered vendor hostnames only.
+
+## 11. Migration ledger
+
+| Transition | Mechanism | Exit test |
+|---|---|---|
+| Homegrown AS → Athenz+Keycloak | Dual grant paths per service; issuer-trust mappings removed per migration | Zero mappings; profile deleted from Claims Contract |
+| PingID broker → ID-JAG/EMA | Front-leg swap at Keycloak on Ping availability | 30-day dual-run parity in SIEM |
+| Broker per-vendor → EMA direct | Sunset criteria (Broker doc §15) | Vendor registry entry disabled; grants revoked on drain |
+| 2025-11-25 → 2026-07-28 servers | Built stateless from day one; conformance suite gate | Suite green on all servers |
+
+## 12. Risks and accepted trade-offs
+
+Fail-closed vault behavior on the broker trades availability for credential safety (revisit if egress becomes clinical-critical). Kong's MCP support is a plugin layer atop a general gateway — accepted because it extends an estate the organization already operates at scale, and revisited if purpose-built gateways materially outpace it. PingID's ID-JAG timeline is outside our control — mitigated by the hub design. Per-user vendor tokens multiply consent events at rollout — accepted as one-time cost with self-enrolling onboarding. Custom `cnf`-verification plugin on the DP is bespoke code on the hot path — mitigated by its small surface and dedicated tests.
+
+## 13. Review checklist for approvers
+
+Security: single-issuer invariant, tier audience isolation, cert-bound m2m, broker no-issuance rule. Compliance: §8 mapping, external-tier PHI-free catalog, DLP coverage, audit joinability. Platform: CP/DP version pinning, fail-open/closed decisions, conformance gating. Each companion document carries its own deeper checklist.
+
+---
+
+## Appendix A — Public MCP ingress: WAF rules and edge controls
+
+Organizing principle: the edge handles protocol- and volume-level threats anonymously; everything identity-aware waits one hop for the Kong external DP, where the token is visible. The WAF is never taught about JWTs, and semantic screening (prompt injection, PHI egress) is explicitly **not** an edge responsibility — it lives in the DP guardrail plugins where MCP payloads are parsed with tool context and identity attached. This division is normative: the answer to "where is prompt injection handled" is the gateway, not the WAF.
+
+### A.1 Transport posture
+
+TLS 1.3-preferred ALB security policy (1.2 floor) on FIPS-validated termination; HSTS injected; no plaintext or HTTP/1.0 listeners. ACM certificate carries the external hostname only — nothing at the edge reveals internal naming. Shield Standard assumed; Shield Advanced evaluated (public healthcare endpoint is a credible DDoS target; Advanced adds response-team engagement and cost protection).
+
+### A.2 Managed rule groups and MCP-specific tuning
+
+Baseline: `CommonRuleSet`, `KnownBadInputs`, `IPReputationList`, `AnonymousIPList` (legitimate traffic on this tier originates from known SaaS egress ranges and patient devices, not anonymizing infrastructure). Two tunings driven by MCP's JSON-RPC-over-POST shape:
+
+1. SQLi/XSS body inspection will false-positive on tool arguments containing code or rich text — every rule deploys in count mode with a tuning window before promotion to block.
+2. WAF inspects only the leading portion of request bodies (16 KB default, raisable to 64 KB). Oversized requests are therefore **rejected, not passed uninspected**: MCP tool calls on this tier have no legitimate multi-megabyte payloads; bodies are capped (~128 KB) and anything exceeding the inspection limit blocks unless a specific route is deliberately exempted.
+
+### A.3 Protocol shape enforcement
+
+Custom rules encoding what the endpoint is: only POST/GET/DELETE on MCP path prefixes and the OAuth callback paths (everything else, including OPTIONS floods, blocked); `Content-Type: application/json` required on POSTs; `Authorization` header required on MCP routes (unvalidated at the edge, but drops unauthenticated scanner noise before Kong); header-anomaly drops (oversized or duplicate headers). Streaming nuance: streamable HTTP responses may be long-lived — ALB idle timeout is set to the longest sanctioned tool call and no longer, and WAF/ALB response buffering is explicitly tested against streamed delivery before go-live.
+
+### A.4 Rate limiting, split across layers
+
+| Layer | Key | Purpose |
+|---|---|---|
+| WAF rate rules | Source IP (finer aggregation keys where useful) | Coarse abuse ceiling only — shed the anonymous flood. Deliberately loose: SaaS agents NAT many users through few IPs; a tight per-IP edge limit would throttle the largest legitimate client |
+| WAF, OAuth/token paths | IP + path | Stricter rule scoped to consent/token endpoints, where credential-stuffing and consent-phishing probes concentrate |
+| Kong external DP | `sub`, `azp` from the validated token | The real fairness enforcement among authenticated principals |
+
+### A.5 Bot control and geography
+
+`BotControlRuleSet` in targeted mode with explicit allow-listing for verified, onboarded SaaS agents (published egress ranges pinned in an IP set tied to that client's routes — belt-and-suspenders alongside its OAuth client auth). Geography: country allowlist matching the patient service area plus sanctioned-country blocks, with a documented exception path for traveling patients.
+
+### A.6 Origin cloaking and response hygiene
+
+ALB reachable only through the WAF association; external DP security groups accept only the ALB. Fingerprinting headers stripped or normalized on this tier (`Server`, `X-Powered-By`, Kong `Via`). Edge errors are generic RFC 9457 problem details — no internal hostnames, and never an echo of the offending payload.
+
+### A.7 Logging and feedback loop
+
+Full WAF logs stream (Kinesis Firehose) to the same SIEM as the §9 tuple; sampled-request visibility on; every rule's lifecycle is count → tuned → block, tracked in change management like DP config. Anomaly correlation: a `KnownBadInputs` spike against MCP paths joins (by IP and time) with DP-side scope-ceiling probes from §9 — one actor, two telemetry layers.
+
+### A.8 Review checklist (edge)
+
+Body-size rejection above inspection limit; streaming timeout tested; count-mode ledger current; SaaS egress IP sets pinned and refreshed; OAuth-path rate rule active; no identity logic at the edge; prompt-injection ownership documented at the DP layer.
