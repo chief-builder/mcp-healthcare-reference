@@ -47,6 +47,9 @@
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": false,
       "redirectUris": ["http://localhost:8080/realms/mcp-plane/broker/ping/endpoint"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8080/realms/mcp-plane/broker/ping/endpoint*"
+      },
       "defaultClientScopes": [],
       "optionalClientScopes": [],
       "protocolMappers": [
