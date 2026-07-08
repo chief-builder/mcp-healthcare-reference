@@ -20,8 +20,12 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 2 complete (tests/phase2.sh green: tier wall w/ 401 replay semantics,
-CP-severance resilience, deck-state-matches-git; phases 0/1 still green).
+Phase 3 complete (tests/phase3.sh green: tool visibility by group, 403
+insufficient_scope + step-up, fhir_patient compartment, replica-loss
+statelessness; phases 0/1/2 still green on the phase3 stack). Two-level aud
+and mcp: scope grammar are now live (phase 1 xfails graduated).
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
-Canonical gateway config = deck/*.yaml + compose/phase2/setup-phase2.sh.
-Phase 3 (first-party MCP servers) not started.
+Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
+First-party MCP servers = servers/ (fhir-clinical generated via
+openapi-mcp-generator + authz-hook; scheduling hand-built, Postgres holds).
+Phase 4 (cert-bound m2m) not started.
