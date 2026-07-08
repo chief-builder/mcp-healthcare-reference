@@ -20,6 +20,8 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 1 complete (tests/phase1.sh green: 68 passed, 4 xfailed for later
-phases; all three identity legs incl. real Auth0). Phase 2 not started.
+Phase 2 complete (tests/phase2.sh green: tier wall w/ 401 replay semantics,
+CP-severance resilience, deck-state-matches-git; phases 0/1 still green).
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
+Canonical gateway config = deck/*.yaml + compose/phase2/setup-phase2.sh.
+Phase 3 (first-party MCP servers) not started.
