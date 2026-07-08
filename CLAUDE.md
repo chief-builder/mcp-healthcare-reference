@@ -20,12 +20,16 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 3 complete (tests/phase3.sh green: tool visibility by group, 403
-insufficient_scope + step-up, fhir_patient compartment, replica-loss
-statelessness; phases 0/1/2 still green on the phase3 stack). Two-level aud
-and mcp: scope grammar are now live (phase 1 xfails graduated).
+Phase 4 complete (tests/phase4.sh green: zero-secrets agent manifest,
+contract §6.3 claims incl. cnf, no-mTLS/wrong-cert replay → 401 + audit,
+SVID rotation without pod restart; phases 0–3 still green on the phase4
+stack). Cert-bound m2m is live: SPIRE in k3d (trust domain mcp-lab, lab CA
+root, 180s SVIDs) → Keycloak client-x509 mTLS listener :8443 (issuer pinned
+via KC_HOSTNAME) → Kong internal TLS listener :8143 with the bespoke
+plugins/cnf-check plugin (global on the internal CP; schema registered by
+setup-phase4.sh).
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
 Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
-First-party MCP servers = servers/ (fhir-clinical generated via
-openapi-mcp-generator + authz-hook; scheduling hand-built, Postgres holds).
-Phase 4 (cert-bound m2m) not started.
+Canonical workload config = compose/phase4/k8s/*.yaml (+ SPIRE entries in
+setup-phase4.sh). First-party MCP servers = servers/; loop agent =
+agents/loop-agent. Phase 5 (egress + broker, the centerpiece) not started.
