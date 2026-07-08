@@ -16,7 +16,6 @@ EXPECTED_ISS = "http://localhost:8080/realms/mcp-plane"
 SCHED_MCP_TLS = "https://localhost:8143/scheduling/mcp"
 SCHED_MCP_HTTP = "http://localhost:8100/scheduling/mcp"
 CA = str(Path(__file__).resolve().parents[2] / "compose" / "phase4" / "certs" / "lab-ca.crt")
-KONG_CONTAINER = "mcp-phase4-kong-internal-1"
 CLIENT_ID = "mcp-agents.loop-agent"
 SCOPE = "mcp:scheduling:hold-slot:execute mcp:scheduling:confirm:execute"
 KCTL = ["kubectl", "--context", "k3d-mcp-lab"]
@@ -89,12 +88,22 @@ def call_find_slots(token: str, cert: tuple[str, str] | None, url: str = SCHED_M
     )
 
 
+def _kong_internal_container() -> str:
+    """Find the live internal-DP container by name, whichever phase stack is
+    up (stack-agnostic, like the phase 2/3 tests)."""
+    out = subprocess.run(
+        ["docker", "ps", "--filter", "name=kong-internal", "--format", "{{.Names}}"],
+        check=True, capture_output=True, text=True).stdout.split()
+    assert out, "no running kong-internal container found"
+    return out[0]
+
+
 def kong_audit_events(since: str = "3m") -> list[dict]:
     """cnf-check emits one-line JSON audit records on the proxy log (contract
     §9 fields); until the Phase 6 audit spine ships they are read off the
     container log."""
     out = subprocess.run(
-        ["docker", "logs", "--since", since, KONG_CONTAINER],
+        ["docker", "logs", "--since", since, _kong_internal_container()],
         capture_output=True, text=True, check=True,
     )
     events = []
