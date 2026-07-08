@@ -3,17 +3,19 @@ drop a replica; the surviving replica confirms the hold using the explicit
 slot_hold_id handle (state lives in Postgres, not server memory).
 """
 import subprocess
-from pathlib import Path
 
 from conftest import SCHED_MCP_INTERNAL
 
 import mcp_http
 
-COMPOSE_DIR = Path(__file__).resolve().parents[2] / "compose" / "phase3"
 
-
-def _compose(*args):
-    subprocess.run(["docker", "compose", *args], cwd=COMPOSE_DIR, check=True, capture_output=True)
+def _running_scheduling_replicas() -> list[str]:
+    """Find the live scheduling replicas by name, whichever phase stack is up
+    (same stack-agnostic pattern as the phase 2 severance test)."""
+    return subprocess.run(
+        ["docker", "ps", "--filter", "name=scheduling", "--format", "{{.Names}}"],
+        check=True, capture_output=True, text=True,
+    ).stdout.split()
 
 
 def test_hold_survives_replica_loss(alice_scheduling):
@@ -26,8 +28,10 @@ def test_hold_survives_replica_loss(alice_scheduling):
     slot_hold_id = held["slot_hold_id"]
     assert slot_hold_id
 
-    # Drop the scheduling service to a single replica (removes one container).
-    _compose("up", "-d", "--no-recreate", "--scale", "scheduling=1")
+    replicas = _running_scheduling_replicas()
+    assert len(replicas) >= 2, "need >= 2 scheduling replicas"
+    victim = replicas[0]
+    subprocess.run(["docker", "stop", victim], check=True, capture_output=True)
     try:
         # The surviving replica has never seen this hold in memory — it must read
         # it from Postgres via the handle.
@@ -38,7 +42,7 @@ def test_hold_survives_replica_loss(alice_scheduling):
         assert result.get("status") == "confirmed"
         assert result.get("slot_id") == slot_id
     finally:
-        _compose("up", "-d", "--no-recreate", "--scale", "scheduling=2")
+        subprocess.run(["docker", "start", victim], check=True, capture_output=True)
 
 
 def test_hold_requires_step_up_scope(alice_floor):
