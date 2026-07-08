@@ -8,7 +8,8 @@
 #    fhir_patient linkage (contract §6.5) can be written via the admin API.
 #    Broker mappers bypass the user profile; the admin API does not.
 set -euo pipefail
-cd "$(dirname "$0")"
+# COMPOSE_DIR: later phases reuse this script against their own stack
+cd "${COMPOSE_DIR:-$(dirname "$0")}"
 source .env
 
 KCADM="docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh"

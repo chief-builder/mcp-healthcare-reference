@@ -564,6 +564,7 @@
         "mcp-contract",
         "mcp-tier-external",
         "mcp-amr",
+        "mcp-groups",
         "mcp-idp-origin",
         "mcp-fhir-patient"
       ],

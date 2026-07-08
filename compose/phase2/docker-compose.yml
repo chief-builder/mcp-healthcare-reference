@@ -1,0 +1,199 @@
+name: mcp-phase2
+
+# Phase 2 stack: phase 1 services + two Konnect data planes (one per tier)
+# and the cp-uplink stream proxy that makes CP-severance testable.
+# Konnect provisioning + bring-up: ./setup-phase2.sh (never the Konnect UI).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../phase0/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      KC_TRACING_ENABLED: "true"
+      KC_TRACING_ENDPOINT: http://otel-collector:4317
+      KC_TRACING_SERVICE_NAME: keycloak
+      KC_FEATURES: token-exchange:v1,admin-fine-grained-authz:v1
+      PHASE0_CLIENT_SECRET: ${PHASE0_CLIENT_SECRET}
+      FAKE_PING_PASSWORD: ${FAKE_PING_PASSWORD}
+      FAKE_PING_BROKER_SECRET: ${FAKE_PING_BROKER_SECRET}
+      LEGACY_EXCHANGE_SECRET: ${LEGACY_EXCHANGE_SECRET}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-auth0-not-configured.invalid}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-not-configured}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET:-not-configured}
+    volumes:
+      - ../../realm:/opt/keycloak/data/import:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  homegrown-issuer:
+    build: ../phase1/homegrown-issuer
+    environment:
+      HOMEGROWN_CLIENT_SECRET: ${HOMEGROWN_CLIENT_SECRET}
+    ports:
+      - "7001:7000"
+
+  hapi:
+    image: hapiproject/hapi:v8.0.0
+    environment:
+      "spring.datasource.url": jdbc:postgresql://postgres:5432/hapi
+      "spring.datasource.username": hapi
+      "spring.datasource.password": ${POSTGRES_PASSWORD}
+      "spring.datasource.driverClassName": org.postgresql.Driver
+      "spring.jpa.properties.hibernate.dialect": ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+      "hapi.fhir.fhir_version": R4
+      "server.port": "8081"
+      "hapi.fhir.tester.home.server_address": http://localhost:8081/fhir
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  kong-internal:
+    image: kong/kong-gateway:3.9
+    environment:
+      KONG_ROLE: data_plane
+      KONG_DATABASE: "off"
+      KONG_KONNECT_MODE: "on"
+      KONG_VITALS: "off"
+      KONG_CLUSTER_MTLS: pki
+      KONG_CLUSTER_CERT: /certs/internal.crt
+      KONG_CLUSTER_CERT_KEY: /certs/internal.key
+      KONG_LUA_SSL_TRUSTED_CERTIFICATE: system
+      # the tier-audience pre-function parses JWT payloads
+      KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: cjson.safe
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_STATUS_LISTEN: 0.0.0.0:8007
+    env_file:
+      - path: ./generated/dp-internal.env
+        required: false
+    volumes:
+      - ./certs:/certs:ro
+    ports:
+      - "8100:8000"
+    depends_on:
+      - cp-uplink
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  kong-external:
+    image: kong/kong-gateway:3.9
+    environment:
+      KONG_ROLE: data_plane
+      KONG_DATABASE: "off"
+      KONG_KONNECT_MODE: "on"
+      KONG_VITALS: "off"
+      KONG_CLUSTER_MTLS: pki
+      KONG_CLUSTER_CERT: /certs/external.crt
+      KONG_CLUSTER_CERT_KEY: /certs/external.key
+      KONG_LUA_SSL_TRUSTED_CERTIFICATE: system
+      # the tier-audience pre-function parses JWT payloads
+      KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: cjson.safe
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_STATUS_LISTEN: 0.0.0.0:8007
+    env_file:
+      - path: ./generated/dp-external.env
+        required: false
+    volumes:
+      - ./certs:/certs:ro
+    ports:
+      - "8200:8000"
+    depends_on:
+      - cp-uplink
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  cp-uplink:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./uplink.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      default:
+        # aliases = the real Konnect hostnames (setup-phase2.sh maintains
+        # these four vars in .env), so DP cluster traffic transits this
+        # container with honest SNI/Host end to end
+        aliases:
+          - ${INT_CLUSTER_HOST:-int-cluster.unset.invalid}
+          - ${INT_TELEMETRY_HOST:-int-telemetry.unset.invalid}
+          - ${EXT_CLUSTER_HOST:-ext-cluster.unset.invalid}
+          - ${EXT_TELEMETRY_HOST:-ext-telemetry.unset.invalid}
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    command: ["--config=/etc/otel/otel-collector.yaml"]
+    volumes:
+      - ../phase0/otel/otel-collector.yaml:/etc/otel/otel-collector.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - loki
+      - tempo
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ../phase0/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ../phase0/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ../phase0/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+      - tempo
+
+volumes:
+  postgres-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

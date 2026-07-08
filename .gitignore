@@ -9,3 +9,5 @@ __pycache__/
 .synthea/
 .venv/
 .DS_Store
+compose/phase2/certs/
+compose/phase2/generated/
