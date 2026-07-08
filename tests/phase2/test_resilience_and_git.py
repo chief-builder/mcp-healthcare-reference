@@ -14,13 +14,25 @@ def _compose(*args) -> None:
     )
 
 
+def _running_cp_uplink() -> str:
+    """Find the live cp-uplink container by name, whichever phase stack is up."""
+    out = subprocess.run(
+        ["docker", "ps", "--filter", "name=cp-uplink", "--format", "{{.Names}}"],
+        check=True, capture_output=True, text=True,
+    ).stdout.split()
+    assert out, "no running cp-uplink container found"
+    return out[0]
+
+
 def test_dp_keeps_proxying_with_cp_uplink_severed(alice_token):
     """Stop the cp-uplink proxy (the DPs' only path to Konnect) and prove the
-    data plane still serves from its cached config."""
+    data plane still serves from its cached config. Stack-agnostic: targets the
+    running cp-uplink container by name (works against any phase's stack)."""
     headers = {"Authorization": f"Bearer {alice_token}"}
     assert requests.get(f"{INTERNAL_GW}/fhir/Patient", headers=headers).status_code == 200
 
-    _compose("stop", "cp-uplink")
+    container = _running_cp_uplink()
+    subprocess.run(["docker", "stop", container], check=True, capture_output=True)
     try:
         time.sleep(5)  # let the websocket actually drop
         for _ in range(5):
@@ -28,7 +40,7 @@ def test_dp_keeps_proxying_with_cp_uplink_severed(alice_token):
             assert response.status_code == 200, "DP stopped serving without its CP"
             time.sleep(1)
     finally:
-        _compose("start", "cp-uplink")
+        subprocess.run(["docker", "start", container], check=True, capture_output=True)
 
 
 def test_deck_state_matches_live_config(env):

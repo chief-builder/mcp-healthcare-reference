@@ -90,12 +90,14 @@ def test_tier_and_tier_audience(leg_bundle):
     )
 
 
-@pytest.mark.xfail(reason="per-server resource URIs in aud arrive with Phase 2 gateway work", strict=True)
 def test_aud_second_level(leg_bundle):
+    """Two-level aud (contract §4). Graduated in Phase 3: interactive clients
+    that target first-party servers now carry per-server resource URIs. The m2m
+    smoke/legacy legs are not server-targeted, so they carry only the tier aud."""
     leg, claims, _ = leg_bundle
-    assert any(a.startswith("mcp://srv/") for a in _aud_list(claims)), (
-        f"{leg}: §3 requires tier audience plus at least one server resource URI"
-    )
+    server_auds = [a for a in _aud_list(claims) if a.startswith("mcp://srv/")]
+    if leg in ("workforce", "customer"):
+        assert server_auds, f"{leg}: §4 requires a per-server resource URI in aud"
 
 
 def test_idp_origin(leg_bundle):
