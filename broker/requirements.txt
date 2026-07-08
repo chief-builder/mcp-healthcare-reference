@@ -1,0 +1,5 @@
+fastapi==0.115.*
+uvicorn==0.32.*
+httpx==0.28.*
+hvac==2.3.*
+PyJWT[crypto]==2.10.*

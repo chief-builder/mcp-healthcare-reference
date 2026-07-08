@@ -96,3 +96,75 @@ services:
         paths:
           - /scheduling
         strip_path: true
+
+  # ---- Egress tier (phase 5): brokered vendor routes ----
+  # The service upstream IS the allowlist: only registered vendor hosts are
+  # routable, there is no open proxy. Plugin order (by priority):
+  # openid-connect (1050, audience = the egress resource) -> dlp-egress
+  # (950, nothing unscreened leaves) -> vendor-token (900, broker resolve +
+  # vendor credential injection; the hub JWT is stripped upstream).
+  - name: egress-github
+    url: https://api.githubcopilot.com/mcp
+    routes:
+      - name: egress-github
+        paths:
+          - /egress/github
+        strip_path: true
+    plugins:
+      - name: openid-connect
+        config:
+          issuer: http://keycloak:8080/realms/mcp-plane
+          issuers_allowed:
+            - http://localhost:8080/realms/mcp-plane
+          extra_jwks_uris:
+            - http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
+          auth_methods:
+            - bearer
+          audience:
+            - mcp://egress/github
+          cache_tokens_salt: mcp-lab-egress-github-salt
+      - name: dlp-egress
+        config:
+          patterns:
+            - name: mrn
+              regex: MRN-\d{7}
+            - name: ssn
+              regex: \b\d{3}-\d{2}-\d{4}\b
+      - name: vendor-token
+        config:
+          broker_url: http://broker:8300
+          vendor: github
+          min_ttl_s: 120
+
+  - name: egress-mockhub
+    url: http://mock-vendor:8310/mcp
+    routes:
+      - name: egress-mockhub
+        paths:
+          - /egress/mockhub
+        strip_path: true
+    plugins:
+      - name: openid-connect
+        config:
+          issuer: http://keycloak:8080/realms/mcp-plane
+          issuers_allowed:
+            - http://localhost:8080/realms/mcp-plane
+          extra_jwks_uris:
+            - http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
+          auth_methods:
+            - bearer
+          audience:
+            - mcp://egress/mockhub
+          cache_tokens_salt: mcp-lab-egress-mockhub-salt
+      - name: dlp-egress
+        config:
+          patterns:
+            - name: mrn
+              regex: MRN-\d{7}
+            - name: ssn
+              regex: \b\d{3}-\d{2}-\d{4}\b
+      - name: vendor-token
+        config:
+          broker_url: http://broker:8300
+          vendor: mockhub
+          min_ttl_s: 30

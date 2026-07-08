@@ -378,6 +378,46 @@
       ]
     },
     {
+      "name": "egress-github",
+      "description": "Egress resource audience mcp://egress/github (phase 5 vendor route)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "aud egress github",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://egress/github",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "egress-mockhub",
+      "description": "Egress resource audience mcp://egress/mockhub (phase 5 lab vendor route)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "aud egress mockhub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://egress/mockhub",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "name": "mcp:fhir-clinical:everything:read",
       "description": "Step-up scope for Patient/$everything (broad; issued only via challenge, contract §5)",
       "protocol": "openid-connect",
@@ -605,7 +645,9 @@
       "optionalClientScopes": [
         "mcp:fhir-clinical:everything:read",
         "mcp:scheduling:hold-slot:execute",
-        "mcp:scheduling:confirm:execute"
+        "mcp:scheduling:confirm:execute",
+        "egress-github",
+        "egress-mockhub"
       ]
     },
     {
