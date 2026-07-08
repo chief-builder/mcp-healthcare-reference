@@ -64,7 +64,7 @@ Fits one box: 16 GB RAM minimum (32 GB comfortable with Athenz), any recent mini
 
 ```
 docs/         architecture package (claims contract, broker design, e2e reference, this plan)
-compose/      phase 0–4 docker-compose stacks (phase4/ also carries the k3d/SPIRE manifests)
+compose/      phase 0–5 docker-compose stacks (phase4/ also carries the k3d/SPIRE manifests; phase5/ the mock vendor)
 realm/        keycloak realm exports (git-tracked identity config)
 deck/         Konnect/Kong declarative state
 plugins/      cnf-check + DLP Lua plugins

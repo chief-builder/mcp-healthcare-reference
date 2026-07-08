@@ -20,16 +20,21 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 4 complete (tests/phase4.sh green: zero-secrets agent manifest,
-contract §6.3 claims incl. cnf, no-mTLS/wrong-cert replay → 401 + audit,
-SVID rotation without pod restart; phases 0–3 still green on the phase4
-stack). Cert-bound m2m is live: SPIRE in k3d (trust domain mcp-lab, lab CA
-root, 180s SVIDs) → Keycloak client-x509 mTLS listener :8443 (issuer pinned
-via KC_HOSTNAME) → Kong internal TLS listener :8143 with the bespoke
-plugins/cnf-check plugin (global on the internal CP; schema registered by
-setup-phase4.sh).
+Phase 5 complete (tests/phase5.sh green: consent dance → vendor MCP tool;
+planted MRN blocked + audited at the egress DP; 20 parallel resolves →
+exactly one vendor refresh (single-flight + generation CAS); DELETE /grants
+revokes at the vendor RFC 7009; plus state-replay/iss-mismatch security
+alerts, STALE→re-consent, fail-closed vault, no-issuance route audit;
+phases 0–4 still green on the phase5 stack). Egress + broker are live:
+Vendor Token Broker (broker/, per docs/vendor-token-broker-design.md) over
+OpenBao custody; dlp-egress + vendor-token bespoke Kong plugins on the
+egress routes; mockhub vendor AS (compose/phase5/mock-vendor) drives the
+gates headless; real GitHub leg activates when GITHUB_CLIENT_ID/SECRET set.
+Prior phases unchanged: cert-bound m2m (phase 4) = SPIRE in k3d → Keycloak
+client-x509 :8443 → Kong :8143 + plugins/cnf-check.
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
 Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
-Canonical workload config = compose/phase4/k8s/*.yaml (+ SPIRE entries in
-setup-phase4.sh). First-party MCP servers = servers/; loop agent =
-agents/loop-agent. Phase 5 (egress + broker, the centerpiece) not started.
+Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
+broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
+First-party MCP servers = servers/; loop agent = agents/loop-agent.
+Phase 6 (audit spine — OTel → Loki/Tempo, jti tuple dashboard) not started.
