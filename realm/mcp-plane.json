@@ -336,6 +336,64 @@
         "include.in.token.scope": "true",
         "display.on.consent.screen": "true"
       }
+    },
+    {
+      "name": "srv-fhir-clinical",
+      "description": "Per-server resource audience mcp://srv/fhir-clinical (contract §4, two-level aud)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "aud fhir-clinical",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://srv/fhir-clinical",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "srv-scheduling",
+      "description": "Per-server resource audience mcp://srv/scheduling (contract §4, two-level aud)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "aud scheduling",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp://srv/scheduling",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp:fhir-clinical:everything:read",
+      "description": "Step-up scope for Patient/$everything (broad; issued only via challenge, contract §5)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "mcp:scheduling:hold-slot:execute",
+      "description": "Step-up scope to place a slot hold (contract §5)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "mcp:scheduling:confirm:execute",
+      "description": "Step-up scope to confirm a slot hold (contract §5)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
     }
   ],
   "identityProviders": [
@@ -540,9 +598,15 @@
         "mcp-tier-internal",
         "mcp-groups",
         "mcp-amr",
-        "mcp-idp-origin"
+        "mcp-idp-origin",
+        "srv-fhir-clinical",
+        "srv-scheduling"
       ],
-      "optionalClientScopes": []
+      "optionalClientScopes": [
+        "mcp:fhir-clinical:everything:read",
+        "mcp:scheduling:hold-slot:execute",
+        "mcp:scheduling:confirm:execute"
+      ]
     },
     {
       "clientId": "patient-agent",
@@ -566,7 +630,8 @@
         "mcp-amr",
         "mcp-groups",
         "mcp-idp-origin",
-        "mcp-fhir-patient"
+        "mcp-fhir-patient",
+        "srv-fhir-clinical"
       ],
       "optionalClientScopes": ["patient/Patient.read", "patient/Observation.read"]
     },

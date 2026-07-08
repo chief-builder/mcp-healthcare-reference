@@ -1,7 +1,36 @@
 # External tier (CP mcp-external) — git is the source of truth.
 # Edit here, then: deck gateway sync deck/external.yaml --konnect-... (see
-# compose/phase2/setup-phase2.sh). Never edit in the Konnect UI.
+# compose/phaseN/setup-phaseN.sh). Never edit in the Konnect UI.
 _format_version: "3.0"
+
+# Global external-tier wall (see deck/internal.yaml): 401 invalid_token for a
+# cross-tier replay; token-less requests pass so MCP PRM discovery works.
+plugins:
+  - name: pre-function
+    config:
+      access:
+        - |
+          local cjson = require "cjson.safe"
+          local auth = kong.request.get_header("authorization") or ""
+          local token = auth:match("^[Bb]earer%s+(.+)$")
+          if not token then return end -- no token: let the upstream challenge
+          local reject = function()
+            return kong.response.exit(401, { message = "token not valid for this tier" },
+              { ["WWW-Authenticate"] = 'Bearer realm="mcp-external", error="invalid_token", error_description="tier audience mismatch"' })
+          end
+          local payload = token:match("^[^.]+%.([^.]+)%.")
+          if not payload then return reject() end
+          payload = payload:gsub("-", "+"):gsub("_", "/")
+          payload = payload .. string.rep("=", (4 - #payload % 4) % 4)
+          local raw = ngx.decode_base64(payload)
+          local claims = raw and cjson.decode(raw)
+          if not claims then return reject() end
+          local aud = claims.aud
+          if type(aud) == "string" then aud = { aud } end
+          for _, a in ipairs(aud or {}) do
+            if a == "mcp://tier/external" then return end
+          end
+          return reject()
 
 services:
   - name: fhir-placeholder
@@ -12,32 +41,6 @@ services:
           - /fhir
         strip_path: true
     plugins:
-      # see deck/internal.yaml — 401 invalid_token for cross-tier replay
-      - name: pre-function
-        config:
-          access:
-            - |
-              local cjson = require "cjson.safe"
-              local auth = kong.request.get_header("authorization") or ""
-              local token = auth:match("^[Bb]earer%s+(.+)$")
-              if not token then return end -- openid-connect emits the 401 challenge
-              local reject = function()
-                return kong.response.exit(401, { message = "token not valid for this tier" },
-                  { ["WWW-Authenticate"] = 'Bearer realm="mcp-external", error="invalid_token", error_description="tier audience mismatch"' })
-              end
-              local payload = token:match("^[^.]+%.([^.]+)%.")
-              if not payload then return reject() end
-              payload = payload:gsub("-", "+"):gsub("_", "/")
-              payload = payload .. string.rep("=", (4 - #payload % 4) % 4)
-              local raw = ngx.decode_base64(payload)
-              local claims = raw and cjson.decode(raw)
-              if not claims then return reject() end
-              local aud = claims.aud
-              if type(aud) == "string" then aud = { aud } end
-              for _, a in ipairs(aud or {}) do
-                if a == "mcp://tier/external" then return end
-              end
-              return reject()
       - name: openid-connect
         config:
           issuer: http://keycloak:8080/realms/mcp-plane
@@ -45,17 +48,23 @@ services:
             - http://localhost:8080/realms/mcp-plane
           auth_methods:
             - bearer
-          # external tier audience only — an internal-tier token replayed
-          # here MUST fail (phase 2 acceptance gate)
           audience:
             - mcp://tier/external
           authenticated_groups_claim:
             - groups
-          # deck requires an explicit value or every sync would drift; salts
-          # token-cache keys only, not a credential
           cache_tokens_salt: mcp-lab-external-cache-salt
       - name: acl
         config:
           allow:
             - mcp-external-curated
           always_use_authenticated_groups: true
+
+  # Patient-facing access to the FHIR clinical server (Auth0 end customers).
+  # The server enforces the fhir_patient compartment; the tier wall is global.
+  - name: fhir-clinical
+    url: http://fhir-clinical:3000
+    routes:
+      - name: fhir-clinical-external
+        paths:
+          - /fhir-clinical
+        strip_path: true

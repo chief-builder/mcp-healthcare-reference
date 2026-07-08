@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fhir-clinical": {
+      "type": "http",
+      "url": "http://localhost:8100/fhir-clinical/mcp"
+    },
+    "scheduling": {
+      "type": "http",
+      "url": "http://localhost:8100/scheduling/mcp"
+    }
+  }
+}

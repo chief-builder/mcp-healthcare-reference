@@ -1,12 +1,47 @@
 # Internal tier (CP mcp-internal) — git is the source of truth.
 # Edit here, then: deck gateway sync deck/internal.yaml --konnect-... (see
-# compose/phase2/setup-phase2.sh). Never edit in the Konnect UI.
+# compose/phaseN/setup-phaseN.sh). Never edit in the Konnect UI.
 _format_version: "3.0"
 
+# Tier wall as a GLOBAL plugin so every route (including the first-party MCP
+# server routes) gets it. RFC 6750 semantics: a wrong-tier token is 401
+# invalid_token. Token-less requests pass through untouched, so unauthenticated
+# Protected Resource Metadata discovery on the MCP routes still works — the MCP
+# server itself issues the 401 + WWW-Authenticate challenge.
+plugins:
+  - name: pre-function
+    config:
+      access:
+        - |
+          local cjson = require "cjson.safe"
+          local auth = kong.request.get_header("authorization") or ""
+          local token = auth:match("^[Bb]earer%s+(.+)$")
+          if not token then return end -- no token: let the upstream challenge
+          local reject = function()
+            return kong.response.exit(401, { message = "token not valid for this tier" },
+              { ["WWW-Authenticate"] = 'Bearer realm="mcp-internal", error="invalid_token", error_description="tier audience mismatch"' })
+          end
+          local payload = token:match("^[^.]+%.([^.]+)%.")
+          if not payload then return reject() end
+          payload = payload:gsub("-", "+"):gsub("_", "/")
+          payload = payload .. string.rep("=", (4 - #payload % 4) % 4)
+          local raw = ngx.decode_base64(payload)
+          local claims = raw and cjson.decode(raw)
+          if not claims then return reject() end
+          local aud = claims.aud
+          if type(aud) == "string" then aud = { aud } end
+          for _, a in ipairs(aud or {}) do
+            if a == "mcp://tier/internal" then return end
+          end
+          return reject()
+
 services:
+  # Phase 2 placeholder: the tier wall + group ACL proven against HAPI directly.
+  # openid-connect here validates signature + tier audience and maps groups to
+  # the ACL. The Phase 3 MCP servers below are authoritative for their own
+  # audience / scope / group / compartment, so their routes only carry the
+  # global tier wall.
   - name: fhir-placeholder
-    # Phase 3 replaces this with the first-party MCP servers; until then the
-    # tier wall and ACLs are proven against HAPI directly.
     url: http://hapi:8081/fhir
     routes:
       - name: fhir-internal
@@ -14,55 +49,39 @@ services:
           - /fhir
         strip_path: true
     plugins:
-      # RFC 6750 semantics for the tier wall: wrong-audience is 401
-      # invalid_token, not 403 (the openid-connect plugin's audience check
-      # yields 403 insufficient_scope). Signature is still verified by the
-      # openid-connect plugin on every request; this only reads the claim.
-      # Same pattern as the production cnf pre-function (arch doc §A.4).
-      - name: pre-function
-        config:
-          access:
-            - |
-              local cjson = require "cjson.safe"
-              local auth = kong.request.get_header("authorization") or ""
-              local token = auth:match("^[Bb]earer%s+(.+)$")
-              if not token then return end -- openid-connect emits the 401 challenge
-              local reject = function()
-                return kong.response.exit(401, { message = "token not valid for this tier" },
-                  { ["WWW-Authenticate"] = 'Bearer realm="mcp-internal", error="invalid_token", error_description="tier audience mismatch"' })
-              end
-              local payload = token:match("^[^.]+%.([^.]+)%.")
-              if not payload then return reject() end
-              payload = payload:gsub("-", "+"):gsub("_", "/")
-              payload = payload .. string.rep("=", (4 - #payload % 4) % 4)
-              local raw = ngx.decode_base64(payload)
-              local claims = raw and cjson.decode(raw)
-              if not claims then return reject() end
-              local aud = claims.aud
-              if type(aud) == "string" then aud = { aud } end
-              for _, a in ipairs(aud or {}) do
-                if a == "mcp://tier/internal" then return end
-              end
-              return reject()
       - name: openid-connect
         config:
           issuer: http://keycloak:8080/realms/mcp-plane
-          # tokens are minted via localhost from the host; same realm, same
-          # keys — documented lab alias, exact-string matched
           issuers_allowed:
             - http://localhost:8080/realms/mcp-plane
           auth_methods:
             - bearer
-          # the cross-tier cryptographic wall (claims contract §4)
           audience:
             - mcp://tier/internal
           authenticated_groups_claim:
             - groups
-          # deck requires an explicit value or every sync would drift; salts
-          # token-cache keys only, not a credential
           cache_tokens_salt: mcp-lab-internal-cache-salt
       - name: acl
         config:
           allow:
             - mcp-clinical-tools
           always_use_authenticated_groups: true
+
+  # First-party MCP servers. strip_path leaves /mcp and /.well-known/* for the
+  # server; the server enforces its own resource audience, per-tool scope
+  # (step-up), group visibility, and (FHIR) patient compartment.
+  - name: fhir-clinical
+    url: http://fhir-clinical:3000
+    routes:
+      - name: fhir-clinical-internal
+        paths:
+          - /fhir-clinical
+        strip_path: true
+
+  - name: scheduling
+    url: http://scheduling:3000
+    routes:
+      - name: scheduling-internal
+        paths:
+          - /scheduling
+        strip_path: true

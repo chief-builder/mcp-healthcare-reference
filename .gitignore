@@ -11,3 +11,7 @@ __pycache__/
 .DS_Store
 compose/phase2/certs/
 compose/phase2/generated/
+compose/phase3/certs/
+compose/phase3/generated/
+servers/*/node_modules/
+servers/*/dist/
