@@ -654,6 +654,49 @@
         "mcp-idp-origin"
       ],
       "optionalClientScopes": []
+    },
+    {
+      "clientId": "mcp-agents.loop-agent",
+      "description": "Internal m2m loop agent (contract §6.3, Appendix A): SPIRE-issued SPIFFE cert, client-x509 auth, certificate-bound tokens. Lab stand-in for the Athenz path — no client secret exists anywhere.",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-x509",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false,
+      "attributes": {
+        "x509.subjectdn": "(.*)CN=loop-agent\\.mcp-agents\\.svc(.*)",
+        "x509.allow.regex.pattern.comparison": "true",
+        "tls.client.certificate.bound.access.tokens": "true"
+      },
+      "defaultClientScopes": [
+        "mcp-contract",
+        "mcp-tier-internal",
+        "srv-scheduling"
+      ],
+      "optionalClientScopes": [
+        "mcp:scheduling:hold-slot:execute",
+        "mcp:scheduling:confirm:execute"
+      ],
+      "protocolMappers": [
+        {
+          "name": "idp_origin",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "idp_origin",
+            "claim.value": "athenz",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ]
 }

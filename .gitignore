@@ -13,5 +13,7 @@ compose/phase2/certs/
 compose/phase2/generated/
 compose/phase3/certs/
 compose/phase3/generated/
+compose/phase4/certs/
+compose/phase4/generated/
 servers/*/node_modules/
 servers/*/dist/

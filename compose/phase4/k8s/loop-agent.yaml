@@ -1,0 +1,106 @@
+# The internal m2m loop agent (contract §6.3, Appendix A) — the acceptance
+# gate's subject. Deliberately auditable: this manifest contains NO Secret
+# references, no client secret, no token. Identity arrives via SPIRE workload
+# attestation (namespace + service account selectors); the spiffe-helper
+# sidecar keeps the short-lived SVID on a shared emptyDir, so rotation never
+# restarts the pod. The lab-ca ConfigMap (public cert, created by
+# setup-phase4.sh) is server-TLS trust, not a credential.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-agents
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loop-agent
+  namespace: mcp-agents
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spiffe-helper-config
+  namespace: mcp-agents
+data:
+  helper.conf: |
+    agent_address = "/run/spire/sockets/agent.sock"
+    cert_dir = "/svid"
+    svid_file_name = "svid.pem"
+    svid_key_file_name = "svid_key.pem"
+    svid_bundle_file_name = "svid_bundle.pem"
+    daemon_mode = true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loop-agent
+  namespace: mcp-agents
+  labels:
+    app: loop-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loop-agent
+  template:
+    metadata:
+      labels:
+        app: loop-agent
+    spec:
+      serviceAccountName: loop-agent
+      # One uid for both containers: spiffe-helper writes the SVID key 0600,
+      # and the agent must be able to read it off the shared volume.
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+      containers:
+        - name: spiffe-helper
+          image: ghcr.io/spiffe/spiffe-helper:0.10.0
+          args: ["-config", "/etc/spiffe-helper/helper.conf"]
+          volumeMounts:
+            - name: helper-config
+              mountPath: /etc/spiffe-helper
+              readOnly: true
+            - name: svid
+              mountPath: /svid
+            - name: spire-agent-socket
+              mountPath: /run/spire/sockets
+              readOnly: true
+        - name: agent
+          image: mcp-loop-agent:phase4
+          imagePullPolicy: Never
+          env:
+            - name: KC_TOKEN_URL
+              value: https://host.k3d.internal:8443/realms/mcp-plane/protocol/openid-connect/token
+            - name: MCP_URL
+              value: https://host.k3d.internal:8143/scheduling/mcp
+            - name: CLIENT_ID
+              value: mcp-agents.loop-agent
+            - name: SCOPE
+              value: mcp:scheduling:hold-slot:execute mcp:scheduling:confirm:execute
+            - name: SVID_DIR
+              value: /svid
+            - name: CA_BUNDLE
+              value: /lab-ca/lab-ca.crt
+            - name: INTERVAL
+              value: "15"
+          volumeMounts:
+            - name: svid
+              mountPath: /svid
+              readOnly: true
+            - name: lab-ca
+              mountPath: /lab-ca
+              readOnly: true
+      volumes:
+        - name: helper-config
+          configMap:
+            name: spiffe-helper-config
+        - name: svid
+          emptyDir: {}
+        - name: spire-agent-socket
+          hostPath:
+            path: /run/spire/sockets
+            type: Directory
+        - name: lab-ca
+          configMap:
+            name: lab-ca

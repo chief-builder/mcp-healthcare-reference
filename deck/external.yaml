@@ -46,6 +46,11 @@ services:
           issuer: http://keycloak:8080/realms/mcp-plane
           issuers_allowed:
             - http://localhost:8080/realms/mcp-plane
+          # Phase 4 pins KC_HOSTNAME, so discovery advertises jwks_uri at
+          # localhost:8080 — unreachable from inside the DP. Fetch the keys
+          # over the container network as well.
+          extra_jwks_uris:
+            - http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
           auth_methods:
             - bearer
           audience:
