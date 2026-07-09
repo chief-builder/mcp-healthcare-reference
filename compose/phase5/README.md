@@ -28,6 +28,22 @@ for), Issues read/write permission, then install it on your account. Put
 `./setup-phase5.sh`, and complete the one-time consent from the
 `authorize_uri` that `tests/phase5.sh`'s GitHub test prints when skipping.
 
+Real GitHub MCP tool names differ from mockhub's — the broker/DLP/injection
+machinery is vendor-agnostic, but tool contracts are per-vendor. GitHub's
+remote MCP server (`api.githubcopilot.com/mcp`, 47 tools) uses:
+
+| Intent | mockhub (lab) | real GitHub |
+|---|---|---|
+| create an issue | `create_issue` | `issue_write` with `method: "create"` |
+| update / close an issue | — | `issue_write` with `method: "update"`, `state: "closed"` |
+| read one issue | — | `issue_read` with `method: "get"` |
+| list issues | `list_issues` | `list_issues` (matches) |
+
+`issue_write`/`issue_read` require `method`, `owner`, `repo`; discover the
+full set with a `tools/list` call through `/egress/github`. Confirmed end to
+end: a real issue created and closed through resolve → DLP → vendor-token
+injection → GitHub, with one hub `jti` joining every hop (contract §9).
+
 Vault note: OpenBao runs in dev mode (in-memory, per plan §2 — file
 storage is a later hardening). Any vault restart wipes the broker token,
 vendor client creds, and all grants; re-run `./setup-phase5.sh` to
