@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP Healthcare Reference Overview</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2314213d'/%3E%3Cpath d='M17 34h30M32 19v30M21 23h22v22H21z' fill='none' stroke='%23ffffff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #14213d;
+      --muted: #526173;
+      --line: #d9e2ec;
+      --surface: #ffffff;
+      --wash: #f6f8fb;
+      --blue: #1f6feb;
+      --green: #278f58;
+      --teal: #0f8b8d;
+      --purple: #6f42c1;
+      --orange: #d97706;
+      --red: #c2410c;
+      --shadow: 0 18px 45px rgba(20, 33, 61, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--wash);
+      font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 58px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 28px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      font-size: clamp(2rem, 4.4vw, 4.45rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      font-size: clamp(1.55rem, 2.5vw, 2.4rem);
+      line-height: 1.08;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    p { color: var(--muted); }
+
+    .hero, .panel, .visual, .phase, .component, .callout {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .hero {
+      padding: clamp(24px, 4vw, 44px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 460px;
+    }
+
+    .hero p {
+      max-width: 65ch;
+      font-size: 1.08rem;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #23364d;
+      background: #f9fbfd;
+      font-size: 0.86rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .metric {
+      padding: 15px;
+      border-radius: 8px;
+      background: #f7fafc;
+      border: 1px solid #e5edf5;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.4rem;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .visual {
+      padding: 16px;
+      min-height: 460px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .visual img {
+      width: 100%;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .caption {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .image-explainer {
+      display: grid;
+      gap: 10px;
+      margin-top: 2px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+
+    .image-explainer h3 {
+      margin: 0;
+    }
+
+    .image-explainer ol {
+      margin: 0;
+      padding-left: 21px;
+      color: var(--muted);
+    }
+
+    .image-explainer li {
+      margin: 7px 0;
+    }
+
+    section { margin-top: 28px; }
+
+    .panel { padding: clamp(20px, 3vw, 30px); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .component {
+      box-shadow: none;
+      padding: 18px;
+      min-height: 180px;
+      border-top: 4px solid var(--blue);
+    }
+
+    .component:nth-child(2) { border-top-color: var(--green); }
+    .component:nth-child(3) { border-top-color: var(--purple); }
+    .component:nth-child(4) { border-top-color: var(--teal); }
+    .component:nth-child(5) { border-top-color: var(--orange); }
+    .component:nth-child(6) { border-top-color: var(--red); }
+    .component:nth-child(7) { border-top-color: var(--green); }
+    .component:nth-child(8) { border-top-color: var(--purple); }
+
+    .component ul, .phase ul {
+      padding-left: 19px;
+      margin: 12px 0 0;
+      color: var(--muted);
+    }
+
+    .component li, .phase li { margin: 7px 0; }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    header > *, .architecture > *, .two-col > * { min-width: 0; }
+
+    .swimlane {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 8px;
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 150px repeat(5, minmax(120px, 1fr));
+      align-items: center;
+      min-width: 780px;
+      gap: 8px;
+    }
+
+    .lane-title {
+      font-weight: 800;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+
+    .node {
+      min-height: 58px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: 750;
+      font-size: 0.86rem;
+      position: relative;
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      right: -11px;
+      width: 14px;
+      height: 2px;
+      background: #9cb6d3;
+    }
+
+    .node:last-child::after { display: none; }
+    .blue { border-color: #a5c7ff; background: #eff6ff; }
+    .green { border-color: #a6d9bd; background: #f0fff6; }
+    .purple { border-color: #c8b6ef; background: #f7f2ff; }
+    .teal { border-color: #9ad8da; background: #effdfe; }
+    .orange { border-color: #f5c889; background: #fff7ed; }
+
+    .callout {
+      box-shadow: none;
+      padding: 18px;
+      border-left: 5px solid var(--blue);
+    }
+
+    .callout strong {
+      color: var(--ink);
+    }
+
+    .invariants {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      counter-reset: invariant;
+    }
+
+    .invariant {
+      min-height: 176px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      padding: 15px;
+      counter-increment: invariant;
+    }
+
+    .invariant::before {
+      content: counter(invariant);
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      margin-bottom: 14px;
+      color: #fff;
+      background: var(--ink);
+      font-weight: 800;
+      font-size: 0.86rem;
+    }
+
+    .invariant p {
+      font-size: 0.9rem;
+      margin-bottom: 0;
+    }
+
+    .token-schema {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .claim {
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fbfdff;
+    }
+
+    code {
+      color: #0f427a;
+      background: #eef5ff;
+      border: 1px solid #d7e8ff;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 0.9em;
+    }
+
+    .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .phase {
+      box-shadow: none;
+      padding: 16px;
+      min-height: 230px;
+    }
+
+    .phase .number {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: white;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .phase-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .phase-head .number { margin-bottom: 0; }
+
+    .state {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .state.done {
+      color: #17603c;
+      background: #e9f9f0;
+      border: 1px solid #b7e5cb;
+    }
+
+    .state.next {
+      color: #92400e;
+      background: #fff7ed;
+      border: 1px solid #f5d9ac;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #edf4fb;
+      color: var(--ink);
+    }
+
+    td { color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      header, .architecture, .two-col { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .invariants, .phase-grid, .token-schema { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero { min-height: auto; }
+    }
+
+    @media (max-width: 640px) {
+      main { width: min(100% - 22px, 1180px); padding-top: 16px; }
+      .grid, .invariants, .phase-grid, .token-schema, .status-grid { grid-template-columns: 1fr; }
+      .panel, .hero { padding: 18px; }
+      .visual { padding: 10px; min-height: auto; }
+      .badge { white-space: normal; }
+      table {
+        display: block;
+        overflow-x: auto;
+        max-width: 100%;
+      }
+      th, td { min-width: 145px; }
+      th, td { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="hero">
+        <div>
+          <h1>Enterprise MCP Healthcare Reference</h1>
+          <p>
+            This repository is a home-lab reference implementation for a governed Model Context Protocol platform in a HIPAA-regulated setting. It combines architecture documents, Docker Compose phases, Keycloak realm fixtures, Kong gateway policy, stateless MCP servers, a vendor token broker, egress controls, and acceptance tests.
+          </p>
+          <p>
+            The core thesis is narrow and testable: every request to the MCP plane should carry a short-lived Keycloak-issued token with tier and server audiences, tool-level authorization should be enforced at both gateway and server layers, first-party servers should be stateless, SaaS egress should pass through DLP plus per-user vendor-token custody, and every hop should join in the audit spine on one <code>jti</code>.
+          </p>
+          <div class="badge-row" aria-label="Project tags">
+            <span class="badge">MCP 2026-07-28 stateless model</span>
+            <span class="badge">Keycloak single issuer</span>
+            <span class="badge">Kong gateway tiers</span>
+            <span class="badge">FHIR R4 synthetic data</span>
+            <span class="badge">Vendor token broker</span>
+            <span class="badge">DLP egress guardrail</span>
+            <span class="badge">jti-joinable audit spine</span>
+          </div>
+        </div>
+        <div class="status-grid" aria-label="Repository status">
+          <div class="metric"><strong>7 / 8</strong><span>phases complete, acceptance gates green (0–6)</span></div>
+          <div class="metric"><strong>7</strong><span>fidelity-contract properties enforced, never stubbed</span></div>
+          <div class="metric"><strong>2</strong><span>first-party MCP servers</span></div>
+          <div class="metric"><strong>3</strong><span>bespoke Kong plugins</span></div>
+        </div>
+      </div>
+      <aside class="visual">
+        <img src="assets/overview/platform-map.png" alt="Generated high-level platform map showing client, identity, gateway, MCP, and SaaS zones.">
+        <p class="caption">Generated visual aid. The precise labels and guarantees are stated in the sections below.</p>
+      </aside>
+    </header>
+
+    <section class="panel">
+      <h2>What The Project Is Proving</h2>
+      <div class="invariants">
+        <div class="invariant">
+          <h3>One MCP issuer</h3>
+          <p>Ping, Auth0, Athenz, and transitional homegrown identity paths normalize into Keycloak-issued MCP-plane JWTs.</p>
+        </div>
+        <div class="invariant">
+          <h3>PHI boundary discipline</h3>
+          <p>Gateway data planes, servers, broker, and audit stay inside customer-controlled infrastructure; egress is screened.</p>
+        </div>
+        <div class="invariant">
+          <h3>Stateless servers</h3>
+          <p>MCP request continuity is carried by explicit handles and request-local identity, not by protocol sessions.</p>
+        </div>
+        <div class="invariant">
+          <h3>Layered governance</h3>
+          <p>Identity policy governs connections; gateway ACLs and MCP server checks govern tool calls.</p>
+        </div>
+        <div class="invariant">
+          <h3>Planned exits</h3>
+          <p>Homegrown AS and brokered vendor tokens are transitional, with explicit migration paths to Athenz and EMA/ID-JAG.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="architecture">
+      <div class="panel">
+        <h2>Architecture Flow</h2>
+        <div class="swimlane" role="img" aria-label="Deterministic architecture swimlane">
+          <div class="lane">
+            <div class="lane-title">Workforce</div>
+            <div class="node blue">Claude Code / Codex / VS Code</div>
+            <div class="node green">Ping brokered by Keycloak</div>
+            <div class="node purple">Internal Kong DP</div>
+            <div class="node teal">Scheduling / FHIR MCP</div>
+            <div class="node orange">FHIR / EHR backend</div>
+          </div>
+          <div class="lane">
+            <div class="lane-title">Internal agents</div>
+            <div class="node blue">Loop agent workload</div>
+            <div class="node green">Athenz or SPIFFE cert path</div>
+            <div class="node purple">cnf-bound internal tier</div>
+            <div class="node teal">Tool call with scopes</div>
+            <div class="node orange">Shared state stores</div>
+          </div>
+          <div class="lane">
+            <div class="lane-title">Patients / third parties</div>
+            <div class="node blue">Patient app or partner client</div>
+            <div class="node green">Auth0 or native Keycloak client</div>
+            <div class="node purple">External Kong DP</div>
+            <div class="node teal">Curated MCP catalog</div>
+            <div class="node orange">Patient compartment only</div>
+          </div>
+          <div class="lane">
+            <div class="lane-title">SaaS egress</div>
+            <div class="node blue">Corporate MCP client</div>
+            <div class="node green">Hub JWT</div>
+            <div class="node purple">Egress DP: DLP + broker</div>
+            <div class="node teal">Vendor token injection</div>
+            <div class="node orange">SaaS MCP endpoint</div>
+          </div>
+          <div class="lane">
+            <div class="lane-title">Audit spine</div>
+            <div class="node blue">JSON audit record at every hop</div>
+            <div class="node green">Kong OTLP / Alloy log shipping</div>
+            <div class="node purple">OTel collector</div>
+            <div class="node teal">Loki + Tempo</div>
+            <div class="node orange">Grafana tuple, one query per jti</div>
+          </div>
+        </div>
+      </div>
+      <div class="callout">
+        <h2>Security Boundary</h2>
+        <p><strong>Tier replay is meant to fail.</strong> Tokens carry exactly one tier audience such as <code>mcp://tier/internal</code> or <code>mcp://tier/external</code>, plus one or more server resource audiences such as <code>mcp://srv/fhir-clinical</code>.</p>
+        <p><strong>The hub token stops at the validating component.</strong> MCP servers use their own backend credentials for FHIR calls, and the egress tier replaces the hub JWT with a vendor access token only after DLP and broker resolution.</p>
+        <p><strong>Audit is joinable by design.</strong> The shared tuple uses <code>jti</code>, <code>sub</code>, <code>act.sub</code>, <code>azp</code>, <code>idp_origin</code>, tier, tool, server, and decision — and phase 6 proves it: one Loki query keyed by <code>jti</code> walks a vendor call across gateway, DLP, and broker records.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Implemented Components In This Repo</h2>
+      <div class="grid">
+        <article class="component">
+          <h3>Identity Hub Fixtures</h3>
+          <p>Keycloak realm artifacts and phase setup scripts model the single-issuer contract and upstream identity normalization.</p>
+          <ul>
+            <li><code>realm/mcp-plane.json</code></li>
+            <li><code>compose/phase1/homegrown-issuer</code></li>
+            <li><code>tests/phase1</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Kong Gateway Plane</h3>
+          <p>Declarative gateway state and phase stacks separate internal, external, and egress concerns.</p>
+          <ul>
+            <li><code>deck/internal.yaml</code></li>
+            <li><code>deck/external.yaml</code></li>
+            <li><code>compose/phase2</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Generated FHIR MCP</h3>
+          <p>A TypeScript Streamable HTTP MCP server exposes a curated FHIR subset, validates OAuth protected-resource metadata, and re-checks audience and scopes.</p>
+          <ul>
+            <li><code>getPatient</code></li>
+            <li><code>patientEverything</code></li>
+            <li><code>searchObservation</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Hand-Built Scheduling MCP</h3>
+          <p>The scheduling server demonstrates stateless continuity with explicit <code>slot_hold_id</code> handles stored in Postgres.</p>
+          <ul>
+            <li><code>find-slots</code></li>
+            <li><code>hold-slot</code></li>
+            <li><code>confirm-hold</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Vendor Token Broker</h3>
+          <p>A FastAPI broker resolves per-user vendor tokens, performs consent with server-side state and PKCE, stores grants, revokes them, and serializes refresh races.</p>
+          <ul>
+            <li><code>/v1/tokens/resolve</code></li>
+            <li><code>/v1/authorize/{vendor}</code></li>
+            <li><code>/v1/callback/{vendor}</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Kong Policy Plugins</h3>
+          <p>Lua plugins enforce certificate-bound token checks, outbound DLP, and vendor-token injection on the egress route.</p>
+          <ul>
+            <li><code>cnf-check</code></li>
+            <li><code>dlp-egress</code></li>
+            <li><code>vendor-token</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Audit Spine</h3>
+          <p>Kong exports traces and plugin audit records over OTLP; Alloy ships every container's stdout JSON audit lines; Grafana provisions the jti-keyed tuple dashboard.</p>
+          <ul>
+            <li><code>compose/phase5/alloy</code></li>
+            <li><code>compose/phase0/grafana/provisioning</code></li>
+            <li><code>servers/*/src/audit.ts</code></li>
+          </ul>
+        </article>
+        <article class="component">
+          <h3>Mock Vendor + Gates</h3>
+          <p>A mockhub authorization server with rotating refresh tokens drives the consent, refresh-race, and revocation gates fully headless; each phase ends in a green suite.</p>
+          <ul>
+            <li><code>compose/phase5/mock-vendor</code></li>
+            <li><code>tests/phase5.sh</code></li>
+            <li><code>tests/phase6.sh</code></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="panel">
+        <h2>Claims Contract</h2>
+        <p>The contract is the project’s shared API between identity, gateway, servers, broker, and audit. It deliberately avoids email, names, or directory PII in access tokens.</p>
+        <div class="token-schema">
+          <div class="claim"><h3><code>iss</code></h3><p>Exact Keycloak realm issuer; all other issuers are rejected.</p></div>
+          <div class="claim"><h3><code>aud</code></h3><p>One tier audience plus server resource URIs.</p></div>
+          <div class="claim"><h3><code>scope</code></h3><p>Tool grammar such as <code>mcp:scheduling:hold-slot:execute</code>.</p></div>
+          <div class="claim"><h3><code>cnf</code></h3><p>Certificate thumbprint for mTLS-bound workload tokens.</p></div>
+          <div class="claim"><h3><code>fhir_patient</code></h3><p>Mandatory compartment claim on patient-facing Auth0-origin flows.</p></div>
+          <div class="claim"><h3><code>act</code></h3><p>On-behalf-of delegation chain for agents acting for users.</p></div>
+          <div class="claim"><h3><code>groups</code></h3><p>Normalized <code>mcp-*</code> role vocabulary.</p></div>
+          <div class="claim"><h3><code>jti</code></h3><p>Opaque join key for gateway, server, broker, and SIEM events.</p></div>
+        </div>
+      </div>
+      <div class="visual">
+        <img src="assets/overview/broker-flow.png" alt="Generated sequence visual for broker-mediated SaaS egress.">
+        <p class="caption">Generated visual aid for the broker and egress path.</p>
+        <div class="image-explainer">
+          <h3>How to read this image</h3>
+          <ol>
+            <li><strong>User starts an MCP tool call.</strong> The request reaches the gateway with the enterprise hub JWT.</li>
+            <li><strong>Gateway asks the broker for a vendor token.</strong> The enterprise JWT is used for identity inside the platform, not forwarded to the SaaS vendor.</li>
+            <li><strong>Missing consent starts OAuth.</strong> The broker manages the consent redirect, server-side state, and PKCE details.</li>
+            <li><strong>Broker stores credentials in vault.</strong> Vendor token material is custodied per user and refreshed by the broker.</li>
+            <li><strong>Retry goes through policy.</strong> The gateway resolves a live vendor token, applies DLP screening, then calls the vendor with the vendor token.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>SaaS Egress And Broker Sequence</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>Control</th>
+            <th>Why It Matters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Initial MCP call reaches egress DP</td>
+            <td>Hub JWT validated; egress route applies vendor allowlist and DLP before vendor-token injection.</td>
+            <td>Unapproved or PHI-like payloads should not leave the customer boundary.</td>
+          </tr>
+          <tr>
+            <td>Broker resolve</td>
+            <td>Kong calls <code>/v1/tokens/resolve</code> with the hub JWT; broker independently validates it and keys lookup by authoritative <code>sub</code>.</td>
+            <td>The broker is a credential custodian, not an issuer, and does not trust the gateway blindly.</td>
+          </tr>
+          <tr>
+            <td>Consent if missing</td>
+            <td>Broker creates opaque transaction state and a PKCE verifier, then sends the browser to the vendor authorization server.</td>
+            <td>Prevents account-binding and mix-up attacks while keeping vendor credentials off user devices.</td>
+          </tr>
+          <tr>
+            <td>Refresh when near expiry</td>
+            <td>Per <code>{vendor, sub}</code> single-flight locking and generation compare-and-swap guard rotating refresh tokens.</td>
+            <td>Concurrent refreshes should not burn a vendor token family.</td>
+          </tr>
+          <tr>
+            <td>Upstream vendor call</td>
+            <td>Kong replaces the hub Authorization header with the vendor access token.</td>
+            <td>The enterprise JWT is never forwarded to a SaaS MCP server.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Prototype Phases</h2>
+      <p>Phases 0–6 are complete and each acceptance gate (<code>tests/phaseN.sh</code>) is green on the current stack. Phase 7, the red-team weekend, is next.</p>
+      <div class="phase-grid">
+        <article class="phase">
+          <div class="phase-head"><div class="number">0</div><span class="state done">gate green</span></div>
+          <h3>Skeleton</h3>
+          <p>Compose stack with Keycloak, Postgres, HAPI FHIR, Grafana stack, synthetic patients, and realm export.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">1</div><span class="state done">gate green</span></div>
+          <h3>Identity Hub</h3>
+          <p>Brokered workforce and customer flows plus homegrown token exchange all produce contract-conformant Keycloak JWTs.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">2</div><span class="state done">gate green</span></div>
+          <h3>Gateway Tiers</h3>
+          <p>Internal and external data planes enforce tier audiences, route ACLs, cached config resilience, and git-managed changes.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">3</div><span class="state done">gate green</span></div>
+          <h3>First-Party MCP</h3>
+          <p>Generated FHIR MCP and hand-built scheduling MCP validate PRM, scopes, compartment rules, and statelessness.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">4</div><span class="state done">gate green</span></div>
+          <h3>Cert-Bound M2M</h3>
+          <p>SPIFFE or Athenz-style certs produce <code>cnf</code>-bound tokens and the Kong plugin rejects channel mismatch.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">5</div><span class="state done">gate green</span></div>
+          <h3>Egress + Broker</h3>
+          <p>Vendor consent, token custody, DLP checks, injection, revocation, and refresh-race tests make SaaS egress governable.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">6</div><span class="state done">gate green</span></div>
+          <h3>Audit Spine</h3>
+          <p>Gateway, server, broker, and identity events join by <code>jti</code> in one Loki query, with Kong traces in Tempo and a provisioned Grafana tuple dashboard.</p>
+        </article>
+        <article class="phase">
+          <div class="phase-head"><div class="number">7</div><span class="state next">next up</span></div>
+          <h3>Red-Team Weekend</h3>
+          <p>Cross-tier replay, scope probes, callback replay, issuer tampering, stale storms, and log leakage are exercised.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>How To Read The Repository</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Purpose</th>
+            <th>Start Here</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>docs/</code></td>
+            <td>Normative architecture, token contract, broker design, and lab phase plan.</td>
+            <td><code>docs/mcp-e2e-reference-architecture.md</code></td>
+          </tr>
+          <tr>
+            <td><code>compose/</code></td>
+            <td>Phase-specific Docker Compose environments and setup scripts.</td>
+            <td><code>compose/README.md</code></td>
+          </tr>
+          <tr>
+            <td><code>servers/</code></td>
+            <td>First-party MCP resource servers for FHIR clinical data and scheduling.</td>
+            <td><code>servers/fhir-clinical/src/mcp-server.ts</code></td>
+          </tr>
+          <tr>
+            <td><code>broker/</code></td>
+            <td>FastAPI vendor token broker with vault-backed storage and refresh controls.</td>
+            <td><code>broker/app/main.py</code></td>
+          </tr>
+          <tr>
+            <td><code>plugins/</code></td>
+            <td>Kong Lua plugins for certificate binding, DLP screening, and vendor-token injection.</td>
+            <td><code>plugins/cnf-check/handler.lua</code></td>
+          </tr>
+          <tr>
+            <td><code>tests/</code></td>
+            <td>Acceptance suites mapped to prototype phases; all gates 0–6 are green.</td>
+            <td><code>tests/phase5</code> and <code>tests/phase6</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Generated diagrams are stored in <code>assets/overview/</code>. This page is a static overview; architecture authority remains in <code>docs/</code> and the executable checks in <code>tests/</code>.
+    </footer>
+  </main>
+</body>
+</html>
