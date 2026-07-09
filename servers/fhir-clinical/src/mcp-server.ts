@@ -29,6 +29,7 @@ import {
   type ResourceServerConfig,
 } from './oauth-resource-server.js';
 import { authorize } from './authz-hook.js';
+import { auditToolCall } from './audit.js';
 
 // --- generation-time configuration (overridable via environment) -------------
 const HOST = process.env.HOST || '127.0.0.1';
@@ -404,6 +405,7 @@ export function createApp() {
     if (!tool || !tool.requiredScope) return next();
     const scopes = req.auth?.scopes || [];
     if (scopes.includes(tool.requiredScope)) return next();
+    auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, body?.params?.name, 'deny', 'insufficient_scope');
     res
       .status(403)
       .set('WWW-Authenticate',
@@ -414,6 +416,9 @@ export function createApp() {
   // Stateless MCP endpoint: authenticate, enforce tool scope, then a fresh
   // server+transport per request.
   app.post('/mcp', bearer, enforceToolScope, async (req: Request, res: Response) => {
+    if (req.body?.method === 'tools/call') {
+      auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, req.body?.params?.name, 'allow');
+    }
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     const server = buildMcpServer(req.auth);
     res.on('close', () => { transport.close(); server.close(); });

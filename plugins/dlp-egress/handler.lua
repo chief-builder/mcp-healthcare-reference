@@ -30,12 +30,12 @@ local function token_claims()
   return type(claims) == "table" and claims or {}
 end
 
-local function deny(reason, pattern_name)
+local function audit(level, decision, reason, pattern_name)
   local claims = token_claims()
   local route = kong.router.get_route()
-  kong.log.warn(cjson.encode({
+  kong.log[level](cjson.encode({
     audit = "dlp-egress",
-    decision = "deny",
+    decision = decision,
     reason = reason,
     pattern = pattern_name or ngx.null,
     token_id = claims.jti,
@@ -44,6 +44,10 @@ local function deny(reason, pattern_name)
     route = route and route.name or ngx.null,
     ts = ngx.now(),
   }))
+end
+
+local function deny(reason, pattern_name)
+  audit("warn", "deny", reason, pattern_name)
   return kong.response.exit(403, {
     error = "dlp_blocked",
     reason = reason,
@@ -67,6 +71,9 @@ function Dlp:access(conf)
       return deny("pattern_match", p.name)
     end
   end
+  -- Clean pass gets a verdict too: the phase 6 tuple must show that outbound
+  -- content WAS screened, not merely that nothing blocked it.
+  audit("notice", "allow", "screened", nil)
 end
 
 return Dlp

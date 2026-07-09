@@ -143,6 +143,10 @@ services:
       KONG_PLUGINS: bundled,cnf-check,dlp-egress,vendor-token
       KONG_LUA_PACKAGE_PATH: /opt/kong-plugins/?.lua;;
       KONG_STATUS_LISTEN: 0.0.0.0:8007
+      # Audit spine (phase 6): produce spans for the opentelemetry plugin
+      # (deck/internal.yaml) to export; sample everything — this is a lab.
+      KONG_TRACING_INSTRUMENTATIONS: "all"
+      KONG_TRACING_SAMPLING_RATE: "1.0"
     env_file:
       - path: ./generated/dp-internal.env
         required: false
@@ -171,6 +175,8 @@ services:
       KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: cjson.safe
       KONG_PROXY_LISTEN: 0.0.0.0:8000
       KONG_STATUS_LISTEN: 0.0.0.0:8007
+      KONG_TRACING_INSTRUMENTATIONS: "all"
+      KONG_TRACING_SAMPLING_RATE: "1.0"
     env_file:
       - path: ./generated/dp-external.env
         required: false
@@ -258,6 +264,20 @@ services:
       - tempo-data:/var/tempo
     ports:
       - "3200:3200"
+
+  # Audit spine (phase 6): ships every container's stdout/stderr to Loki via
+  # the Docker API — the broker, MCP servers, and mock vendor emit one JSON
+  # audit line per event on stdout by design (broker/app/audit.py), and this
+  # is how they reach the SIEM substitute. Kong's own audit records travel
+  # OTLP instead (opentelemetry plugin in deck/), unwrapped from the error log.
+  alloy:
+    image: grafana/alloy:v1.5.1
+    command: ["run", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
 
   grafana:
     image: grafana/grafana:11.4.0

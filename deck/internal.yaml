@@ -9,6 +9,16 @@ _format_version: "3.0"
 # Protected Resource Metadata discovery on the MCP routes still works — the MCP
 # server itself issues the 401 + WWW-Authenticate challenge.
 plugins:
+  # Audit spine (contract §9/§A.4, phase 6): every request's traces and the
+  # kong.log audit records the bespoke plugins emit (cnf-check, dlp-egress,
+  # vendor-token) leave via OTLP to the lab collector → Tempo/Loki. Requires
+  # KONG_TRACING_INSTRUMENTATIONS=all on the DP (compose/phase5).
+  - name: opentelemetry
+    config:
+      traces_endpoint: http://otel-collector:4318/v1/traces
+      logs_endpoint: http://otel-collector:4318/v1/logs
+      resource_attributes:
+        service.name: kong-internal
   # Cert-bound token enforcement (contract §8, phase 4): if a token carries
   # cnf.x5t#S256 it must arrive over mTLS with the matching client cert —
   # global, like the tier wall, because the certificate phase runs before

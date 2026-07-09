@@ -6,6 +6,14 @@ _format_version: "3.0"
 # Global external-tier wall (see deck/internal.yaml): 401 invalid_token for a
 # cross-tier replay; token-less requests pass so MCP PRM discovery works.
 plugins:
+  # Audit spine (contract §9/§A.4, phase 6): traces + kong.log records via
+  # OTLP to the lab collector → Tempo/Loki.
+  - name: opentelemetry
+    config:
+      traces_endpoint: http://otel-collector:4318/v1/traces
+      logs_endpoint: http://otel-collector:4318/v1/logs
+      resource_attributes:
+        service.name: kong-external
   - name: pre-function
     config:
       access:

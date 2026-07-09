@@ -23,6 +23,7 @@ import {
   createTokenVerifier,
   type ResourceServerConfig,
 } from './oauth-resource-server.js';
+import { auditToolCall } from './audit.js';
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -121,12 +122,16 @@ export function createApp() {
     const need = TOOL_SCOPE[req.body?.params?.name];
     if (!need) return next();
     if ((req.auth?.scopes || []).includes(need)) return next();
+    auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, req.body?.params?.name, 'deny', 'insufficient_scope');
     res.status(403)
       .set('WWW-Authenticate', `Bearer error="insufficient_scope", scope="${need}", resource_metadata="${resourceMetadataUrl}"`)
       .json({ error: 'insufficient_scope', scope: need });
   }
 
   app.post('/mcp', bearer, enforceToolScope, async (req: Request, res: Response) => {
+    if (req.body?.method === 'tools/call') {
+      auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, req.body?.params?.name, 'allow');
+    }
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     const server = buildMcpServer(req.auth);
     res.on('close', () => { transport.close(); server.close(); });

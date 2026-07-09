@@ -1,0 +1,107 @@
+{
+  "uid": "mcp-audit-tuple",
+  "title": "MCP Audit Tuple",
+  "description": "Contract §9 walk-back: paste a token jti and see the human, client, gateway decision, DLP verdict, broker resolve, and server/vendor action it produced. Kong records arrive via the opentelemetry plugin (OTLP), everything else as container-stdout JSON shipped by Alloy.",
+  "tags": ["mcp-lab", "audit"],
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "templating": {
+    "list": [
+      {
+        "name": "jti",
+        "label": "Token jti",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "logs",
+      "title": "Full tuple — every audit record carrying $jti",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending", "dedupStrategy": "none", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\".+\"} | json | __error__=\"\" | token_id=\"$jti\" or hub_jti=\"$jti\""
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "Gateway decisions (cnf-check / dlp-egress / vendor-token)",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 10 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\"kong-.+\"} | json | __error__=\"\" | token_id=\"$jti\""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "logs",
+      "title": "DLP verdicts (allow = screened clean, deny = blocked)",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 10 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\"kong-.+\"} | json | __error__=\"\" | audit=\"dlp-egress\" | token_id=\"$jti\""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Broker events (resolve / refresh / consent / revoke)",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 19 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=\"broker\"} | json | __error__=\"\" | hub_jti=\"$jti\""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "First-party MCP server tool calls",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 19 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\"fhir-clinical|scheduling\"} | json | __error__=\"\" | token_id=\"$jti\""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Security alerts (all jtis) — broker state/iss failures, cnf rejections, DLP blocks",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 28 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\".+\"} | json | __error__=\"\" | security_event=\"true\" or decision=\"deny\""
+        }
+      ]
+    }
+  ]
+}
