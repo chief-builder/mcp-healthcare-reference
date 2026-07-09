@@ -10,7 +10,8 @@ by the setup scripts and wired declaratively in `deck/internal.yaml`.
 - `dlp-egress/` — outbound DLP at the egress routes (phase 5): PCRE
   screening of tool arguments (MRN/SSN-grade patterns) before anything
   leaves for a vendor; blocks + audits by pattern NAME (never the matched
-  text); fail-closed on unscannable bodies.
+  text); fail-closed on unscannable bodies. Clean passes get an `allow`
+  verdict too (phase 6): the audit tuple must show content WAS screened.
 - `vendor-token/` — per-sub vendor credential injection (phase 5): calls
   the broker's resolve, swaps the upstream Authorization to the vendor
   token (the hub JWT never transits), and translates needs-consent into

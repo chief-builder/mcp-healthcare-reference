@@ -20,21 +20,28 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 5 complete (tests/phase5.sh green: consent dance → vendor MCP tool;
-planted MRN blocked + audited at the egress DP; 20 parallel resolves →
-exactly one vendor refresh (single-flight + generation CAS); DELETE /grants
-revokes at the vendor RFC 7009; plus state-replay/iss-mismatch security
-alerts, STALE→re-consent, fail-closed vault, no-issuance route audit;
-phases 0–4 still green on the phase5 stack). Egress + broker are live:
-Vendor Token Broker (broker/, per docs/vendor-token-broker-design.md) over
-OpenBao custody; dlp-egress + vendor-token bespoke Kong plugins on the
-egress routes; mockhub vendor AS (compose/phase5/mock-vendor) drives the
-gates headless; real GitHub leg activates when GITHUB_CLIENT_ID/SECRET set.
-Prior phases unchanged: cert-bound m2m (phase 4) = SPIRE in k3d → Keycloak
-client-x509 :8443 → Kong :8143 + plugins/cnf-check.
+Phase 6 complete (tests/phase6.sh green: one Loki query keyed by jti walks
+a vendor call back through vendor-token allow + dlp-egress verdict +
+broker.resolve; a planted-MRN block joins the same way; first-party
+tools/call carries the §9 tuple; Kong traces in Tempo; the "MCP Audit
+Tuple" Grafana dashboard is provisioned; no token material on the spine;
+phases 0–5 still green). The audit spine rides the phase5 stack (no
+compose/phase6): Kong DPs export traces + kong.log audit records via a
+global opentelemetry plugin in deck/*.yaml (KONG_TRACING_* env in
+compose); everything else (broker, servers, mock-vendor) emits one JSON
+audit line per event on stdout, shipped by Alloy
+(compose/phase5/alloy/config.alloy) over the Docker API to Loki. Grafana
+provisioning (datasources + tuple dashboard) = compose/phase0/grafana/.
+MCP servers emit §9 records per tools/call (servers/*/src/audit.ts);
+dlp-egress logs allow verdicts on clean passes too.
+Phase 5 unchanged: Vendor Token Broker (broker/) over OpenBao custody;
+dlp-egress + vendor-token plugins on the egress routes; mockhub vendor AS
+(compose/phase5/mock-vendor) drives the gates headless; real GitHub leg
+activates when GITHUB_CLIENT_ID/SECRET set. Cert-bound m2m (phase 4) =
+SPIRE in k3d → Keycloak client-x509 :8443 → Kong :8143 + plugins/cnf-check.
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
 Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
 Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
 broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
 First-party MCP servers = servers/; loop agent = agents/loop-agent.
-Phase 6 (audit spine — OTel → Loki/Tempo, jti tuple dashboard) not started.
+Phase 7 (red-team weekend, plan §3) not started.

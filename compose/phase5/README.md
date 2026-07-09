@@ -54,3 +54,26 @@ Memory note: same 8 GB Docker VM squeeze as phase 4 — seed with
 `PATIENT_COUNT=10`, or stop the k3d cluster during seeding. Under load the
 loop agent or HAPI can OOM-restart; `docker start mcp-phase5-hapi-1` and a
 loop-agent rollout restart recover them.
+
+## Phase 6 — audit spine (rides this stack)
+
+No new stack: phase 6 is telemetry wiring + the tuple dashboard on top of
+the phase 5 services.
+
+- **Kong DPs → OTLP**: a global `opentelemetry` plugin on both tiers
+  (deck/*.yaml) exports traces and the bespoke plugins' `kong.log` audit
+  records (cnf-check / dlp-egress / vendor-token) to the collector →
+  Tempo/Loki, unwrapped from the nginx error log. Needs
+  `KONG_TRACING_INSTRUMENTATIONS=all` (compose).
+- **Everything else → Alloy**: `alloy/config.alloy` tails every container
+  in this project over the Docker API and pushes to Loki. The broker, MCP
+  servers, and mock vendor emit one JSON audit line per event on stdout by
+  design, so a `service_name` label plus LogQL `| json` is the whole
+  parsing story.
+- **Grafana**: the "MCP Audit Tuple" dashboard is provisioned from
+  `compose/phase0/grafana/provisioning/dashboards/` — paste a token `jti`
+  and walk the human → client → gateway decision → DLP verdict → broker →
+  vendor/server action chain in one query.
+
+Bring-up: re-run `./setup-phase5.sh` (rebuilds servers, syncs deck, starts
+Alloy). Gate: `tests/phase6.sh`.
