@@ -98,6 +98,12 @@ services:
         paths:
           - /fhir-clinical
         strip_path: true
+    plugins:
+      # Coarse abuse ceiling; generous enough for interactive tool use.
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
 
   - name: scheduling
     url: http://scheduling:3000
@@ -106,6 +112,11 @@ services:
         paths:
           - /scheduling
         strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
 
   # ---- Egress tier (phase 5): brokered vendor routes ----
   # The service upstream IS the allowlist: only registered vendor hosts are
@@ -145,6 +156,10 @@ services:
           broker_url: http://broker:8300
           vendor: github
           min_ttl_s: 120
+      - name: rate-limiting
+        config:
+          minute: 120
+          policy: local
 
   - name: egress-mockhub
     url: http://mock-vendor:8310/mcp
@@ -178,3 +193,10 @@ services:
           broker_url: http://broker:8300
           vendor: mockhub
           min_ttl_s: 30
+          required_scopes:
+            - issues:read
+            - issues:write
+      - name: rate-limiting
+        config:
+          minute: 120
+          policy: local

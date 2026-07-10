@@ -71,6 +71,18 @@ def delete_entry(vendor: str, sub: str) -> None:
         raise VaultUnavailable(str(exc)) from exc
 
 
+def list_subs(vendor: str) -> list[str]:
+    """Subs with an entry under this vendor (KV v2 list). Empty if none."""
+    try:
+        resp = _client.secrets.kv.v2.list_secrets(
+            path=vendor, mount_point=TOKENS_MOUNT)
+    except hvac_exc.InvalidPath:
+        return []
+    except Exception as exc:
+        raise VaultUnavailable(str(exc)) from exc
+    return [k for k in resp["data"]["keys"] if not k.endswith("/")]
+
+
 def read_client(vendor: str) -> dict | None:
     """Per-vendor confidential client credential (design §3/§5)."""
     try:

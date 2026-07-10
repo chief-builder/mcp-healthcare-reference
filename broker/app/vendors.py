@@ -47,7 +47,9 @@ def get_vendor(vendor: str) -> dict | None:
 
 
 async def endpoints(vendor: str) -> dict:
-    """authorization_endpoint / token_endpoint / revocation_endpoint / issuer."""
+    """RFC 8414 metadata: authorization_endpoint / token_endpoint /
+    revocation_endpoint / issuer, plus authorization_response_iss_parameter_supported
+    (drives the RFC 9207 mix-up defense on the callback)."""
     spec = _registry[vendor]
     if "auth_metadata_url" in spec:
         if vendor not in _metadata_cache:

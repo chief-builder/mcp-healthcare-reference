@@ -57,6 +57,7 @@ function VendorToken:access(conf)
       sub = claims.sub,
       hub_jti = claims.jti,
       min_ttl_s = conf.min_ttl_s,
+      required_scopes = conf.required_scopes,
     }),
     headers = {
       ["Content-Type"] = "application/json",
@@ -82,6 +83,15 @@ function VendorToken:access(conf)
       authorize_uri = body.authorize_uri,
     }, { ["WWW-Authenticate"] =
            'Bearer realm="mcp-egress", error="invalid_token", error_description="vendor consent required"' })
+  end
+  -- Grant exists but lacks the tool's scopes: step-up re-consent (§4.1).
+  if res.status == 409 and body.authorize_uri then
+    audit("deny", conf, claims, { reason = "needs_reconsent_scope" })
+    return kong.response.exit(401, {
+      error = "authorization_required",
+      authorize_uri = body.authorize_uri,
+    }, { ["WWW-Authenticate"] =
+           'Bearer realm="mcp-egress", error="insufficient_scope", error_description="vendor re-consent required"' })
   end
   if res.status == 409 then
     audit("deny", conf, claims, { reason = body.title or "conflict" })

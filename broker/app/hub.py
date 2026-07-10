@@ -23,7 +23,13 @@ class HubAuthError(Exception):
 
 
 def validate(authorization: str | None) -> dict:
-    """Return verified claims of the Bearer hub JWT or raise HubAuthError."""
+    """Return verified claims of the Bearer hub JWT or raise HubAuthError.
+
+    Algorithms are pinned to the claims-contract §2 set (PS256 primary,
+    ES256 permitted; RS256 and all HMAC forbidden). Contract shape —
+    mcp_contract 1.0 and exactly one tier audience — is enforced here so a
+    malformed or cross-tier token never reaches the resolve path.
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HubAuthError("missing bearer token")
     token = authorization.split(None, 1)[1]
@@ -31,7 +37,7 @@ def validate(authorization: str | None) -> dict:
         key = _jwks.get_signing_key_from_jwt(token).key
         claims = jwt.decode(
             token, key,
-            algorithms=["PS256", "ES256", "RS256"],
+            algorithms=["PS256", "ES256"],
             issuer=HUB_ISSUER,
             audience=TIER_AUDIENCE,
             leeway=30,
@@ -39,4 +45,10 @@ def validate(authorization: str | None) -> dict:
         )
     except Exception as exc:  # jwt raises many subclasses; all mean 401
         raise HubAuthError(str(exc)) from exc
+    if claims.get("mcp_contract") != "1.0":
+        raise HubAuthError("unsupported mcp_contract")
+    aud = claims.get("aud", [])
+    aud = [aud] if isinstance(aud, str) else aud
+    if sum(a.startswith("mcp://tier/") for a in aud) != 1:
+        raise HubAuthError("token must carry exactly one tier audience")
     return claims

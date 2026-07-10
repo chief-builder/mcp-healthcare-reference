@@ -81,3 +81,9 @@ services:
         paths:
           - /fhir-clinical
         strip_path: true
+    plugins:
+      # Public tier: a tighter abuse ceiling than the internal DP.
+      - name: rate-limiting
+        config:
+          minute: 120
+          policy: local
