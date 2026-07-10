@@ -482,7 +482,7 @@
           </div>
         </div>
         <div class="status-grid" aria-label="Repository status">
-          <div class="metric"><strong>7 / 8</strong><span>phases complete, acceptance gates green (0–6)</span></div>
+          <div class="metric"><strong>8 / 8</strong><span>phases complete, acceptance gates green (0–7)</span></div>
           <div class="metric"><strong>7</strong><span>fidelity-contract properties enforced, never stubbed</span></div>
           <div class="metric"><strong>2</strong><span>first-party MCP servers</span></div>
           <div class="metric"><strong>3</strong><span>bespoke Kong plugins</span></div>
@@ -725,7 +725,7 @@
 
     <section class="panel">
       <h2>Prototype Phases</h2>
-      <p>Phases 0–6 are complete and each acceptance gate (<code>tests/phaseN.sh</code>) is green on the current stack. Phase 7, the red-team weekend, is next.</p>
+      <p>Phases 0–7 are complete and each acceptance gate (<code>tests/phaseN.sh</code>) is green on the current stack. Phase 7, the red-team weekend, ran the arch §13 acceptance list plus the named probes; its findings were filed as GitHub issues and remediated in code. Conformance targets the draft MCP 2026-07-28 model, not a final certification.</p>
       <div class="phase-grid">
         <article class="phase">
           <div class="phase-head"><div class="number">0</div><span class="state done">gate green</span></div>
@@ -763,9 +763,9 @@
           <p>Gateway, server, broker, and identity events join by <code>jti</code> in one Loki query, with Kong traces in Tempo and a provisioned Grafana tuple dashboard.</p>
         </article>
         <article class="phase">
-          <div class="phase-head"><div class="number">7</div><span class="state next">next up</span></div>
+          <div class="phase-head"><div class="number">7</div><span class="state done">gate green</span></div>
           <h3>Red-Team Weekend</h3>
-          <p>Cross-tier replay, scope probes, callback replay, issuer tampering, stale storms, and log leakage are exercised.</p>
+          <p>Cross-tier replay, scope probes, callback replay, issuer tampering, stale storms, and log leakage are exercised. Findings filed as issues and remediated in code.</p>
         </article>
       </div>
     </section>
@@ -808,7 +808,7 @@
           </tr>
           <tr>
             <td><code>tests/</code></td>
-            <td>Acceptance suites mapped to prototype phases; all gates 0–6 are green.</td>
+            <td>Acceptance suites mapped to prototype phases; all gates 0–7 are green.</td>
             <td><code>tests/phase5</code> and <code>tests/phase6</code></td>
           </tr>
         </tbody>

@@ -206,8 +206,16 @@ services:
       HUB_ISSUER: http://localhost:8080/realms/mcp-plane
       HUB_JWKS_URI: http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      MCP_ADMIN_ISSUER: http://localhost:8080/realms/mcp-plane
     ports:
       - "8300:8300"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8300/healthz').status==200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
     depends_on:
       - vault
       - keycloak

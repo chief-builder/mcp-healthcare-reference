@@ -18,7 +18,14 @@ README. Bring-up is per phase (`compose/phaseN/README.md`); the acceptance
 gate for each phase is `tests/phaseN.sh`.
 
 ## Status
-Phases 0–6 complete; all seven gates are green on the current stack. The
-phase 6 audit spine rides the phase 5 stack (`compose/phase5/README.md`) —
-one Loki query keyed by `jti` walks a vendor call across the gateway, DLP,
-and broker records. Phase 7 (red-team weekend) not started.
+Phases 0–7 complete; the gates are green on the current stack. The phase 6
+audit spine rides the phase 5 stack (`compose/phase5/README.md`) — one Loki
+query keyed by `jti` walks a vendor call across the gateway, DLP, and broker
+records. Phase 7 (red-team weekend) ran the arch §13 acceptance list plus the
+named probes; its findings were filed as GitHub issues in this repo and the
+remediation is folded back into the code (contract-exact token validation,
+per-resource patient scopes, outcome-accurate audit, RFC 9207 iss-omission
+defense, mass-STALE paging, broker scope minimization, and scheduling hold
+lifecycle). Conformance is to the **draft** MCP 2026-07-28 model, not a final
+certification; intentional lab substitutions are documented in
+`docs/prototype-plan.md` §2 and the claims contract §4.

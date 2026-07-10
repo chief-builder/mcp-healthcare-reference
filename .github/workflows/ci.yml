@@ -1,0 +1,64 @@
+name: ci
+
+# Offline checks only: TypeScript builds, Python compile, dependency audit, and
+# config/schema validation. The live-stack acceptance gates (tests/phaseN.sh)
+# need Konnect/Auth0/GitHub/Docker and stay manual integration gates.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-ts:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        server: [fhir-clinical, scheduling]
+    defaults:
+      run:
+        working-directory: servers/${{ matrix.server }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: servers/${{ matrix.server }}/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile broker, agent, and mock vendor
+        run: |
+          python -m py_compile \
+            broker/app/*.py \
+            agents/loop-agent/*.py \
+            compose/phase5/mock-vendor/*.py
+      - name: Import broker with its dependencies
+        run: |
+          pip install -r broker/requirements.txt
+          python -c "import ast; ast.parse(open('broker/app/main.py').read())"
+
+  validate-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Realm exports and vendor registry are valid JSON
+        run: |
+          python -c "import json,glob; [json.load(open(f)) for f in glob.glob('realm/*.json')]"
+          python -c "import json; json.load(open('broker/registry.json'))"
+      - name: decK gateway state is valid YAML
+        run: |
+          python -c "import yaml,glob; [yaml.safe_load(open(f)) for f in glob.glob('deck/*.yaml')]"
