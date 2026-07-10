@@ -67,7 +67,7 @@ docs/         architecture package (claims contract, broker design, e2e referenc
 compose/      phase 0–5 docker-compose stacks (phase4/ also carries the k3d/SPIRE manifests; phase5/ the mock vendor)
 realm/        keycloak realm exports (git-tracked identity config)
 deck/         Konnect/Kong declarative state
-plugins/      cnf-check + DLP Lua plugins
+plugins/      bespoke Kong Lua plugins: cnf-check, dlp-egress, vendor-token
 broker/       vendor token broker service
 servers/      first-party MCP servers (generated + hand-built)
 agents/       the internal loop agent
