@@ -30,6 +30,9 @@ SCOPE = os.environ.get("SCOPE", "mcp:scheduling:hold-slot:execute mcp:scheduling
 SVID_DIR = os.environ.get("SVID_DIR", "/svid")
 CA_BUNDLE = os.environ.get("CA_BUNDLE", "/lab-ca/lab-ca.crt")
 INTERVAL = float(os.environ.get("INTERVAL", "15"))
+# Book against the workload's own provider so its slot namespace never collides
+# with the acceptance tests' (both otherwise default to the same catalogue slot).
+PROVIDER = os.environ.get("SCHED_PROVIDER", "loop-agent")
 
 CERT = (f"{SVID_DIR}/svid.pem", f"{SVID_DIR}/svid_key.pem")
 ACCEPT = "application/json, text/event-stream"
@@ -97,7 +100,7 @@ def iteration() -> None:
     if bound != x5t:
         raise RuntimeError(f"token cnf {bound} does not match presented cert {x5t}")
 
-    slots = call_tool(token, "find-slots", {})
+    slots = call_tool(token, "find-slots", {"provider": PROVIDER})
     hold = call_tool(token, "hold-slot", {"slot_id": slots[0]["slot_id"]})
     call_tool(token, "release-hold", {"slot_hold_id": hold["slot_hold_id"]})
 
