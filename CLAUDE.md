@@ -44,4 +44,12 @@ Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
 Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
 broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
 First-party MCP servers = servers/; loop agent = agents/loop-agent.
-Phase 7 (red-team weekend, plan §3) not started.
+Phase 7 (red-team weekend, plan §3) run once: tests/phase7.sh green (18
+passed, 2 xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker
+state replay, RFC 9207 iss tamper, per-entry STALE, token-in-log grep,
+broker no-issuance all hold. Three findings filed as GitHub issues: #1
+(High) broker skips RFC 9207 iss check when the callback omits iss — mix-up
+bypass; #2 (Med) no mass-STALE/page signal on org-app uninstall; #3 (Low)
+external-tier CIMD origin-allowlist control not implemented. The two open
+gaps are the xfail(strict) probes in tests/phase7/. Note: HAPI may be
+OOM-down (Exited 137) in a tight Docker VM — restart before FHIR gates.
