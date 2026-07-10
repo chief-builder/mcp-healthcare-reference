@@ -5,11 +5,10 @@ cross-tier replay, scope-ceiling, broker `state` replay, RFC 9207 `iss`
 tampering/omission, STALE-storm, and a token-in-log grep; plus the CIMD
 external-tier experiment and the broker no-issuance rule.
 
-Passing test = defense held. Two probes are marked xfail(strict): they
-assert the behavior the design requires, which the lab does not yet meet —
-each is filed as a GitHub issue named in the marker reason. When a gap is
-closed the xfail flips to XPASS (a hard failure), which is the reminder to
-delete the marker.
+Passing test = defense held. The RFC 9207 iss-omission and mass-STALE probes
+(GitHub #1, #2) were xfail(strict) gaps; both are now fixed and asserted as
+real defenses. The remaining known gap is the external-tier CIMD control
+(#3), which its probe asserts as the secure outcome the realm already gives.
 """
 import base64
 import hashlib
@@ -133,13 +132,6 @@ def test_iss_tampering_is_rejected_and_alerts(alice):
         "iss tampering did not raise a security_event"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "FINDING #1 (RFC 9207 iss omission): mockhub advertises "
-    "authorization_response_iss_parameter_supported=true, so a callback with "
-    "NO iss param must be rejected before redeeming the code. The broker's "
-    "guard (`iss is not None`) skips the check and proceeds to redeem — "
-    "mix-up defense bypassed. Desired behavior mirrors the tamper case: a 400 "
-    "issuer rejection, not a 502 that reveals the code was submitted."))
 def test_iss_omission_is_rejected_when_vendor_advertises_iss(alice):
     meta = requests.get(
         f"{MOCK}/.well-known/oauth-authorization-server", timeout=10).json()
@@ -175,12 +167,6 @@ def test_stale_storm_marks_each_entry_and_audits(env):
     assert len(subs) >= 2, f"expected ≥2 distinct STALE subs, got {subs}"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "FINDING #2 (no mass-STALE detection): design §8/§10 and arch §9 "
-    "require a burst of STALEs for one vendor (≥3/min) to raise a mass-stale "
-    "'page' anomaly. The broker emits only per-entry broker.stale; no "
-    "aggregate/page signal is produced, so the org-uninstall case is invisible "
-    "to the anomaly layer."))
 def test_stale_storm_raises_mass_stale_signal(env):
     mock_reset()
     tokens = [login(env, u) for u in ("dr-alice", "bob-analyst")]

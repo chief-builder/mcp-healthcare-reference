@@ -4,10 +4,9 @@ Drives the running phase-5 stack + phase-6 audit spine. Reuses the phase-1
 OIDC flow drivers and mirrors the phase-5/6 broker + audit helpers so the
 red-team probes read the same way the acceptance gates do.
 
-A passing test here means the defense held. Probes that document a
-confirmed gap are marked xfail(strict) with the filed issue in the reason,
-so the gate stays green while the finding stays visible — and flips to a
-failure (XPASS) the day the gap is fixed and the marker should be removed.
+A passing test here means the defense held. The two former xfail(strict)
+gaps (GitHub #1 iss-omission, #2 mass-STALE) are now fixed and asserted as
+real defenses; no strict-xfail probes remain.
 """
 import base64
 import json
