@@ -73,6 +73,20 @@ A token's `aud` MUST contain exactly one tier audience and one or more server UR
 
 Clients request server URIs via the `resource` parameter at the token endpoint; Keycloak client policy caps which URIs each client may request.
 
+> **Lab deviation (documented, GitHub #13).** RFC 8707 / the MCP authorization
+> spec expect the resource indicator to be the server's canonical **HTTPS
+> endpoint URL** (e.g. `https://fhir.example/mcp`), and RFC 9728 metadata to be
+> served at the path-inserted well-known URI. This reference implementation uses
+> opaque `mcp://tier/*` and `mcp://srv/*` URIs as the two-level audience instead.
+> The property under test — a token minted for one tier/server failing
+> cryptographic validation at another — is fully preserved; what is consciously
+> lost is out-of-the-box interop with clients that derive the `resource`
+> parameter from the endpoint URL. The MCP servers now serve their PRM at the
+> path-inserted URI (`/.well-known/oauth-protected-resource/mcp`, with the root
+> path kept as an alias) so discovery is spec-shaped even though the resource
+> value is not an HTTPS URL. Migrating to endpoint-URL resources is a major
+> contract version (Section 11) and is tracked in issue #13.
+
 ## 5. Scope grammar
 
 ```

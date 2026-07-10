@@ -37,6 +37,11 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://${HOST}:${PORT}`;
 const UPSTREAM_BASE_URL = process.env.UPSTREAM_BASE_URL || 'http://hapi:8081/fhir';
 const UPSTREAM_AUTH_MODE: string = 'none'; // none | env-credential | passthrough
+// Upstream guardrails: bound the fan-out (_count), the wait (timeout), and the
+// response we buffer, so one tool call can't exhaust the server or HAPI.
+const MAX_FHIR_COUNT = parseInt(process.env.MAX_FHIR_COUNT || '100', 10);
+const UPSTREAM_TIMEOUT_MS = parseInt(process.env.UPSTREAM_TIMEOUT_MS || '10000', 10);
+const MAX_UPSTREAM_BYTES = parseInt(process.env.MAX_UPSTREAM_BYTES || '2000000', 10);
 
 const REQUIRED_SCOPES = (process.env.MCP_REQUIRED_SCOPES ?? '')
   .split(',').map((s) => s.trim()).filter(Boolean);
@@ -66,6 +71,9 @@ interface ToolDescriptor {
   bodyParams: string[];
   requiredScope?: string;
   requiredGroup?: string;
+  /** Scope a patient-origin token (fhir_patient present) must hold for this
+   *  tool's resource type (contract §3/§6.5). Not required of workforce tokens. */
+  requiredPatientScope?: string;
 }
 const TOOLS: ToolDescriptor[] = [
   {
@@ -97,7 +105,8 @@ const TOOLS: ToolDescriptor[] = [
       "id"
     ],
     "queryParams": [],
-    "bodyParams": []
+    "bodyParams": [],
+    "requiredPatientScope": "patient/Patient.read"
   },
   {
     "name": "patientEverything",
@@ -168,7 +177,8 @@ const TOOLS: ToolDescriptor[] = [
       "code",
       "_count"
     ],
-    "bodyParams": []
+    "bodyParams": [],
+    "requiredPatientScope": "patient/Observation.read"
   },
   {
     "name": "searchCondition",
@@ -201,7 +211,8 @@ const TOOLS: ToolDescriptor[] = [
       "patient",
       "_count"
     ],
-    "bodyParams": []
+    "bodyParams": [],
+    "requiredPatientScope": "patient/Condition.read"
   },
   {
     "name": "searchMedicationRequest",
@@ -234,7 +245,8 @@ const TOOLS: ToolDescriptor[] = [
       "patient",
       "_count"
     ],
-    "bodyParams": []
+    "bodyParams": [],
+    "requiredPatientScope": "patient/MedicationRequest.read"
   }
 ];
 const TOOLS_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
@@ -300,7 +312,15 @@ async function callUpstream(tool: ToolDescriptor, args: Record<string, any>, cal
   }
   const query = new URLSearchParams();
   for (const q of tool.queryParams) {
-    if (args[q] !== undefined) query.set(q, String(args[q]));
+    if (args[q] === undefined) continue;
+    // Clamp _count so a caller can't ask HAPI for an unbounded page.
+    if (q === '_count') {
+      const n = Math.trunc(Number(args[q]));
+      if (!Number.isFinite(n) || n < 1) throw new Error('_count must be a positive integer');
+      query.set(q, String(Math.min(n, MAX_FHIR_COUNT)));
+    } else {
+      query.set(q, String(args[q]));
+    }
   }
   const qs = query.toString();
   const url = `${UPSTREAM_BASE_URL}${path}${qs ? `?${qs}` : ''}`;
@@ -314,11 +334,45 @@ async function callUpstream(tool: ToolDescriptor, args: Record<string, any>, cal
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(url, { method: tool.method, headers, body });
-  const text = await res.text();
-  let data: unknown = text;
-  try { data = JSON.parse(text); } catch { /* non-JSON upstream body */ }
-  return { ok: res.ok, status: res.status, data };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  let res: Awaited<ReturnType<typeof fetch>>;
+  try {
+    res = await fetch(url, { method: tool.method, headers, body, signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timer);
+    if ((err as Error)?.name === 'AbortError') throw new Error('upstream request timed out');
+    throw err;
+  }
+  try {
+    const text = await readCapped(res, MAX_UPSTREAM_BYTES);
+    let data: unknown = text;
+    try { data = JSON.parse(text); } catch { /* non-JSON upstream body */ }
+    return { ok: res.ok, status: res.status, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Read the body but stop once the cap is exceeded, so an oversized upstream
+// response can't blow up the server's memory. (Fetch Response, not Express's.)
+async function readCapped(res: Awaited<ReturnType<typeof fetch>>, maxBytes: number): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return res.text();
+  const decoder = new TextDecoder();
+  let out = '';
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error(`upstream response exceeded ${maxBytes} bytes`);
+    }
+    out += decoder.decode(value, { stream: true });
+  }
+  return out + decoder.decode();
 }
 
 // --- MCP server (fresh per request; stateless) -------------------------------
@@ -337,10 +391,29 @@ function buildMcpServer(auth?: AuthInfo): McpServer {
         annotations: tool.annotations as any,
       },
       async (args: Record<string, any>) => {
-        // Optional per-request authorization hook (e.g. data compartment filter);
-        // may throw {status,message} or return mutated args.
-        args = await authorize({ auth, tool, args });
-        const result = await callUpstream(tool, args, auth?.token);
+        // Audit reflects the FINAL outcome (contract §9): allow only after a
+        // successful upstream read; deny for compartment/validation/upstream
+        // failures. No request bodies or token material are logged.
+        try {
+          // Optional per-request authorization hook (e.g. data compartment filter);
+          // may throw {status,message} or return mutated args.
+          args = await authorize({ auth, tool, args });
+        } catch (err) {
+          auditToolCall(RESOURCE_CONFIG.resourceUri, auth, tool.name, 'deny', 'compartment');
+          throw err;
+        }
+        let result;
+        try {
+          result = await callUpstream(tool, args, auth?.token);
+        } catch (err) {
+          auditToolCall(RESOURCE_CONFIG.resourceUri, auth, tool.name, 'deny', 'upstream_error');
+          return {
+            content: [{ type: 'text' as const, text: (err as Error).message }],
+            isError: true,
+          };
+        }
+        auditToolCall(RESOURCE_CONFIG.resourceUri, auth, tool.name,
+          result.ok ? 'allow' : 'deny', result.ok ? undefined : `upstream_${result.status}`);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result.data, null, 2) }],
           isError: !result.ok,
@@ -380,14 +453,16 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(securityGuard);
 
-  const resourceMetadataUrl = `${PUBLIC_BASE_URL}/.well-known/oauth-protected-resource`;
+  // RFC 9728 path-insertion: the MCP endpoint is /mcp, so its metadata lives at
+  // /.well-known/oauth-protected-resource/mcp. Challenges point here; the root
+  // path is kept as a back-compat alias.
+  const resourceMetadataUrl = `${PUBLIC_BASE_URL}/.well-known/oauth-protected-resource/mcp`;
 
   // Protected Resource Metadata (RFC 9728) — public, no auth.
   // metadataHandler returns a Router serving GET '/', so mount with app.use.
-  app.use(
-    '/.well-known/oauth-protected-resource',
-    metadataHandler(buildProtectedResourceMetadata(RESOURCE_CONFIG)),
-  );
+  const prm = metadataHandler(buildProtectedResourceMetadata(RESOURCE_CONFIG));
+  app.use('/.well-known/oauth-protected-resource/mcp', prm);
+  app.use('/.well-known/oauth-protected-resource', prm);
 
   const bearer = requireBearerAuth({
     verifier: createTokenVerifier(RESOURCE_CONFIG),
@@ -402,23 +477,28 @@ export function createApp() {
     const body = req.body;
     if (!body || body.method !== 'tools/call') return next();
     const tool = TOOLS_BY_NAME.get(body?.params?.name);
-    if (!tool || !tool.requiredScope) return next();
+    if (!tool) return next();
     const scopes = req.auth?.scopes || [];
-    if (scopes.includes(tool.requiredScope)) return next();
+    // A patient-origin token (fhir_patient present) must carry the per-resource
+    // patient scope for this tool (contract §3/§6.5). Workforce tokens are
+    // governed by group ACLs and keep floor-read access (no patient scope).
+    const isPatient = (req.auth?.extra as any)?.fhir_patient !== undefined;
+    const required = tool.requiredScope
+      ?? (isPatient ? tool.requiredPatientScope : undefined);
+    if (!required || scopes.includes(required)) return next();
     auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, body?.params?.name, 'deny', 'insufficient_scope');
     res
       .status(403)
       .set('WWW-Authenticate',
-        `Bearer error="insufficient_scope", scope="${tool.requiredScope}", resource_metadata="${resourceMetadataUrl}"`)
-      .json({ error: 'insufficient_scope', scope: tool.requiredScope });
+        `Bearer error="insufficient_scope", scope="${required}", resource_metadata="${resourceMetadataUrl}"`)
+      .json({ error: 'insufficient_scope', scope: required });
   }
 
   // Stateless MCP endpoint: authenticate, enforce tool scope, then a fresh
   // server+transport per request.
   app.post('/mcp', bearer, enforceToolScope, async (req: Request, res: Response) => {
-    if (req.body?.method === 'tools/call') {
-      auditToolCall(RESOURCE_CONFIG.resourceUri, req.auth, req.body?.params?.name, 'allow');
-    }
+    // The tools/call outcome is audited inside the tool handler (allow only on
+    // success), so nothing is logged here before the work runs.
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     const server = buildMcpServer(req.auth);
     res.on('close', () => { transport.close(); server.close(); });

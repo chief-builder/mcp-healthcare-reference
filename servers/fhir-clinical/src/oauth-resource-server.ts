@@ -64,12 +64,29 @@ export function createTokenVerifier(config: ResourceServerConfig): OAuthTokenVer
         ({ payload } = await jwtVerify(token, jwks, {
           issuer: expectedIssuer,
           audience: config.resourceUri, // RFC 8707 audience binding
+          // Claims-contract §2: PS256 primary, ES256 permitted; RS256 and all
+          // HMAC forbidden. Pinning here refuses a token signed with anything else.
+          algorithms: ['PS256', 'ES256'],
         }));
       } catch (err) {
-        // Wrong signature, wrong issuer, expired, OR wrong audience all land here.
+        // Wrong signature/issuer/expiry/audience OR a forbidden alg land here.
         throw new InvalidTokenError(
           err instanceof Error ? err.message : 'token verification failed',
         );
+      }
+
+      // Claims-contract shape checks (defense in depth; the DP validates too).
+      if (payload.mcp_contract !== '1.0') {
+        throw new InvalidTokenError('unsupported or missing mcp_contract');
+      }
+      const aud = Array.isArray(payload.aud) ? payload.aud : payload.aud ? [payload.aud] : [];
+      if (aud.filter((a: unknown) => typeof a === 'string' && a.startsWith('mcp://tier/')).length !== 1) {
+        throw new InvalidTokenError('token must carry exactly one tier audience');
+      }
+      // fhir_patient is a PII claim: mandatory on the Auth0 end-customer path,
+      // FORBIDDEN on every other path (contract §3). Reject it anywhere else.
+      if (payload.fhir_patient !== undefined && payload.idp_origin !== 'auth0') {
+        throw new InvalidTokenError('fhir_patient is forbidden on non-patient tokens');
       }
 
       const scopes =
