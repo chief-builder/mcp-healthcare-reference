@@ -44,12 +44,31 @@ Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
 Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
 broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
 First-party MCP servers = servers/; loop agent = agents/loop-agent.
-Phase 7 (red-team weekend, plan §3) run once: tests/phase7.sh green (18
-passed, 2 xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker
-state replay, RFC 9207 iss tamper, per-entry STALE, token-in-log grep,
-broker no-issuance all hold. Three findings filed as GitHub issues: #1
-(High) broker skips RFC 9207 iss check when the callback omits iss — mix-up
-bypass; #2 (Med) no mass-STALE/page signal on org-app uninstall; #3 (Low)
-external-tier CIMD origin-allowlist control not implemented. The two open
-gaps are the xfail(strict) probes in tests/phase7/. Note: HAPI may be
-OOM-down (Exited 137) in a tight Docker VM — restart before FHIR gates.
+Phase 7 (red-team weekend, plan §3): tests/phase7.sh green (20 passed, 0
+xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker state
+replay, RFC 9207 iss tamper/omission, per-entry + mass STALE, token-in-log
+grep, broker no-issuance all hold.
+
+An external review (sol-rec.md, since triaged) drove a remediation pass —
+all gates 0–7 green after it. Landed: contract-exact token validation
+(broker + servers pin PS256/ES256, drop RS256, enforce mcp_contract +
+exactly-one tier aud + forbidden fhir_patient); per-resource patient scopes
+(realm + fhir server); outcome-accurate audit (allow only after success);
+FHIR _count/timeout/size guardrails; broker RFC 9207 iss-omission defense
+(#1), mass-STALE paging (#2), required_scopes + 409 needs-reconsent-scope
+(#9), background sweeper (#10, no Redis — single-replica scoping kept);
+scheduling hold lifecycle (#12, held-only uniqueness + pg advisory-lock
+migration; loop agent books its own SCHED_PROVIDER namespace); PRM at the
+path-inserted well-known URI + documented mcp:// deviation (#13); ops batch
+(#14: Kong rate-limits, broker compose healthcheck, multi-stage non-root
+Node images, .github/workflows/ci.yml, refreshed README/overview, authed
+broker admin GET). GitHub #1,#2,#4-#7,#9-#14 closed. Still open: #3 (Low,
+external-tier CIMD control — tracked gap) and #8 (MCP 2026-07-28 wire
+migration to @modelcontextprotocol/server@2.0 — deferred off an unstable
+12h-old beta; statelessness already holds on SDK 1.29). Applying the
+gateway-side changes live needs setup-phase5.sh (vendor-token schema
+re-register + deck sync + internal DP restart); the realm scope additions
+need a realm re-import (not done live — avoids a destructive re-import of
+the Auth0-federated user). Note: HAPI may be OOM-down (Exited 137) in a
+tight Docker VM — restart before FHIR gates; stopping k3d frees enough RAM
+for it to stay up.
