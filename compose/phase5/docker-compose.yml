@@ -41,7 +41,7 @@ services:
       KC_TRACING_ENABLED: "true"
       KC_TRACING_ENDPOINT: http://otel-collector:4317
       KC_TRACING_SERVICE_NAME: keycloak
-      KC_FEATURES: token-exchange:v1,admin-fine-grained-authz:v1
+      KC_FEATURES: token-exchange:v1,admin-fine-grained-authz:v1,dpop
       # Cert-bound m2m (contract §6.3): mTLS-capable HTTPS listener. The
       # truststore is the lab CA that signs SPIRE's intermediate, so SVID
       # chains validate at the TLS layer before client-x509 matching runs.
@@ -140,8 +140,10 @@ services:
       KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
       KONG_SSL_CERT: /certs/kong-internal.crt
       KONG_SSL_CERT_KEY: /certs/kong-internal.key
-      KONG_PLUGINS: bundled,cnf-check,dlp-egress,vendor-token
+      KONG_PLUGINS: bundled,cnf-check,dlp-egress,vendor-token,dpop-check
       KONG_LUA_PACKAGE_PATH: /opt/kong-plugins/?.lua;;
+      # DPoP proof replay cache (dpop-check); single-entry DP → authoritative.
+      KONG_NGINX_HTTP_LUA_SHARED_DICT: "dpop_jti 5m"
       KONG_STATUS_LISTEN: 0.0.0.0:8007
       # Audit spine (phase 6): produce spans for the opentelemetry plugin
       # (deck/internal.yaml) to export; sample everything — this is a lab.
@@ -155,6 +157,7 @@ services:
       - ../../plugins/cnf-check:/opt/kong-plugins/kong/plugins/cnf-check:ro
       - ../../plugins/dlp-egress:/opt/kong-plugins/kong/plugins/dlp-egress:ro
       - ../../plugins/vendor-token:/opt/kong-plugins/kong/plugins/vendor-token:ro
+      - ../../plugins/dpop-check:/opt/kong-plugins/kong/plugins/dpop-check:ro
     ports:
       - "8100:8000"
       - "8143:8443"

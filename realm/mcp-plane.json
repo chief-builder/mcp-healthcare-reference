@@ -669,6 +669,40 @@
       ]
     },
     {
+      "clientId": "workforce-dpop",
+      "description": "Workforce DPoP client (RFC 9449, contract §6.6); parallel to claude-code, which stays bearer (gap register). dpop.bound.access.tokens stamps cnf.jkt.",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://localhost:8765/*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "dpop.bound.access.tokens": "true",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "basic-claims",
+        "mcp-contract",
+        "mcp-tier-internal",
+        "mcp-groups",
+        "mcp-amr",
+        "mcp-idp-origin",
+        "srv-fhir-clinical",
+        "srv-scheduling"
+      ],
+      "optionalClientScopes": [
+        "mcp:fhir-clinical:everything:read",
+        "mcp:scheduling:hold-slot:execute",
+        "mcp:scheduling:confirm:execute",
+        "egress-github",
+        "egress-mockhub"
+      ]
+    },
+    {
       "clientId": "patient-agent",
       "description": "Patient-facing agent client (contract §6.5, Auth0-brokered end customers)",
       "protocol": "openid-connect",

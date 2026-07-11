@@ -35,7 +35,7 @@ services:
       KC_TRACING_SERVICE_NAME: keycloak
       # explicit :v1 — the legacy external->internal exchange needs V1 FGAP;
       # unversioned names resolve to V2 on KC 26.2+
-      KC_FEATURES: token-exchange:v1,admin-fine-grained-authz:v1
+      KC_FEATURES: token-exchange:v1,admin-fine-grained-authz:v1,dpop
       # realm-import placeholder substitution
       PHASE0_CLIENT_SECRET: ${PHASE0_CLIENT_SECRET}
       FAKE_PING_PASSWORD: ${FAKE_PING_PASSWORD}

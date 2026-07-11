@@ -59,4 +59,24 @@ $KCADM get users/profile -r mcp-plane \
   | jq '.unmanagedAttributePolicy = "ADMIN_EDIT"' \
   | $KCADM update users/profile -r mcp-plane -f - > /dev/null
 
-echo "==> Done: exchange permission + linkage-store attribute policy applied."
+echo "==> Ensuring workforce-dpop client requires DPoP-bound tokens (RFC 9449)..."
+# Idempotent: the realm import already carries workforce-dpop, but a realm that
+# predates it (or was never re-imported) gets the client/attribute set here
+# without a destructive re-import (which would clobber the Auth0 linkage store).
+# Read-modify-write the attributes map with jq — kcadm's `-s attributes.a.b=c`
+# would nest on the dots, but client attribute keys are literal dotted strings.
+dpop_id=$($KCADM get clients -r mcp-plane -q clientId=workforce-dpop --fields id | jq -r '.[0].id // empty')
+if [ -z "$dpop_id" ]; then
+  cc_id=$($KCADM get clients -r mcp-plane -q clientId=claude-code --fields id | jq -r '.[0].id')
+  $KCADM get "clients/${cc_id}" -r mcp-plane \
+    | jq 'del(.id, .secret) | .clientId="workforce-dpop"
+          | .description="Workforce DPoP client (RFC 9449, contract §6.6)"
+          | .attributes["dpop.bound.access.tokens"]="true"' \
+    | $KCADM create clients -r mcp-plane -f - > /dev/null
+  dpop_id=$($KCADM get clients -r mcp-plane -q clientId=workforce-dpop --fields id | jq -r '.[0].id')
+fi
+$KCADM get "clients/${dpop_id}" -r mcp-plane \
+  | jq '.attributes["dpop.bound.access.tokens"]="true"' \
+  | $KCADM update "clients/${dpop_id}" -r mcp-plane -f - > /dev/null
+
+echo "==> Done: exchange permission + linkage-store attribute policy + DPoP client applied."
