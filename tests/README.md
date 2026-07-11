@@ -10,6 +10,7 @@ plus the phase 6 audit spine). Re-run any earlier gate against the running
 stack to check for regressions.
 
 `phase7.sh` is the red-team weekend (plan §3) — adversarial probes against
-the same stack; passing means the defense held. Two probes are
-`xfail(strict)`, documenting confirmed gaps filed as GitHub issues (#1, #2);
-see `phase7/README.md`.
+the same stack; passing means the defense held. All probes are plain
+asserts: the two gaps they originally documented as `xfail(strict)`
+(issues #1, #2) were remediated and the markers removed; see
+`phase7/README.md`.

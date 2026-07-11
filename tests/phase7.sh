@@ -5,9 +5,9 @@
 #   token-in-log grep, and the CIMD external-tier experiment. Findings are
 #   filed as GitHub issues in this repo.
 #
-# Passing = defense held. Two probes are xfail(strict), documenting confirmed
-# gaps (see the filed issues); an XPASS there means a gap was fixed and the
-# marker should be removed. Requires the compose/phase5 stack up (+ phase 6
+# Passing = defense held. All probes are plain asserts (the two former
+# xfail(strict) gaps — iss omission #1, mass-STALE signal #2 — were fixed
+# and their markers removed). Requires the compose/phase5 stack up (+ phase 6
 # spine) — the same target as tests/phase6.sh.
 set -euo pipefail
 cd "$(dirname "$0")/phase7"
