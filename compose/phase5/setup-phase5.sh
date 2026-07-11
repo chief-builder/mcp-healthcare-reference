@@ -147,6 +147,7 @@ ensure_plugin_schema() {
 ensure_plugin_schema cnf-check
 ensure_plugin_schema dlp-egress
 ensure_plugin_schema vendor-token
+ensure_plugin_schema dpop-check
 
 # ---------- compose stack ----------
 if docker ps --format '{{.Names}}' | grep -q '^mcp-phase4-'; then

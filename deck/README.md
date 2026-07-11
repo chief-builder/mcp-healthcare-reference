@@ -5,7 +5,8 @@ Config-as-git: `tests/phase2/test_resilience_and_git.py` fails if live
 state drifts from these files.
 
 - `internal.yaml` — internal-tier DP: global opentelemetry + cnf-check +
-  tier pre-function; first-party MCP routes; egress routes
+  dpop-check + tier pre-function (the pre-function accepts both `Bearer`
+  and `DPoP` auth schemes); first-party MCP routes; egress routes
   (`/egress/github`, `/egress/mockhub`) with openid-connect → dlp-egress →
   vendor-token.
 - `external.yaml` — external-tier DP: curated catalog behind the external

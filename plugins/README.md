@@ -16,3 +16,8 @@ by the setup scripts and wired declaratively in `deck/internal.yaml`.
   the broker's resolve, swaps the upstream Authorization to the vendor
   token (the hub JWT never transits), and translates needs-consent into
   the MCP authorization-required challenge.
+- `dpop-check/` — RFC 9449 DPoP sender-constraint enforcement: binds
+  `cnf.jkt` tokens to a client-held key at the internal DP (structure +
+  thumbprint + htm/htu/iat/ath + `jti` replay via a shared dict). The
+  public-client analogue of `cnf-check`; the servers' `requireDpop`
+  middleware is the authoritative signature re-check.

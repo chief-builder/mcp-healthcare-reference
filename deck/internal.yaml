@@ -25,13 +25,23 @@ plugins:
   # routing. Custom plugin: plugins/cnf-check (schema registered on the CP
   # by compose/phase4/setup-phase4.sh; DP loads it via KONG_PLUGINS).
   - name: cnf-check
+  # DPoP sender-constraint (contract §8, RFC 9449): if a token carries cnf.jkt
+  # it must arrive as `Authorization: DPoP <token>` with a fresh, matching proof.
+  # Global, like cnf-check and the tier wall; claim-driven so bearer paths are
+  # untouched. Custom plugin: plugins/dpop-check (schema on the CP via
+  # setup-phase5.sh; DP loads it via KONG_PLUGINS + the dpop_jti shared dict).
+  - name: dpop-check
   - name: pre-function
     config:
       access:
         - |
           local cjson = require "cjson.safe"
           local auth = kong.request.get_header("authorization") or ""
-          local token = auth:match("^[Bb]earer%s+(.+)$")
+          -- Accept both schemes: DPoP-bound tokens (RFC 9449 §7.1) present as
+          -- `DPoP <token>`, not `Bearer`. Matching only Bearer here would let a
+          -- DPoP-scheme request slip past the tier wall via the no-token return.
+          local token = auth:match("^[Bb][Ee][Aa][Rr][Ee][Rr]%s+(.+)$")
+            or auth:match("^[Dd][Pp][Oo][Pp]%s+(.+)$")
           if not token then return end -- no token: let the upstream challenge
           local reject = function()
             return kong.response.exit(401, { message = "token not valid for this tier" },
