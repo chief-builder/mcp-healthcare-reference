@@ -20,7 +20,9 @@ import pytest
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase1"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase3"))
 import oidc_flows  # noqa: E402
+import dpop as dpop_lib  # noqa: E402
 
 KC_BASE = "http://localhost:8080"
 REALM = "mcp-plane"
@@ -71,6 +73,20 @@ def alice(env) -> str:
 def bob(env) -> str:
     """Workforce analyst, internal tier, non-clinical group."""
     return login(env, "bob-analyst")
+
+
+@pytest.fixture(scope="session")
+def alice_dpop(env):
+    """Workforce clinician on the DPoP client: a per-client EC key and the
+    cnf.jkt-bound access token minted with a proof (RFC 9449). Returns
+    (key, token)."""
+    key = dpop_lib.make_key()
+    token = oidc_flows.authorization_code_login(
+        KC_BASE, REALM, "workforce-dpop", "http://localhost:8765/callback",
+        "dr-alice", env["FAKE_PING_PASSWORD"], idp_hint="ping",
+        scope="openid", dpop_key=key,
+    )["access_token"]
+    return key, token
 
 
 def claims_of(token: str) -> dict:

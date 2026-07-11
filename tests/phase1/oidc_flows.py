@@ -124,8 +124,12 @@ def authorization_code_login(
     password: str,
     idp_hint: str | None = None,
     scope: str = "openid",
+    dpop_key=None,
 ) -> dict:
-    """Drive a full auth-code+PKCE login; returns the token endpoint response."""
+    """Drive a full auth-code+PKCE login; returns the token endpoint response.
+
+    When dpop_key (an EC P-256 private key from dpop.make_key) is given, a DPoP
+    proof is attached to the token request so Keycloak binds cnf.jkt (RFC 9449)."""
     session = requests.Session()
     verifier, challenge = _pkce()
     state = secrets.token_urlsafe(16)
@@ -168,8 +172,13 @@ def authorization_code_login(
     )
     assert query["state"][0] == state, "state mismatch on callback"
 
+    token_url = f"{kc_base}/realms/{realm}/protocol/openid-connect/token"
+    headers = {}
+    if dpop_key is not None:
+        import dpop as _dpop  # phase1 is on sys.path in the phase3/7 harness
+        headers["DPoP"] = _dpop.proof(dpop_key, "POST", token_url)
     token_response = requests.post(
-        f"{kc_base}/realms/{realm}/protocol/openid-connect/token",
+        token_url,
         data={
             "grant_type": "authorization_code",
             "client_id": client_id,
@@ -177,6 +186,7 @@ def authorization_code_login(
             "redirect_uri": redirect_uri,
             "code_verifier": verifier,
         },
+        headers=headers,
     )
     assert token_response.status_code == 200, token_response.text
     return token_response.json()
