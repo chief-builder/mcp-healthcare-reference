@@ -12,6 +12,18 @@ broker for SaaS MCP egress with DLP.
 - [Prototype Plan](docs/prototype-plan.md) — fidelity contract, substitution map, phases 0–7
 - [overview.html](overview.html) — rendered tour of the repo and phase status
 
+### Showcase pages
+
+- [Product showcase](docs/showcase/product.html) — what the platform is and why it matters: promises, persona threads, scenarios
+- [Technical overview](docs/showcase/technical-overview.html) — invariants, master diagram, EMA alignment, phase gates, consistency-review verdict
+
+### Verified codebase walkthroughs
+
+- [Modules — functional](docs/walkthrough/modules-functional.html) — what every repository module does and why it exists
+- [Modules — technical](docs/walkthrough/modules-technical.html) — entry points, algorithms, state, endpoints, validation, and known limits
+- [Overall — functional](docs/walkthrough/overall-functional.html) — actors, end-to-end journeys, trust boundaries, and operating outcomes
+- [Overall — technical](docs/walkthrough/overall-technical.html) — runtime topology, ports, protocol sequences, validation matrix, and reassessment criteria
+
 ## Layout
 Repo layout is prototype-plan §5; each component directory carries its own
 README. Bring-up is per phase (`compose/phaseN/README.md`); the acceptance

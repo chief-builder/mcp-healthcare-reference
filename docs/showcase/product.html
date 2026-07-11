@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Governed MCP for Healthcare — Product Overview</title>
+<style>
+  :root {
+    --ground: #F3ECE1;
+    --surface: #FBF7EF;
+    --surface-2: #ECE1CF;
+    --ink: #2E2318;
+    --ink-soft: #6E5D4B;
+    --accent: #8A552A;
+    --accent-ink: #6E4120;
+    --good: #5E7E3E;
+    --warn: #A9702C;
+    --line: #DBCCB6;
+    --thread: #B8763B;
+    --code-bg: #EDE2CF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #1B140D;
+      --surface: #241B12;
+      --surface-2: #2E2318;
+      --ink: #EFE5D6;
+      --ink-soft: #B5A08A;
+      --accent: #D29A5B;
+      --accent-ink: #E0B078;
+      --good: #A3BE78;
+      --warn: #E0A45C;
+      --line: #3B2D1F;
+      --thread: #D29A5B;
+      --code-bg: #140F09;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1B140D;
+    --surface: #241B12;
+    --surface-2: #2E2318;
+    --ink: #EFE5D6;
+    --ink-soft: #B5A08A;
+    --accent: #D29A5B;
+    --accent-ink: #E0B078;
+    --good: #A3BE78;
+    --warn: #E0A45C;
+    --line: #3B2D1F;
+    --thread: #D29A5B;
+    --code-bg: #140F09;
+  }
+  :root[data-theme="light"] {
+    --ground: #F3ECE1;
+    --surface: #FBF7EF;
+    --surface-2: #ECE1CF;
+    --ink: #2E2318;
+    --ink-soft: #6E5D4B;
+    --accent: #8A552A;
+    --accent-ink: #6E4120;
+    --good: #5E7E3E;
+    --warn: #A9702C;
+    --line: #DBCCB6;
+    --thread: #B8763B;
+    --code-bg: #EDE2CF;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  section[id] { scroll-margin-top: 4rem; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 17px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1, h2, h3 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin: 0 0 0.6rem;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.08em 0.35em;
+  }
+  a { color: var(--accent-ink); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  main { max-width: 1020px; margin: 0 auto; padding: 0 1.4rem 5rem; }
+  section { margin-top: 5.5rem; }
+
+  .eyebrow {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--accent-ink); margin-bottom: 0.7rem;
+  }
+
+  /* ---- hero ---- */
+  header.hero { padding: 5rem 0 0; }
+  header.hero h1 {
+    font-size: clamp(2.4rem, 6vw, 3.9rem);
+    max-width: 18ch;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    font-size: 1.18rem; color: var(--ink-soft); max-width: 58ch; margin-top: 1rem;
+  }
+
+  /* ---- the audit thread ---- */
+  .persona-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 3rem; }
+  .persona-tabs button {
+    font: inherit; font-size: 0.84rem; font-weight: 600;
+    padding: 0.38rem 1rem; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+  }
+  .persona-tabs button:hover { color: var(--accent-ink); border-color: var(--accent); }
+  .persona-tabs button[aria-pressed="true"] {
+    border: 1.5px solid var(--accent); color: var(--accent-ink); background: var(--surface-2);
+  }
+  .thread-wrap { margin-top: 0.6rem; overflow-x: auto; padding-bottom: 0.5rem; }
+  .bead .chip, .bead .role, .thread-caption { transition: opacity 160ms ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .bead .chip, .bead .role, .thread-caption { transition: none; }
+  }
+  .thread {
+    display: flex; align-items: center; gap: 0; min-width: 720px;
+    position: relative; padding: 1.4rem 0.2rem;
+  }
+  .thread::before {
+    content: ""; position: absolute; left: 2%; right: 2%; top: 50%;
+    border-top: 2px solid var(--thread); opacity: 0.55;
+  }
+  .bead {
+    position: relative; flex: 1; text-align: center;
+  }
+  .bead .chip {
+    display: inline-block; background: var(--surface); border: 1.5px solid var(--thread);
+    border-radius: 999px; padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: 600;
+    position: relative; z-index: 1; white-space: nowrap;
+  }
+  .bead .role {
+    display: block; margin-top: 0.5rem; font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .thread-caption {
+    font-size: 0.95rem; color: var(--ink-soft); max-width: 62ch; margin-top: 0.6rem;
+  }
+  .thread-caption strong { color: var(--accent-ink); }
+
+  h2 { font-size: 2rem; }
+  .section-intro { color: var(--ink-soft); max-width: 64ch; margin: 0 0 1.8rem; font-size: 1.05rem; }
+
+  /* ---- problem cards ---- */
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.1rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.4rem 1.5rem; min-width: 0;
+  }
+  .card h3 { font-size: 1.15rem; }
+  .card p { margin: 0; font-size: 0.95rem; color: var(--ink-soft); }
+
+  /* ---- one front door ---- */
+  .door {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.2rem; align-items: center;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 720px) { .door { grid-template-columns: 1fr; } }
+  .door-col { display: grid; gap: 0.6rem; }
+  .door-item {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 9px;
+    padding: 0.65rem 1rem; font-size: 0.92rem;
+  }
+  .door-item .sub { display: block; font-size: 0.8rem; color: var(--ink-soft); }
+  .door-center {
+    text-align: center; background: var(--surface-2); border: 1.5px solid var(--accent);
+    border-radius: 14px; padding: 1.4rem 1.6rem; font-weight: 650;
+  }
+  .door-center .sub { display: block; font-weight: 400; font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.3rem; }
+
+  /* ---- promises ---- */
+  .promises { display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .promise {
+    display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 1.5rem;
+    padding: 1.5rem 0; border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 720px) { .promise { grid-template-columns: 1fr; gap: 0.4rem; } }
+  .promise h3 { font-size: 1.3rem; margin: 0; }
+  .promise p { margin: 0; color: var(--ink-soft); max-width: 60ch; }
+
+  /* ---- vignettes ---- */
+  .vignette {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--thread);
+    border-radius: 0 12px 12px 0; padding: 1.5rem 1.7rem; margin-top: 1.2rem;
+  }
+  .vignette h3 { font-size: 1.2rem; }
+  .vignette p { margin: 0.3rem 0 0; color: var(--ink-soft); max-width: 68ch; }
+  .vignette .outcome { margin-top: 0.8rem; font-size: 0.92rem; }
+  .vignette .outcome strong { color: var(--good); }
+  .vignette .outcome.blocked strong { color: var(--warn); }
+
+  /* ---- governance ---- */
+  .gov-band {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
+    padding: 2rem 2.2rem; margin-top: 1.5rem;
+  }
+  .gov-band p { max-width: 66ch; color: var(--ink-soft); margin: 0.6rem 0 0; }
+  .gov-band .big { font-size: 1.25rem; color: var(--ink); font-family: "Iowan Old Style", Palatino, Charter, Georgia, serif; margin: 0; }
+
+  /* ---- proof strip ---- */
+  .proof {
+    display: flex; flex-wrap: wrap; gap: 0.6rem 2rem; margin-top: 1.4rem;
+    border-block: 1px solid var(--line); padding: 1rem 0; font-size: 0.92rem;
+  }
+  .proof .item { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
+
+  footer { margin-top: 5rem; border-top: 1px solid var(--line); padding-top: 1.5rem; font-size: 0.88rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<main>
+  <header class="hero">
+    <div class="eyebrow">Governed MCP for regulated healthcare</div>
+    <h1>Give AI a key to the hospital — and a name on every door it opens.</h1>
+    <p class="lede">
+      A platform that lets clinicians, autonomous agents, partners, and patients put AI to work
+      against clinical systems and SaaS tools — while the organization keeps the three things
+      regulators actually ask for: control over who connects, certainty about what left, and a
+      complete answer to "who did that?"
+    </p>
+
+    <div class="persona-tabs" role="group" aria-label="Choose a persona to see their audit thread">
+      <button type="button" data-persona="engineer" aria-pressed="true">Engineer</button>
+      <button type="button" data-persona="clinician" aria-pressed="false">Clinician</button>
+      <button type="button" data-persona="agent" aria-pressed="false">Autonomous agent</button>
+      <button type="button" data-persona="patient" aria-pressed="false">Patient</button>
+    </div>
+    <div class="thread-wrap">
+      <div class="thread" id="thread" role="img" aria-label="One audit thread joining an engineer, their AI agent, the gateway decision, the tool call, and the result">
+        <div class="bead"><span class="chip">Sam, platform engineer</span><span class="role">the human</span></div>
+        <div class="bead"><span class="chip">their coding agent</span><span class="role">the AI</span></div>
+        <div class="bead"><span class="chip">screened &amp; allowed</span><span class="role">the decision</span></div>
+        <div class="bead"><span class="chip">create_issue</span><span class="role">the action</span></div>
+        <div class="bead"><span class="chip">GitHub issue #482</span><span class="role">the result</span></div>
+      </div>
+      <p class="thread-caption" id="thread-caption">
+        <strong>One thread runs through everything.</strong> Every request carries a single traceable
+        identifier from the person, through their agent, through every checkpoint, to the final action —
+        so any result, anywhere, walks back to a name in one query.
+      </p>
+    </div>
+    <script>
+      (function () {
+        var personas = {
+          engineer: {
+            aria: "One audit thread joining an engineer, their AI agent, the gateway decision, the tool call, and the result",
+            beads: [
+              ["Sam, platform engineer", "the human"],
+              ["their coding agent", "the AI"],
+              ["screened & allowed", "the decision"],
+              ["create_issue", "the action"],
+              ["GitHub issue #482", "the result"]
+            ],
+            lead: "One thread runs through everything.",
+            rest: " Every request carries a single traceable identifier from the person, through their agent, through every checkpoint, to the final action — so any result, anywhere, walks back to a name in one query."
+          },
+          clinician: {
+            aria: "One audit thread joining a clinician, her scheduling assistant, the MFA-verified decision, the booking action, and the result",
+            beads: [
+              ["Dr. Reyes, hospitalist", "the human"],
+              ["her scheduling assistant", "the AI"],
+              ["MFA-verified & allowed", "the decision"],
+              ["hold-slot", "the action"],
+              ["follow-up booked", "the result"]
+            ],
+            lead: "Clinical actions carry the clinician's name.",
+            rest: " Clinical tools demand stronger sign-in, and every booking, order, or lookup her assistant makes is hers on the record — with the assistant named right beside her."
+          },
+          agent: {
+            aria: "One audit thread joining an autonomous service identity, its certificate-bound credential, the verification decision, the scheduling action, and the result",
+            beads: [
+              ["night-shift recon agent", "the workload"],
+              ["certificate-bound identity", "the credential"],
+              ["verified & allowed", "the decision"],
+              ["hold-slot", "the action"],
+              ["schedule reconciled", "the result"]
+            ],
+            lead: "Even unattended work has an owner.",
+            rest: " An agent running at 3 a.m. holds no passwords and hides behind no shared account — it acts under its own attested identity, and the morning report shows exactly what it did."
+          },
+          patient: {
+            aria: "One audit thread joining a patient, her health assistant, the compartment decision, the medication lookup, and the result",
+            beads: [
+              ["Maria, patient", "the human"],
+              ["her health assistant", "the AI"],
+              ["her record only", "the decision"],
+              ["list_medications", "the action"],
+              ["her meds, explained", "the result"]
+            ],
+            lead: "A patient's assistant is only ever about that patient.",
+            rest: " The credential it carries cannot express a request for anyone else's chart — privacy enforced by structure, not by promise."
+          }
+        };
+        var thread = document.getElementById("thread");
+        var caption = document.getElementById("thread-caption");
+        var buttons = document.querySelectorAll(".persona-tabs button");
+        function show(key) {
+          var p = personas[key];
+          var beads = thread.querySelectorAll(".bead");
+          for (var i = 0; i < beads.length; i++) {
+            beads[i].querySelector(".chip").textContent = p.beads[i][0];
+            beads[i].querySelector(".role").textContent = p.beads[i][1];
+          }
+          thread.setAttribute("aria-label", p.aria);
+          caption.innerHTML = "";
+          var strong = document.createElement("strong");
+          strong.textContent = p.lead;
+          caption.appendChild(strong);
+          caption.appendChild(document.createTextNode(p.rest));
+          for (var j = 0; j < buttons.length; j++) {
+            buttons[j].setAttribute("aria-pressed", buttons[j].dataset.persona === key ? "true" : "false");
+          }
+        }
+        for (var k = 0; k < buttons.length; k++) {
+          buttons[k].addEventListener("click", function () { show(this.dataset.persona); });
+        }
+      })();
+    </script>
+  </header>
+
+  <section id="why">
+    <div class="eyebrow">Why this exists</div>
+    <h2>AI arrived faster than the guardrails</h2>
+    <p class="section-intro">
+      Health systems are already full of AI assistants that want to read charts, book appointments,
+      file tickets, and call vendor tools. Three problems show up on day one:
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Anonymous hands</h3>
+        <p>An agent acts, something changes in a clinical system, and nobody can say which human set it
+        in motion. In healthcare, an action without an accountable person is a finding, not a feature.</p>
+      </div>
+      <div class="card">
+        <h3>Data that wanders</h3>
+        <p>The fastest way to leak PHI is an eager assistant pasting a chart into a ticket bound for a
+        vendor with no business associate agreement. Good intentions don't survive autocomplete.</p>
+      </div>
+      <div class="card">
+        <h3>Credential sprawl</h3>
+        <p>Every new tool wants a token. Tokens end up in laptops, scripts, and shared accounts — unowned,
+        unrotated, unrevoked when someone leaves. Each one is a standing incident.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="what">
+    <div class="eyebrow">What it is</div>
+    <h2>One front door for every AI conversation</h2>
+    <p class="section-intro">
+      Four very different populations, one governed path. Nothing reaches a clinical system or a
+      vendor except through the same front door, carrying the same kind of identity, subject to the
+      same checks.
+    </p>
+    <div class="door">
+      <div class="door-col">
+        <div class="door-item">Clinicians &amp; staff <span class="sub">AI coding tools and assistants at work</span></div>
+        <div class="door-item">Autonomous agents <span class="sub">scheduled jobs that work while you sleep</span></div>
+        <div class="door-item">Partners &amp; SaaS agents <span class="sub">outside AI, on a curated shelf only</span></div>
+        <div class="door-item">Patients <span class="sub">assistants that can only ever see their own record</span></div>
+      </div>
+      <div class="door-center">
+        The governed plane
+        <span class="sub">one identity standard · one policy point · one audit trail</span>
+      </div>
+      <div class="door-col">
+        <div class="door-item">Clinical systems <span class="sub">records, scheduling, formularies — as AI-callable tools</span></div>
+        <div class="door-item">SaaS vendors <span class="sub">GitHub, Notion, and friends — screened on the way out</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="promises">
+    <div class="eyebrow">The promises</div>
+    <h2>What the platform guarantees</h2>
+    <div class="promises">
+      <div class="promise">
+        <h3>Every action has a name</h3>
+        <p>Human, agent, tool, patient record touched, decision, timestamp — captured on every single
+        call, joinable in one query. An auditor's question becomes a lookup, not a project.</p>
+      </div>
+      <div class="promise">
+        <h3>Patient data stays home</h3>
+        <p>Everything leaving for a vendor is screened for patient identifiers before it goes. A chart
+        pasted into a ticket gets blocked and recorded — the vendor never sees it, and you can prove it.</p>
+      </div>
+      <div class="promise">
+        <h3>Patients see only themselves</h3>
+        <p>A patient-facing assistant is structurally incapable of reaching another person's record.
+        Not "policy says it shouldn't" — the credential it holds cannot express the request.</p>
+      </div>
+      <div class="promise">
+        <h3>Your IdP stays in charge</h3>
+        <p>Which AI clients may talk to which systems, for whom, with what ceiling — decided centrally
+        in the identity provider you already run, the way the MCP Enterprise-Managed Authorization
+        standard defines it. No per-app consent fatigue, no shadow connections.</p>
+      </div>
+      <div class="promise">
+        <h3>Nobody carries keys</h3>
+        <p>No personal access tokens on laptops, no shared service accounts. Vendor credentials are
+        acquired once with the user's consent, kept in a vault, rotated automatically, and revoked the
+        day someone offboards.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="scenarios">
+    <div class="eyebrow">How it feels</div>
+    <h2>Three ordinary moments</h2>
+
+    <div class="vignette">
+      <h3>The ticket that almost carried a chart</h3>
+      <p>A developer's coding assistant files a GitHub issue about a data bug and helpfully includes a
+      sample — with a real medical record number in it. The platform screens the outbound call, blocks
+      it, and records the verdict. The assistant retries with the identifier redacted; the issue lands.</p>
+      <p class="outcome blocked"><strong>Blocked and recorded</strong> — the vendor never saw the number, and the audit trail shows both the attempt and the clean retry.</p>
+    </div>
+
+    <div class="vignette">
+      <h3>The night-shift agent</h3>
+      <p>An autonomous agent reconciles tomorrow's schedule at 3 a.m. It authenticates with a
+      short-lived machine credential — no password, no secret in its config — books what it needs under
+      its own name, and every hold it places is attributable to it, not to a shared account.</p>
+      <p class="outcome"><strong>Zero secrets, full attribution</strong> — the agent works unattended and the morning report shows exactly what it did.</p>
+    </div>
+
+    <div class="vignette">
+      <h3>The auditor's question</h3>
+      <p>"Show me everyone and everything that touched this patient's record in March." One query,
+      keyed on the thread that runs through every call: the humans, the agents acting for them, the
+      tools invoked, and each decision along the way — including the denials.</p>
+      <p class="outcome"><strong>Minutes, not weeks</strong> — because the trail was designed in, not reconstructed after.</p>
+    </div>
+  </section>
+
+  <section id="governance">
+    <div class="eyebrow">The governance story</div>
+    <h2>Connections are policy. Tool calls are enforcement.</h2>
+    <div class="gov-band">
+      <p class="big">Enterprise admins decide which AI clients may connect to which systems — centrally,
+      in the identity provider, before a single request flows.</p>
+      <p>That's the connection layer, and it follows the MCP Enterprise-Managed Authorization standard:
+      sign in once through the enterprise IdP, and sanctioned AI tools connect to sanctioned systems
+      with no per-app consent ceremony. What each request may <em>do</em> is then enforced again at the
+      gateway and inside every tool — least privilege by scope, by role, by patient. Neither layer
+      assumes the other did its job.</p>
+      <p>And every transitional piece — brokered credentials for vendors that don't speak the standard
+      yet — is built with a defined exit, shrinking as the ecosystem adopts it.</p>
+    </div>
+  </section>
+
+  <section id="proof">
+    <div class="eyebrow">Not slideware</div>
+    <h2>It runs</h2>
+    <p class="section-intro">
+      Every claim on this page is enforced by a working reference implementation and proven by
+      executable acceptance gates — including an adversarial red-team suite that tries to replay
+      tokens across boundaries, leak identifiers, and hijack consent flows.
+    </p>
+    <div class="proof">
+      <div class="item"><span class="dot"></span>End-to-end reference running, all gates green</div>
+      <div class="item"><span class="dot"></span>Red-team suite: every probe holds</div>
+      <div class="item"><span class="dot"></span>Real vendor, real consent, real revocation</div>
+    </div>
+    <p class="section-intro" style="margin-top:1.4rem;">
+      For the architecture, the token contract, and the engineering detail behind each promise, see the
+      <a href="technical-overview.html">technical companion</a>.
+    </p>
+  </section>
+
+  <footer>
+    Governed MCP for healthcare — a reference implementation of enterprise AI connectivity with
+    HIPAA-shaped controls. Names in scenarios are illustrative; patient data in the lab is synthetic.
+  </footer>
+</main>
+
+</body>
+</html>
