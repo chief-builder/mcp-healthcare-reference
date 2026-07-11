@@ -68,12 +68,13 @@ All tokens conform to the Claims Contract: `PS256`/`ES256` on FIPS modules, 5–
 
 Tier isolation is cryptographic, not just topological: tier audiences in every token make cross-tier replay fail signature-independent validation.
 
-**Master diagram** — every client population, token path, and flow in one view. Solid edges are current state; dashed labeled edges are the future EMA (ID-JAG) upgrade paths; unlabeled dashed edges feed the audit spine.
+**Master diagram** — every client population, token path, and flow in one view. Solid edges are current state; dashed labeled edges are the future EMA (ID-JAG) upgrade paths; unlabeled dashed edges feed the audit spine. Token binding is shown per client: the autonomous agents are mTLS/cert-bound (`cnf.x5t#S256`) and the `workforce-dpop` client is DPoP/key-bound (`cnf.jkt`) — two bindings, one `cnf` doctrine, each enforced at the DP and re-validated at the server.
 
 ```mermaid
 flowchart LR
     subgraph CL["MCP Clients"]
-        WF["Workforce interactive clients<br/>Claude Code · Codex CLI · VS Code"]
+        WF["Workforce interactive clients<br/>Claude Code · Codex CLI · VS Code<br/>(bearer today)"]
+        WFD["Workforce DPoP client<br/>(workforce-dpop) — sender-constrained"]
         AG["Internal autonomous agents<br/>(loop agent)"]
         EXTC["External SaaS agents + B2B<br/>ChatGPT · partners"]
         PAT["End-customer clients<br/>(patient-facing agents)"]
@@ -88,7 +89,7 @@ flowchart LR
     end
 
     subgraph GW["Kong gateway tiers (DPs in customer AWS)"]
-        INT["Internal DP<br/>JWT + cnf checks · mcp://tier/internal"]
+        INT["Internal DP<br/>JWT + cnf(mTLS) + DPoP checks · mcp://tier/internal"]
         EXT["External DP (WAF front)<br/>curated catalog · mcp://tier/external"]
         EGR["Egress tier<br/>vendor allowlist · DLP · vendor-token injection"]
     end
@@ -119,7 +120,8 @@ flowchart LR
     HG -->|"RFC 8693 token exchange (sunsetting)"| KC
     ATZ -->|"X.509 SVID"| AG
     WF -->|"authorization code + PKCE"| KC
-    AG -->|"tls_client_auth client credentials → cnf-bound token"| KC
+    WFD -->|"auth code + PKCE + DPoP proof<br/>→ cnf.jkt-bound token (RFC 9449)"| KC
+    AG -->|"tls_client_auth client credentials → cnf.x5t#S256-bound token"| KC
     EXTC -->|"authorization code + PKCE (pre-registered)"| KC
     PAT -->|"authorization code + PKCE (Auth0 brokered)"| KC
 
@@ -129,11 +131,12 @@ flowchart LR
     WF -.->|"Pattern A — EMA direct (ID-JAG),<br/>per-vendor after risk assessment"| GAS
 
     %% data paths
-    WF -->|"hub JWT via VPN"| INT
+    WF -->|"hub JWT via VPN (bearer)"| INT
+    WFD -->|"hub JWT + fresh DPoP proof per request"| INT
     AG -->|"hub JWT + mTLS"| INT
     EXTC -->|"hub JWT via WAF"| EXT
     PAT -->|"hub JWT via WAF"| EXT
-    INT --> SCH
+    INT -->|"servers re-validate cnf/DPoP — never trust the DP"| SCH
     INT --> FHI
     EXT -->|"curated catalog · patient-compartment tools"| FHI
     FHI -->|"Athenz mTLS service creds (no token transit)"| EHR
