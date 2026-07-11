@@ -42,6 +42,8 @@ export function buildProtectedResourceMetadata(
     resource: config.resourceUri,
     authorization_servers: config.authorizationServers,
     bearer_methods_supported: ['header'],
+    // RFC 9449 §5.1: advertise the DPoP proof algorithms this server accepts.
+    dpop_signing_alg_values_supported: ['ES256'],
     ...(config.scopesSupported ? { scopes_supported: config.scopesSupported } : {}),
   };
 }

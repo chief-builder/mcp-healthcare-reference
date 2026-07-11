@@ -17,6 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js';
 import { metadataHandler } from '@modelcontextprotocol/sdk/server/auth/handlers/metadata.js';
+import { dpopSchemeShim, requireDpop } from './dpop.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import {
   buildProtectedResourceMetadata,
@@ -218,6 +219,7 @@ export function createApp() {
   app.use('/.well-known/oauth-protected-resource', prm);
 
   const bearer = requireBearerAuth({ verifier: createTokenVerifier(RESOURCE_CONFIG), resourceMetadataUrl });
+  const dpop = requireDpop({ htu: process.env.DPOP_HTU || `${PUBLIC_BASE_URL}/mcp`, resourceMetadataUrl });
 
   function enforceToolScope(req: Request, res: Response, next: NextFunction): void {
     if (req.body?.method !== 'tools/call') return next();
@@ -230,7 +232,7 @@ export function createApp() {
       .json({ error: 'insufficient_scope', scope: need });
   }
 
-  app.post('/mcp', bearer, enforceToolScope, async (req: Request, res: Response) => {
+  app.post('/mcp', dpopSchemeShim, bearer, dpop, enforceToolScope, async (req: Request, res: Response) => {
     // Each tool audits its own final outcome (allow only on success); nothing
     // is logged here before the work runs.
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });

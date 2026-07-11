@@ -22,6 +22,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js';
 import { metadataHandler } from '@modelcontextprotocol/sdk/server/auth/handlers/metadata.js';
+import { dpopSchemeShim, requireDpop } from './dpop.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import {
   buildProtectedResourceMetadata,
@@ -469,6 +470,7 @@ export function createApp() {
     requiredScopes: REQUIRED_SCOPES,
     resourceMetadataUrl,
   });
+  const dpop = requireDpop({ htu: process.env.DPOP_HTU || `${PUBLIC_BASE_URL}/mcp`, resourceMetadataUrl });
 
   // Per-tool scope enforcement (draft-spec step-up). For a tools/call, the tool's
   // `x-mcp-scope` must be held; otherwise a single-shot 403 insufficient_scope
@@ -496,7 +498,7 @@ export function createApp() {
 
   // Stateless MCP endpoint: authenticate, enforce tool scope, then a fresh
   // server+transport per request.
-  app.post('/mcp', bearer, enforceToolScope, async (req: Request, res: Response) => {
+  app.post('/mcp', dpopSchemeShim, bearer, dpop, enforceToolScope, async (req: Request, res: Response) => {
     // The tools/call outcome is audited inside the tool handler (allow only on
     // success), so nothing is logged here before the work runs.
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -509,8 +511,8 @@ export function createApp() {
   // Stateless: no server-initiated stream, no session teardown.
   const methodNotAllowed = (_req: Request, res: Response) =>
     res.status(405).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed' }, id: null });
-  app.get('/mcp', bearer, methodNotAllowed);
-  app.delete('/mcp', bearer, methodNotAllowed);
+  app.get('/mcp', dpopSchemeShim, bearer, dpop, methodNotAllowed);
+  app.delete('/mcp', dpopSchemeShim, bearer, dpop, methodNotAllowed);
 
   return app;
 }
