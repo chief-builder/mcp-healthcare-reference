@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCP Healthcare Reference — Module Technical Walkthrough</title><link rel="icon" href="data:,">
+  <style>
+    :root{--bg:#06101c;--p:#0d1b2b;--p2:#10243a;--ink:#e9f4ff;--m:#9cb1c9;--c:#39d6e4;--g:#67ddb3;--a:#ffc56f;--v:#a796ff;--r:#ff8493;--line:#23415f}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#071a2c,#06101c 28%);color:var(--ink);font:15px/1.65 Inter,system-ui,sans-serif}a{color:var(--c)}code,pre{font-family:"SFMono-Regular",Consolas,monospace}.shell{width:min(1240px,calc(100% - 30px));margin:auto}.bar{position:sticky;top:0;z-index:9;background:#06101eee;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}.bar .shell{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 0}.brand{font-weight:800}.nav{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}.nav a{text-decoration:none;color:var(--m)}
+    .hero{padding:56px 0 26px}.ey{color:var(--c);font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}h1{font-size:clamp(38px,5.5vw,68px);line-height:1.02;margin:10px 0 18px}h2{font-size:31px;margin:58px 0 12px}h3{font-size:21px;margin:0 0 8px}h4{font-size:16px;color:#dcecff;margin:20px 0 6px}.lede{font-size:19px;color:#c4d4e5;max-width:930px}.hero img,.visual{width:100%;border-radius:22px;border:1px solid var(--line);box-shadow:0 25px 60px #0008}.hero img{margin-top:30px}.visual{margin:24px 0}.callout{border:1px solid #7a6030;background:#2b2417;color:#ffe5b4;padding:15px 18px;border-radius:12px;margin:22px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.card{min-width:0;overflow-wrap:anywhere;background:linear-gradient(145deg,var(--p2),var(--p));border:1px solid var(--line);border-radius:16px;padding:20px}.card p,.card li{color:#c3d2e1}.wide{grid-column:1/-1}.file{display:flex;justify-content:space-between;gap:14px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:12px}.file code{color:#b4f5f6;font-size:14px;overflow-wrap:anywhere}.pill{font-size:11px;border:1px solid #37607a;border-radius:999px;padding:2px 8px;color:#a5e9ef;white-space:nowrap}.pill.warn{border-color:#755e32;color:#ffd497}.pill.bad{border-color:#7e3743;color:#ffabb5}.table-wrap{max-width:100%;overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:720px}.tbl th,.tbl td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px}.tbl th{color:#9feef2;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.tbl td{color:#c5d4e4}pre{white-space:pre-wrap;background:#050c15;border:1px solid #1d3954;border-radius:12px;padding:16px;color:#b9d9ee;overflow:auto}.seq{display:grid;grid-template-columns:170px 1fr;gap:8px 16px}.seq .who{color:var(--c);font-weight:700}.seq .what{border-left:2px solid #264b68;padding:0 0 16px 16px;color:#cad8e6}.ok{color:var(--g)}.warn{color:var(--a)}.bad{color:var(--r)}.muted{color:var(--m)}details{border:1px solid var(--line);border-radius:12px;background:#091625;margin:10px 0}summary{cursor:pointer;font-weight:700;padding:13px 16px}details>div{padding:0 16px 16px}footer{border-top:1px solid var(--line);margin-top:65px;padding:30px 0 55px;color:var(--m)}
+    @media(max-width:780px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.bar .shell{flex-direction:column;align-items:flex-start}.seq{grid-template-columns:1fr}.seq .what{margin-bottom:8px}}
+  </style>
+</head>
+<body>
+  <header class="bar"><div class="shell"><div class="brand">MCP Healthcare Reference</div><nav class="nav"><a href="modules-functional.html">Modules · Functional</a><a href="modules-technical.html">Modules · Technical</a><a href="overall-functional.html">Overall · Functional</a><a href="overall-technical.html">Overall · Technical</a></nav></div></header>
+  <main class="shell">
+    <section class="hero"><div class="ey">Verified module guide · Technical view</div><h1>Source-level module walkthrough</h1><p class="lede">Implementation details for every active code/configuration area: entry points, data structures, endpoints, validation boundaries, persistence, concurrency, deployment behavior, tests, and known accuracy limitations.</p><img src="assets/identity-normalization.png" alt="Conceptual normalized identity and protected service flows"><p class="caption">Five upstream identities normalize to one canonical JWT.</p><div class="callout">This page documents what the source does now. It does not silently promote target architecture statements into implemented behavior. Generated data, local secrets, certificates, caches, lockfiles, and compiled output are runtime artifacts rather than functional modules.</div></section>
+
+    <section id="baseline"><h2>Implementation baseline</h2><div class="grid">
+      <article class="card"><h3>MCP runtime</h3><p>Both servers use <code>@modelcontextprotocol/sdk@1.29.0</code>, Express 5, Zod 3, and JOSE 6. They create a fresh stateless <code>StreamableHTTPServerTransport</code> for every POST. No session ID is generated.</p><p class="warn">This is the 2025-era SDK in stateless mode. It does not implement the 2026-07-28 per-request metadata/header era.</p></article>
+      <article class="card"><h3>OAuth runtime</h3><p>Keycloak 26.3 is the hub. Resource servers validate JWTs using remote JWKS, pin algorithms to PS256/ES256, check issuer and resource audience, and publish RFC 9728-shaped metadata.</p><p class="warn">The lab uses HTTP and <code>mcp://</code> resource identifiers; those are not production RFC 9728 identifiers.</p></article>
+      <article class="card"><h3>Data services</h3><p>HAPI FHIR 8.0.0 serves R4 data; PostgreSQL 16 stores Keycloak, HAPI, and scheduling state; OpenBao 2 stores vendor credentials; Kong Gateway 3.9 runs hybrid data planes.</p></article>
+      <article class="card"><h3>Observability</h3><p>OpenTelemetry Collector 0.115.1 forwards traces to Tempo 2.6.1 and logs to Loki 3.3.2. Alloy 1.5.1 tails container logs. Grafana 11.4.0 provisions data sources and a tuple dashboard.</p></article>
+    </div></section>
+
+    <section id="realm"><h2>Identity configuration: <code>realm/</code></h2>
+      <div class="grid">
+        <article class="card wide"><div class="file"><code>realm/mcp-plane.json</code><span class="pill">Keycloak import</span></div><p>Defines the hub realm, clients, scopes, claim mappers, groups, users, and upstream IdPs. Realm defaults include <code>PS256</code>, a 300-second access-token lifespan, and <code>sslRequired: none</code> for the lab.</p><div class="table-wrap"><table class="tbl"><thead><tr><th>Client</th><th>Flow</th><th>Purpose</th><th>Notable configuration</th></tr></thead><tbody>
+          <tr><td><code>phase0-smoke</code></td><td>client credentials</td><td>baseline token gate</td><td>secret client; internal tier</td></tr>
+          <tr><td><code>claude-code</code></td><td>authorization code</td><td>workforce client</td><td>public; PKCE S256; internal audiences; optional step-up scopes</td></tr>
+          <tr><td><code>patient-agent</code></td><td>authorization code</td><td>customer/patient client</td><td>public; PKCE S256; external tier; patient scopes and patient mapper</td></tr>
+          <tr><td><code>legacy-exchange</code></td><td>token exchange</td><td>legacy migration</td><td>confidential exchange requester</td></tr>
+          <tr><td><code>mcp-agents.loop-agent</code></td><td>client credentials over mTLS</td><td>workload</td><td><code>client-x509</code>; certificate-bound tokens; scheduling scopes</td></tr>
+        </tbody></table></div><p class="bad">The public client redirect registrations use wildcard paths and the realm is HTTP-first; both are lab-only.</p></article>
+        <article class="card"><div class="file"><code>realm/fake-ping.json</code><span class="pill">test IdP</span></div><p>Creates a separate OIDC issuer and workforce user with raw upstream group names. The hub brokers it and maps the identity into the canonical <code>mcp-*</code> group vocabulary.</p></article>
+        <article class="card"><div class="file"><code>compose/phase1/homegrown-issuer/main.py</code><span class="pill">legacy issuer</span></div><p>Creates an in-memory RSA key at startup, publishes OIDC-shaped discovery/JWKS, issues five-minute RS256 client-credentials tokens, and exposes userinfo. MCP components never accept these tokens directly; Keycloak exchanges them.</p></article>
+        <article class="card"><div class="file"><code>compose/phase1/setup-phase1.sh</code><span class="pill">idempotent setup</span></div><p>Adds external-to-internal token-exchange permission, allows the patient linkage attribute through the Keycloak user profile, and restores account-console client scopes omitted by the explicit import.</p></article>
+      </div>
+    </section>
+
+    <section id="fhir"><h2>FHIR clinical MCP server</h2><img class="visual" src="assets/clinical-scheduling.png" alt="Conceptual clinical and scheduling execution paths"><p class="caption">Patient-compartment FHIR reads and stateless scheduling holds.</p>
+      <div class="grid">
+        <article class="card"><div class="file"><code>src/index.ts</code><span class="pill">entry point</span></div><p>Re-exports the server and OAuth module, imports <code>startServer</code>, and starts the Express listener immediately. Docker executes compiled <code>dist/index.js</code>.</p></article>
+        <article class="card"><div class="file"><code>src/mcp-server.ts</code><span class="pill">core server</span></div><p>Defines environment configuration, five embedded tool descriptors, JSON-Schema-to-Zod conversion, upstream FHIR calls, tool registration, scope middleware, Origin/Host guard, PRM routes, and HTTP transport lifecycle.</p></article>
+        <article class="card"><div class="file"><code>src/oauth-resource-server.ts</code><span class="pill">JWT + PRM</span></div><p>Builds resource metadata and creates an SDK <code>OAuthTokenVerifier</code>. JOSE checks JWKS signature, issuer, expiration, configured audience, and PS256/ES256 algorithm. Additional checks require contract 1.0, exactly one tier audience, and prohibit a patient claim outside Auth0-origin tokens.</p><p class="bad">It does not enforce every contract-mandatory claim (e.g. <code>groups</code>/<code>amr</code> semantics stay at the DP), but it rejects Auth0-origin tokens that lack a non-empty <code>fhir_patient</code>.</p></article>
+        <article class="card"><div class="file"><code>src/authz-hook.ts</code><span class="pill">compartment</span></div><p>If <code>auth.extra.fhir_patient</code> exists, by-ID tools must match it and search tools have their <code>patient</code> argument overwritten. Without that claim, arguments pass unchanged.</p></article>
+        <article class="card"><div class="file"><code>src/audit.ts</code><span class="pill">JSON audit</span></div><p>Writes one JSON line containing server, tool, final decision/reason, token ID, principal, acting agent, client, origin, tier, patient compartment, and timestamp.</p></article>
+        <article class="card"><div class="file"><code>openapi.json</code><span class="pill">source description</span></div><p>Describes the curated FHIR endpoints. Runtime does not dynamically load it; descriptors are embedded in the TypeScript source.</p></article>
+      </div>
+      <h3>Registered tools</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Tool</th><th>FHIR operation</th><th>Authorization</th><th>Input behavior</th></tr></thead><tbody>
+        <tr><td><code>getPatient</code></td><td><code>GET /Patient/{id}</code></td><td>patient token needs <code>patient/Patient.read</code></td><td>patient ID equality when compartmented</td></tr>
+        <tr><td><code>patientEverything</code></td><td><code>GET /Patient/{id}/$everything</code></td><td>clinical group + broad read scope</td><td>by-ID compartment applies</td></tr>
+        <tr><td><code>searchObservation</code></td><td><code>GET /Observation</code></td><td>patient observation scope</td><td>patient forced; count clamped</td></tr>
+        <tr><td><code>searchCondition</code></td><td><code>GET /Condition</code></td><td>patient condition scope</td><td>patient forced; count clamped</td></tr>
+        <tr><td><code>searchMedicationRequest</code></td><td><code>GET /MedicationRequest</code></td><td>patient medication scope</td><td>patient forced; count clamped</td></tr>
+      </tbody></table></div>
+      <details><summary>Upstream resource controls</summary><div><ul><li><code>MAX_FHIR_COUNT</code> defaults to 100.</li><li>Timeout defaults to 10 seconds with <code>AbortController</code>.</li><li>Buffered response size defaults to 2,000,000 bytes.</li><li>Only declared path/query/body parameters are forwarded.</li><li>Caller-token passthrough code exists but is unreachable because the mode is hardcoded to <code>none</code>.</li></ul></div></details>
+      <details><summary>Express route order</summary><div><pre>express.json(1 MB)
+securityGuard
+public protected-resource metadata
+POST /mcp: bearer verification
+per-tool scope check
+fresh MCP server + stateless transport
+tool handler → FHIR fetch → final audit
+GET/DELETE /mcp: authenticated 405</pre></div></details>
+    </section>
+
+    <section id="scheduling"><h2>Scheduling MCP server</h2><div class="grid">
+      <article class="card"><div class="file"><code>src/index.ts</code><span class="pill">entry point</span></div><p>Awaits schema initialization before listening, ensuring the table/index exist before requests are accepted.</p></article>
+      <article class="card"><div class="file"><code>src/server.ts</code><span class="pill">tools + SQL</span></div><p>Defines the synthetic slot catalog, Postgres migration, handlers, scope map, PRM, bearer middleware, and stateless POST endpoint.</p></article>
+      <article class="card"><div class="file"><code>src/oauth-resource-server.ts</code><span class="pill warn">duplicated</span></div><p>Functional copy of FHIR OAuth logic. Security fixes must currently be synchronized manually.</p></article>
+      <article class="card"><div class="file"><code>src/audit.ts</code><span class="pill">audit</span></div><p>Uses the same tuple shape as FHIR.</p></article>
+    </div>
+    <h3>Persistence and concurrency</h3><div class="seq">
+      <div class="who">Startup</div><div class="what">PostgreSQL advisory lock; create/alter table; expire duplicate held rows; recreate partial unique index on held slot IDs.</div>
+      <div class="who">Hold</div><div class="what">Expire elapsed hold, insert with conflict-do-nothing, return existing handle to same subject or deny another subject.</div>
+      <div class="who">Confirm</div><div class="what">Read, verify owner/status/expiry, then update held → confirmed.</div>
+      <div class="who">Release</div><div class="what">Read, verify owner, then update to released.</div>
+    </div>
+    <div class="callout"><strong>Model limitations:</strong> <code>find-slots</code> never queries holds; confirmed rows do not reserve slots; release can change confirmed rows; confirm does not check whether its UPDATE won a race. This proves externalized handles and active-hold contention, not complete booking semantics.</div>
+    <p class="bad">Scheduling does not validate Origin and defines no explicit GET/DELETE 405 routes.</p></section>
+
+    <section id="gateway"><h2>Kong gateway configuration and plugins</h2><div class="grid">
+      <article class="card"><div class="file"><code>deck/internal.yaml</code><span class="pill">declarative state</span></div><p>Global OpenTelemetry, certificate-binding, and tier-wall plugins. Routes HAPI, FHIR MCP, scheduling MCP, GitHub egress, and mockhub egress. Applies rate limits and route-specific OIDC/ACL/DLP/vendor-token plugins.</p></article>
+      <article class="card"><div class="file"><code>deck/external.yaml</code><span class="pill">declarative state</span></div><p>Independent external tier wall, OTel, a placeholder FHIR ACL route, and patient-facing FHIR MCP route.</p></article>
+      <article class="card"><div class="file"><code>cnf-check/handler.lua</code><span class="pill">certificate binding</span></div><p>Requests a client certificate, parses unverified JWT payload only to locate the thumbprint, hashes leaf DER, and returns 401 on missing/unreadable/mismatch. Later components validate signature.</p></article>
+      <article class="card"><div class="file"><code>dlp-egress/handler.lua</code><span class="pill">inspection</span></div><p>Reads raw body, fails closed for unreadable non-GET/HEAD input, executes configured PCRE patterns, blocks on error/match, and logs only the pattern name.</p></article>
+      <article class="card"><div class="file"><code>vendor-token/handler.lua</code><span class="pill">credential swap</span></div><p>Posts vendor/sub/JTI/TTL/scopes to the broker, replaces upstream Authorization on 200, maps consent/re-consent responses, and fails closed when broker resolution fails.</p></article>
+      <article class="card"><div class="file"><code>plugins/*/schema.lua</code><span class="pill">schemas</span></div><p>Declare valid configuration fields. Setup scripts register these schemas with Konnect before decK sync.</p></article>
+    </div></section>
+
+    <section id="broker"><h2>Vendor token broker</h2><img class="visual" src="assets/governed-egress.png" alt="Conceptual broker and governed vendor egress"><p class="caption">Vault custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p><div class="grid">
+      <article class="card"><div class="file"><code>app/main.py</code><span class="pill">FastAPI service</span></div><p>Implements lifespan sweeper, problem responses, in-process cache/locks/transactions/state, OAuth consent, resolve/refresh, grants, admin view, and audit.</p></article>
+      <article class="card"><div class="file"><code>app/hub.py</code><span class="pill">inbound auth</span></div><p>PyJWKClient + PyJWT pin PS256/ES256, issuer, internal tier audience, 30-second leeway, and exp/iat/sub/jti. Additional contract/tier checks run after decode.</p></article>
+      <article class="card"><div class="file"><code>app/vendors.py</code><span class="pill">vendor adapters</span></div><p>Loads and caches registry/metadata; exchanges and refreshes with 10-second HTTPX clients; classifies invalid grants; resolves vendor identity; revokes via RFC 7009 or GitHub deletion.</p></article>
+      <article class="card"><div class="file"><code>app/vault_store.py</code><span class="pill">OpenBao KV v2</span></div><p>Separates token and client mounts, supports versioned CAS, translates missing entries to <code>None</code>, and wraps failures as <code>VaultUnavailable</code>.</p></article>
+      <article class="card"><div class="file"><code>app/audit.py</code><span class="pill">audit</span></div><p>Emits structured events as JSON lines.</p></article>
+      <article class="card"><div class="file"><code>registry.json</code><span class="pill">allowlist</span></div><p>Defines GitHub/mockhub enablement, endpoints or metadata URL, scope ceilings, user lookup, and revocation strategy.</p></article>
+    </div>
+    <h3>HTTP API</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Endpoint</th><th>Auth</th><th>Purpose</th></tr></thead><tbody>
+      <tr><td><code>GET /healthz</code></td><td>none</td><td>liveness</td></tr><tr><td><code>POST /v1/tokens/resolve</code></td><td>hub JWT</td><td>usable token, consent, refresh, or closed failure</td></tr>
+      <tr><td><code>GET /v1/authorize/{vendor}</code></td><td>transaction handle</td><td>PKCE/state and AS redirect</td></tr><tr><td><code>GET /v1/callback/{vendor}</code></td><td>state/response</td><td>issuer/state validation, code redemption, custody write</td></tr>
+      <tr><td><code>DELETE /v1/grants/{vendor}/{sub}</code></td><td>matching hub subject</td><td>vendor-first revocation</td></tr><tr><td><code>GET /v1/grants</code></td><td>hub JWT</td><td>non-secret grant metadata</td></tr>
+      <tr><td><code>GET /v1/admin/vendors/{vendor}</code></td><td>platform-admin hub JWT</td><td>non-secret registry record</td></tr>
+    </tbody></table></div>
+    <details><summary>Resolve/refresh algorithm</summary><div><ol><li>Validate hub JWT and use its subject.</li><li>Validate vendor and requested scopes against ceiling.</li><li>Read cache/Vault; absent or stale means consent.</li><li>Missing scopes means re-consent for a capped union.</li><li>Return token when remaining TTL is sufficient.</li><li>Acquire per-vendor/subject asyncio lock and reread.</li><li>Refresh once and persist with Vault CAS plus generation increment.</li><li>Invalid grant marks STALE; vendor/Vault failure fails closed.</li></ol><p class="warn">The lock is single-process. CAS prevents stale writes but does not stop duplicate vendor refresh calls across broker replicas.</p></div></details>
+    <details><summary>Consent state</summary><div><p>In-memory transactions carry subject/vendor/scopes/time. State records carry transaction, subject, vendor, PKCE verifier, nonce, issuer, issuer-required flag, consumed flag, and time. Both expire after ten minutes; restart abandons them.</p></div></details></section>
+
+    <section id="runtime"><h2>Runtime, workload identity, and observability</h2>
+      <div class="grid">
+        <article class="card"><div class="file"><code>agents/loop-agent/agent.py</code><span class="pill">workload</span></div><p>Rereads the current SVID, calculates x5t#S256, gets an mTLS client-credentials token, checks token binding locally, then calls find/hold/release over the same certificate.</p></article>
+        <article class="card"><div class="file"><code>k8s/loop-agent.yaml</code><span class="pill">Kubernetes</span></div><p>Namespace, service account, helper sidecar, shared SVID volume, agent, CA, URLs, scopes, and collision-free provider. No client secret.</p></article>
+        <article class="card"><div class="file"><code>k8s/spire.yaml</code><span class="pill">SPIRE</span></div><p>SPIRE server/agent chained to the generated lab CA. Setup scripts create workload registration entries and deliberately short SVID TTLs for rotation tests.</p></article>
+        <article class="card"><div class="file"><code>compose/phase5/mock-vendor/main.py</code><span class="pill">test vendor</span></div><p>In-memory OAuth AS/MCP endpoint with real PKCE, 60-second access tokens, rotating refresh families, replay burn, issuer parameter, revocation, user endpoint, tools, and test controls.</p></article>
+      </div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Phase</th><th>Runtime addition</th><th>Setup action</th></tr></thead><tbody>
+        <tr><td>0</td><td>Postgres, Keycloak, HAPI, OTel/Loki/Tempo/Grafana</td><td>realm import, Synthea seed</td></tr><tr><td>1</td><td>brokered identity and legacy issuer</td><td>exchange permission/profile setup</td></tr>
+        <tr><td>2</td><td>Konnect internal/external DPs + uplink proxy</td><td>CPs, certs, endpoint aliases, decK sync</td></tr><tr><td>3</td><td>FHIR and two scheduling replicas</td><td>build and route sync</td></tr>
+        <tr><td>4</td><td>lab PKI, TLS, cnf plugin, k3d/SPIRE</td><td>certs, schema registration, workload deployment</td></tr><tr><td>5</td><td>OpenBao, broker, mockhub, DLP/vendor plugins, Alloy</td><td>Vault mounts/policy/credentials, egress routes</td></tr>
+      </tbody></table></div>
+      <div class="grid">
+        <article class="card"><h3>Audit path</h3><p>Kong OTel → Collector → Loki/Tempo. Service stdout → Alloy Docker discovery → Loki. Grafana provisions both sources and the audit tuple dashboard.</p></article>
+        <article class="card"><h3>Containers</h3><p>Node servers use multi-stage builds and run as <code>node</code>. Broker and agent run as UID 65534. Server health checks query protected-resource metadata.</p></article>
+        <article class="card"><h3>Local artifacts</h3><p>Environment files, generated DP settings, cert/private keys, Synthea output, caches, lockfiles, compiled output, and dependencies are operational artifacts—not separately documented modules.</p></article>
+        <article class="card"><h3>CP resiliency mechanism</h3><p>Nginx carries aliases for Konnect cluster/telemetry endpoints. Stopping it severs DP uplink while leaving cached gateway configuration serving.</p></article>
+      </div>
+    </section>
+
+    <section id="tests"><h2>Tests, CI, and presentation</h2><div class="grid">
+      <article class="card"><h3>Phase tests</h3><p>Phase 0–7 suites cover claims, normalization, tier isolation, CP loss, decK drift, tools, step-up, compartments, stateless handles, mTLS/cnf, consent, DLP, refresh race, revocation, audit joins, and red-team probes.</p></article>
+      <article class="card"><h3><code>tests/phase3/mcp_http.py</code></h3><p>Legacy JSON-RPC helper that sends no modern protocol metadata or mirrored headers. It verifies current application behavior, not 2026 wire compliance.</p></article>
+      <article class="card"><h3>GitHub Actions</h3><p>Builds TypeScript, compiles/imports Python, parses JSON/YAML. Production npm audit is non-blocking; live stack gates remain manual.</p></article>
+      <article class="card"><h3>Existing HTML/assets</h3><p><code>overview.html</code> and <code>assets/overview/</code> are an earlier rendered tour. Root/directory READMEs guide operators.</p></article>
+    </div>
+    <h3>Coverage required before reassessment</h3><ul><li><code>server/discover</code> and version negotiation.</li><li>Required per-request <code>_meta</code> and HTTP header/body binding.</li><li>Unsupported-version and modern error codes.</li><li>Malformed but correctly signed contract-token fixtures.</li><li>Origin-negative coverage for every MCP server.</li><li>Scheduling availability and confirm/release race tests.</li></ul></section>
+  </main>
+  <footer><div class="shell">Verified against repository source/configuration on 2026-07-10. Exact current-state limitations are intentionally retained for the next assessment.</div></footer>
+</body></html>

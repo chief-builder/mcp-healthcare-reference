@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP Healthcare Reference — Overall Technical Walkthrough</title><link rel="icon" href="data:,">
+<style>
+:root{--bg:#050e19;--panel:#0c1b2d;--panel2:#10263e;--ink:#ebf6ff;--muted:#9fb4ca;--cyan:#39d7e5;--green:#66ddb3;--amber:#ffc56d;--purple:#a394ff;--red:#ff8493;--line:#23425f}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 25% 0,#123552 0,transparent 30%),var(--bg);color:var(--ink);font:15px/1.65 Inter,system-ui,sans-serif}.shell{width:min(1260px,calc(100% - 30px));margin:auto}a{color:var(--cyan)}code,pre{font-family:"SFMono-Regular",Consolas,monospace}.bar{position:sticky;top:0;z-index:8;background:#050e19ec;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}.bar .shell{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 0}.brand{font-weight:800}.nav{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}.nav a{text-decoration:none;color:var(--muted)}.hero{padding:58px 0 28px}.ey{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}h1{font-size:clamp(40px,5.7vw,72px);line-height:1.01;margin:10px 0 18px}h2{font-size:31px;margin:60px 0 12px}h3{font-size:21px;margin:0 0 9px}.lede{font-size:20px;color:#c6d7e8;max-width:950px}.hero img,.visual{width:100%;border:1px solid var(--line);border-radius:23px;box-shadow:0 26px 65px #0009}.hero img{margin-top:32px}.visual{margin:22px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:17px;padding:21px}.card p,.card li{color:#c4d4e3}.wide{grid-column:1/-1}.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:760px}.tbl th,.tbl td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px}.tbl th{color:#9deaf0;text-transform:uppercase;letter-spacing:.08em;font-size:12px}.tbl td{color:#c5d5e4}.arch{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch;margin:24px 0}.node{background:#0a1828;border:1px solid var(--line);border-radius:14px;padding:15px;min-height:135px}.node b{color:#a9f1f3}.node.sec{border-color:#6e5b35}.node.data{border-color:#514b80}.node.audit{border-color:#286452}.arrow{display:grid;place-items:center;color:var(--cyan);font-size:23px}.sequence{display:grid;grid-template-columns:150px 1fr;gap:8px 15px}.sequence .actor{font-weight:800;color:var(--cyan)}.sequence .msg{border-left:2px solid #28506e;padding:0 0 15px 16px;color:#c8d7e6}.callout{border:1px solid #775f32;background:#2c2417;color:#ffe4b2;border-radius:13px;padding:16px 19px;margin:22px 0}.danger{border-color:#7b3b47;background:#2c171d;color:#ffc1c8}.ok{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}pre{white-space:pre-wrap;background:#030a12;border:1px solid #1d3852;border-radius:12px;padding:16px;color:#b9dbec;overflow:auto}details{border:1px solid var(--line);background:#091625;border-radius:12px;margin:10px 0}summary{cursor:pointer;font-weight:800;padding:13px 16px}details>div{padding:0 16px 16px}.matrix td:first-child{font-weight:700;color:#eaf5ff}.yes{color:var(--green)}.partial{color:var(--amber)}.no{color:var(--red)}footer{border-top:1px solid var(--line);margin-top:65px;padding:30px 0 55px;color:var(--muted)}@media(max-width:850px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.arch{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.bar .shell{flex-direction:column;align-items:flex-start}.sequence{grid-template-columns:1fr}}
+</style></head><body>
+<header class="bar"><div class="shell"><div class="brand">MCP Healthcare Reference</div><nav class="nav"><a href="modules-functional.html">Modules · Functional</a><a href="modules-technical.html">Modules · Technical</a><a href="overall-functional.html">Overall · Functional</a><a href="overall-technical.html">Overall · Technical</a></nav></div></header>
+<main class="shell">
+<section class="hero"><div class="ey">Verified system guide · Overall technical view</div><h1>Architecture, protocols, state, and controls</h1><p class="lede">A cross-module technical model of the running Phase 5/6 lab: processes and ports, trust boundaries, token paths, request sequences, persistence, failure behavior, audit joins, and the precise delta to the upcoming MCP specification.</p><img src="assets/platform-landscape.png" alt="Conceptual system architecture"><p class="caption">Lab topology: clients, identity hub, gateway, MCP servers, vendor egress, audit spine.</p></section>
+
+<section id="architecture"><h2>Runtime architecture</h2>
+<div class="arch">
+<div class="node"><b>Clients</b><p>Workforce PKCE client<br>Patient PKCE client<br>mTLS loop agent<br>Test clients</p></div><div class="arrow">→</div>
+<div class="node sec"><b>Identity + gateway</b><p>Keycloak hub<br>Kong internal DP<br>Kong external DP<br>cnf / DLP / token plugins</p></div><div class="arrow">→</div>
+<div class="node data"><b>Destinations</b><p>FHIR MCP → HAPI<br>Scheduling MCP → Postgres<br>Broker → OpenBao<br>Vendor MCP</p></div>
+</div>
+<div class="grid">
+<article class="card"><h3>Control plane</h3><p>Two Konnect hybrid control planes are created and configured through API/decK. Local Kong data planes establish mTLS uplinks through an Nginx alias proxy and cache configuration for disconnected operation.</p></article>
+<article class="card"><h3>Data plane</h3><p>Requests stay on local Docker/k3d paths except real Konnect control traffic and optional real Auth0/GitHub integrations. HAPI data is synthetic. Kong first-party routes forward to container ports; egress routes forward only to registered vendor service URLs.</p></article>
+<article class="card"><h3>Application state</h3><p>MCP transport sessions are disabled. FHIR calls are request-local. Scheduling continuity is a UUID handle in Postgres. Broker grants are versioned Vault entries, while consent transactions and single-flight locks are process-local memory.</p></article>
+<article class="card"><h3>Evidence plane</h3><p>Services emit JSON audit lines. Alloy ships Docker logs to Loki. Kong exports OTel logs/traces through Collector to Loki/Tempo. Grafana queries by token ID or hub JTI.</p></article>
+</div></section>
+
+<section id="ports"><h2>Lab endpoints and ports</h2><div class="table-wrap"><table class="tbl"><thead><tr><th>Host port</th><th>Component</th><th>Purpose</th><th>Security posture in lab</th></tr></thead><tbody>
+<tr><td>3000</td><td>Grafana</td><td>dashboards</td><td>local admin credential</td></tr>
+<tr><td>3100 / 3200</td><td>Loki / Tempo</td><td>logs / traces APIs</td><td>no auth, local lab</td></tr>
+<tr><td>4317 / 4318</td><td>OTel Collector</td><td>OTLP gRPC / HTTP</td><td>compose-network and host exposed</td></tr>
+<tr><td>7001</td><td>homegrown issuer</td><td>legacy token issuer</td><td>HTTP, static lab client</td></tr>
+<tr><td>8080</td><td>Keycloak</td><td>public lab issuer and browser flows</td><td>HTTP development mode</td></tr>
+<tr><td>8081</td><td>HAPI FHIR</td><td>synthetic R4 backend</td><td>direct host access for tests</td></tr>
+<tr><td>8100</td><td>Kong internal</td><td>workforce/internal MCP and egress</td><td>HTTP bearer path</td></tr>
+<tr><td>8143</td><td>Kong internal TLS</td><td>certificate-bound agent path</td><td>lab-CA TLS + client cert inspection</td></tr>
+<tr><td>8200</td><td>Kong external</td><td>curated patient/partner surface</td><td>HTTP bearer path</td></tr>
+<tr><td>8210</td><td>OpenBao</td><td>dev Vault API</td><td>dev root token; broker uses scoped token</td></tr>
+<tr><td>8300</td><td>broker</td><td>consent and grant API</td><td>HTTP; hub JWT on protected routes</td></tr>
+<tr><td>8310</td><td>mockhub</td><td>mock OAuth AS and vendor MCP</td><td>HTTP test service</td></tr>
+<tr><td>8443</td><td>Keycloak TLS</td><td>mTLS client credentials</td><td>lab-CA TLS; requests client cert</td></tr>
+</tbody></table></div>
+<div class="callout">These ports describe the Phase 5 Compose lab. Production target URLs in the architecture are HTTPS and privately/publicly exposed according to tier; the committed Compose configuration is not a production network policy.</div></section>
+
+<section id="claims"><h2>Token model and validation matrix</h2>
+<pre>{
+  "iss": "hub issuer",
+  "sub": "effective principal",
+  "aud": ["one tier audience", "one or more server resources"],
+  "azp": "calling client or agent",
+  "exp": 0, "iat": 0, "jti": "opaque join key",
+  "mcp_contract": "1.0",
+  "mcp_tier": "internal | external",
+  "idp_origin": "ping | athenz | homegrown | keycloak | auth0",
+  "scope": "space-delimited scopes",
+  "act": {"sub": "acting workload"},
+  "cnf": {"x5t#S256": "certificate thumbprint"},
+  "fhir_patient": "conditional patient ID",
+  "groups": ["normalized roles"]
+}</pre>
+<div class="table-wrap"><table class="tbl matrix"><thead><tr><th>Validation</th><th>Kong tier wall / OIDC</th><th>MCP servers</th><th>Broker</th></tr></thead><tbody>
+<tr><td>JWT signature</td><td><span class="partial">OIDC only on selected routes; pre-function itself parses unverified</span></td><td><span class="yes">yes, remote JWKS</span></td><td><span class="yes">yes, remote JWKS</span></td></tr>
+<tr><td>Algorithm</td><td><span class="partial">OIDC configuration-dependent</span></td><td><span class="yes">PS256 / ES256</span></td><td><span class="yes">PS256 / ES256</span></td></tr>
+<tr><td>Issuer / expiration</td><td><span class="partial">OIDC routes</span></td><td><span class="yes">yes</span></td><td><span class="yes">yes + 30s leeway</span></td></tr>
+<tr><td>Tier audience</td><td><span class="yes">internal/external wall</span></td><td><span class="partial">exactly one tier-shaped audience, but no tier-claim match</span></td><td><span class="yes">internal audience + one tier-shaped audience</span></td></tr>
+<tr><td>Server resource audience</td><td><span class="partial">first-party routes defer to server</span></td><td><span class="yes">configured audience</span></td><td>not applicable</td></tr>
+<tr><td>Mandatory contract claims</td><td><span class="partial">route-specific</span></td><td><span class="no">incomplete</span></td><td><span class="partial">requires exp/iat/sub/jti plus contract/tier checks</span></td></tr>
+<tr><td>Certificate binding</td><td><span class="yes">cnf-check at internal DP</span></td><td><span class="no">not rechecked</span></td><td><span class="no">lab substitution; hub bearer revalidation</span></td></tr>
+<tr><td>Tool scope</td><td><span class="partial">coarse route policy</span></td><td><span class="yes">per tools/call middleware</span></td><td>vendor scope ceiling and grant coverage</td></tr>
+<tr><td>Patient compartment</td><td>deferred</td><td><span class="yes">enforced; Auth0-origin tokens without a non-empty claim are rejected</span></td><td>not applicable</td></tr>
+</tbody></table></div></section>
+
+<section id="flows"><h2>End-to-end request sequences</h2>
+<h3>Workforce clinical call</h3><div class="sequence">
+<div class="actor">Client</div><div class="msg">Authorization code + PKCE via Keycloak, optionally brokered to fake Ping/Auth0. Receives a hub access token.</div>
+<div class="actor">Internal Kong</div><div class="msg">Global tier pre-function requires <code>mcp://tier/internal</code>. Rate limit applies. First-party route forwards to FHIR server.</div>
+<div class="actor">FHIR server</div><div class="msg">Bearer middleware verifies signature/issuer/expiry/resource audience. For <code>tools/call</code>, required scope is checked. Tool list is group-shaped.</div>
+<div class="actor">Authorization hook</div><div class="msg">When a patient claim exists, by-ID equality or forced search parameter is applied.</div>
+<div class="actor">HAPI</div><div class="msg">Receives a bounded GET request. Response is capped and converted to MCP text content. Final status determines audit allow/deny.</div>
+</div>
+
+<h3>Certificate-bound scheduling call</h3><div class="sequence">
+<div class="actor">SPIRE helper</div><div class="msg">Writes short-lived SVID certificate/key into shared volume and rotates them.</div>
+<div class="actor">Loop agent</div><div class="msg">Reads certificate, requests Keycloak client credentials over mTLS, validates the token’s x5t against the same certificate.</div>
+<div class="actor">Kong :8143</div><div class="msg">Requests the client certificate. <code>cnf-check</code> compares leaf SHA-256 thumbprint to token claim before forwarding.</div>
+<div class="actor">Scheduling</div><div class="msg">Revalidates token and scope, then uses Postgres for the hold. Explicit <code>slot_hold_id</code> carries continuity between calls/replicas.</div>
+</div>
+
+<h3>Governed vendor call</h3><div class="sequence">
+<div class="actor">Internal Kong</div><div class="msg">OIDC validates the egress resource audience. DLP scans the raw JSON body and records allow/deny.</div>
+<div class="actor">vendor-token</div><div class="msg">Calls broker resolve with hub Authorization plus vendor, subject, JTI, TTL, and required scopes.</div>
+<div class="actor">Broker</div><div class="msg">Revalidates hub JWT; reads Vault; returns token, consent URL, re-consent URL, or a closed failure. Refresh is single-flight per process and CAS-protected in Vault.</div>
+<div class="actor">Kong</div><div class="msg">Replaces the hub Authorization header with the vendor access token.</div>
+<div class="actor">Vendor</div><div class="msg">Receives screened MCP body and its own credential only.</div>
+</div><img class="visual" src="assets/governed-egress.png" alt="Conceptual governed vendor sequence"><p class="caption">Vault custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p></section>
+
+<section id="state"><h2>State ownership and failure behavior</h2><div class="table-wrap"><table class="tbl"><thead><tr><th>State</th><th>Owner</th><th>Durability</th><th>Failure behavior</th></tr></thead><tbody>
+<tr><td>Keycloak users, clients, grants</td><td>Postgres</td><td>Compose volume</td><td>identity unavailable if Keycloak/Postgres down</td></tr>
+<tr><td>FHIR synthetic records</td><td>HAPI/Postgres</td><td>Compose volume</td><td>tool returns upstream error; audit deny</td></tr>
+<tr><td>Scheduling holds</td><td>Postgres</td><td>Compose volume, cross-replica</td><td>DB error becomes tool error; schema startup blocks listener</td></tr>
+<tr><td>Vendor grants</td><td>OpenBao KV v2</td><td>dev-mode memory in lab</td><td>Vault failure returns 503; no vendor call</td></tr>
+<tr><td>Broker token cache</td><td>broker process</td><td>60-second memory cache</td><td>cache loss rereads Vault</td></tr>
+<tr><td>Consent transaction/state</td><td>broker process</td><td>10-minute memory only</td><td>restart invalidates active browser flows</td></tr>
+<tr><td>Refresh lock</td><td>broker process</td><td>memory only</td><td>10-second timeout then reread; multiple replicas can duplicate refresh requests</td></tr>
+<tr><td>Gateway configuration</td><td>Konnect DP cache</td><td>DP local cache</td><td>DP continues serving during CP uplink loss</td></tr>
+<tr><td>Audit logs/traces</td><td>Loki/Tempo filesystem</td><td>Compose volumes</td><td>lab-only single-node retention</td></tr>
+</tbody></table></div></section>
+
+<section id="mcp"><h2>Upcoming MCP 2026-07-28 compliance delta</h2>
+<div class="grid">
+<article class="card"><h3 class="bad">Current wire behavior</h3><ul><li>SDK 1.29 and 2025-era schemas.</li><li>Fresh stateless server/transport per POST.</li><li>Legacy requests without per-request identity/capability metadata are accepted.</li><li>No <code>server/discover</code>.</li><li>No mirrored method/name/header validation.</li><li>Existing test helper proves this legacy path.</li></ul></article>
+<article class="card"><h3 class="ok">Required modern behavior</h3><ul><li>Upgrade to the official v2 client/server packages supporting modern and legacy eras.</li><li>Implement <code>server/discover</code> and advertise supported versions/capabilities/serverInfo.</li><li>Require protocol version, clientInfo, and clientCapabilities in request <code>_meta</code>.</li><li>Validate <code>MCP-Protocol-Version</code>, <code>Mcp-Method</code>, and conditional <code>Mcp-Name</code> against the body.</li><li>Return modern HTTP status and JSON-RPC error codes.</li><li>Update all clients/tests and add a conformance gate.</li></ul></article>
+<article class="card"><h3>Transport lifecycle</h3><p>Modern HTTP exposes POST only; GET/DELETE should return 405 for older traffic. Request-scoped SSE remains optional. Client disconnect should cancel work. The FHIR fetch currently has a timeout signal but is not wired to the client disconnect signal.</p></article>
+<article class="card"><h3>Backward compatibility</h3><p>If legacy support is required, v2 auto-negotiation should probe modern discovery and fall back to initialize-era behavior. The server must distinguish modern protocol errors from legacy endpoint absence.</p></article>
+</div></section>
+
+<section id="oauth"><h2>OAuth 2.1 / related RFC compliance delta</h2>
+<div class="table-wrap"><table class="tbl"><thead><tr><th>Area</th><th>Present</th><th>Required remediation</th></tr></thead><tbody>
+<tr><td>PKCE</td><td>Public clients and broker use S256; mockhub enforces verifier</td><td>Broker must verify discovered AS metadata advertises S256 before starting authorization</td></tr>
+<tr><td>Protected Resource Metadata</td><td>path-inserted and root routes; authorization server list; header method</td><td>Use canonical HTTPS MCP endpoint as <code>resource</code>; omit empty arrays; match retrieval/request URL exactly</td></tr>
+<tr><td>Resource indicators</td><td>server audience is checked</td><td>Replace <code>mcp://srv/*</code> PRM resource with HTTPS endpoint resource; retain tier audience separately if desired</td></tr>
+<tr><td>Authorization server discovery</td><td>Keycloak OIDC discovery; vendor RFC 8414 fetch</td><td>Validate metadata issuer and HTTPS endpoints; implement MCP-prescribed discovery behavior in clients</td></tr>
+<tr><td>Issuer identification</td><td>broker validates RFC 9207 issuer when advertised</td><td>Ensure every operated OAuth client validates issuer, including errors; production issuer must be HTTPS</td></tr>
+<tr><td>Redirect URIs</td><td>PKCE clients use localhost wildcard registrations</td><td>Register exact callbacks; only native loopback port may vary</td></tr>
+<tr><td>Transport security</td><td>mTLS workload leg; otherwise HTTP lab</td><td>Production TLS everywhere with consistent public issuer/resource URLs</td></tr>
+<tr><td>Refresh protection</td><td>mock rotation/replay burn; broker CAS/single-flight</td><td>Distributed lock for multi-replica broker; sender constrain or rotate public-client refresh tokens at AS</td></tr>
+<tr><td>Token passthrough</td><td>vendor route replaces hub token; FHIR mode hardcoded none</td><td>Delete dormant passthrough branch so it cannot be enabled</td></tr>
+</tbody></table></div></section>
+
+<section id="audit"><h2>Audit tuple and evidence path</h2>
+<pre>token_id / hub_jti → principal → acting_agent → client
+                     → origin_idp → tier → patient_compartment
+                     → server / route → tool → decision / reason → timestamp</pre>
+<div class="grid">
+<article class="card"><h3>Server evidence</h3><p>FHIR and scheduling audit the final tool outcome. FHIR distinguishes compartment, upstream exception, and upstream HTTP denial. Scope middleware audits insufficient scope.</p></article>
+<article class="card"><h3>Gateway evidence</h3><p>cnf-check logs certificate-binding denials. DLP logs both clean passes and blocks. vendor-token logs broker decisions. OpenTelemetry adds request traces.</p></article>
+<article class="card"><h3>Broker evidence</h3><p>Consent, resolve path, refresh generation, stale transition, mass-stale page, revoke, security callback failures, and admin denial are JSON events.</p></article>
+<article class="card"><h3>Limitations</h3><p>The lab is not an immutable SIEM, has no production retention policy, and uses unauthenticated local Loki/Tempo. Audit completeness still depends on every rejection path emitting a record.</p></article>
+</div></section>
+
+<section id="verification"><h2>Verification and next assessment gate</h2>
+<div class="grid">
+<article class="card"><h3>Current checks</h3><p>Two TypeScript builds are clean. Production npm trees reported zero known vulnerabilities on 2026-07-10. Six read-only Phase 3 clinical/tool integration tests passed during the latest assessment. The running stack’s PRM and Origin behavior were inspected directly.</p></article>
+<article class="card"><h3>CI boundary</h3><p>GitHub Actions performs offline build/compile/config parsing. npm audit is non-blocking. Live Docker/Konnect/Auth0/GitHub/k3d acceptance remains manual.</p></article>
+<article class="card"><h3>Reassessment prerequisites</h3><ol><li>Modern SDK/wire migration and conformance tests.</li><li>HTTPS canonical resource migration.</li><li>Central contract-exact token validation.</li><li>Scheduling Origin and booking-state fixes.</li><li>OAuth metadata/redirect/TLS hardening.</li></ol></article>
+<article class="card"><h3>Required evidence</h3><p>Run builds, dependency audits, new unit tests, modern MCP conformance, Origin negatives, OAuth discovery/PKCE/redirect tests, phases 0–7, race tests, and a fresh token-in-log scan. Record exact versions and the deployed configuration commit.</p></article>
+</div>
+<div class="callout danger"><strong>No current certification claim:</strong> the architecture is well developed and several controls are genuinely implemented, but the current repository cannot accurately claim MCP 2026-07-28, RFC 9728, or production OAuth 2.1 compliance until the listed deltas are closed and verified.</div></section>
+</main><footer><div class="shell">Technical system view verified from repository source and live read-only probes on 2026-07-10. This page intentionally preserves known gaps as reassessment criteria.</div></footer>
+</body></html>
