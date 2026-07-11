@@ -84,9 +84,17 @@ export function createTokenVerifier(config: ResourceServerConfig): OAuthTokenVer
         throw new InvalidTokenError('token must carry exactly one tier audience');
       }
       // fhir_patient is a PII claim: mandatory on the Auth0 end-customer path,
-      // FORBIDDEN on every other path (contract §3). Reject it anywhere else.
+      // FORBIDDEN on every other path (contract §3). Reject it anywhere else,
+      // and reject an Auth0-origin token that lacks it (contract §8: absent on
+      // a path that requires it is a rejection, not a workforce fallback).
       if (payload.fhir_patient !== undefined && payload.idp_origin !== 'auth0') {
         throw new InvalidTokenError('fhir_patient is forbidden on non-patient tokens');
+      }
+      if (
+        payload.idp_origin === 'auth0' &&
+        (typeof payload.fhir_patient !== 'string' || payload.fhir_patient.length === 0)
+      ) {
+        throw new InvalidTokenError('auth0-origin tokens must carry a non-empty string fhir_patient');
       }
 
       const scopes =
