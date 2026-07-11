@@ -62,7 +62,7 @@ All tokens conform to the Claims Contract: `PS256`/`ES256` on FIPS modules, 5–
 
 | Tier | Serves | Route set | Distinctive policy |
 |---|---|---|---|
-| Internal | Workforce clients via VPN + private NLB; internal agents east-west | Full first-party catalog | JWT + `cnf` thumbprint verification; role-scoped MCP ACLs; guardrails |
+| Internal | Workforce clients via VPN + private NLB; internal agents east-west | Full first-party catalog | JWT + `cnf` sender-constraint (mTLS `x5t#S256` for agents, DPoP `jkt` for the workforce-dpop client); role-scoped MCP ACLs; guardrails |
 | External | ChatGPT/B2B and patient apps via WAF + public ALB (edge controls: Appendix A) | Curated catalog only (PHI-free until per-tool compliance approval; patient-compartment tools for Auth0 tokens) | Aggressive rate/response limits; outbound PII guardrails; separate control plane so misconfig cannot expose internal tools |
 | Egress | Corporate clients and internal agents calling SaaS MCP servers | Brokered vendor routes (`mcp://egress/*` audiences) | Tool allowlists per vendor; outbound DLP tuned for PHI signatures; vendor-token injection via broker; hub JWT stripped upstream |
 

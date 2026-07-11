@@ -8,7 +8,7 @@ The prototype is only useful if these seven properties are *actually enforced*, 
 
 1. **Single issuer:** every token the gateway or an MCP server validates is minted by the lab Keycloak, regardless of which upstream "IdP" authenticated the principal.
 2. **Two-level audiences:** tier audience + per-server resource URI (RFC 8707); a token replayed across tiers must fail cryptographic validation, and the acceptance suite proves it.
-3. **Cert-bound m2m:** the internal-agent path uses X.509 client auth at Keycloak and `cnf.x5t#S256` verification at the gateway (RFC 8705). No client secrets on the m2m path.
+3. **Sender-constrained tokens (two bindings, one `cnf` doctrine):** the internal-agent path uses X.509 client auth at Keycloak and `cnf.x5t#S256` verification at the gateway (RFC 8705); no client secrets on the m2m path. The public-client analogue — DPoP (RFC 9449) — binds a workforce token to a client-held key (`cnf.jkt`), enforced gateway-first (`dpop-check` plugin) and re-validated at the server (`requireDpop`). A token lifted from a client's credential store is inert without the matching key/cert.
 4. **Stateless MCP (2026-07-28):** no protocol session; any request to any replica; continuity via explicit handles.
 5. **Egress DLP:** outbound tool arguments to the real SaaS vendor are screened; a planted fake-MRN string must be blocked and audited.
 6. **Broker correctness:** one-time consent dance with server-side `state`/PKCE, vault custody keyed by hub `sub`, and single-flight refresh proven under forced concurrency.
@@ -28,7 +28,7 @@ Everything else is negotiable.
 | EKS | **k3d or kind** (Phase ≥4); plain docker-compose for Phases 0–3 | k8s enters exactly when workload identity does |
 | Epic/Cerner FHIR | **HAPI FHIR JPA server + Synthea synthetic patients** | Real FHIR R4 semantics, patient-compartment filtering, zero PHI by construction |
 | First-party MCP servers | Generate from HAPI's OpenAPI with **your `openapi-mcp-generator`**, plus one hand-built stateless server; PRM (RFC 9728) on both | Dogfoods your own project; statelessness and discovery are real |
-| MCP clients | **Claude Code** (workforce), **MCP Inspector** (external/third-party), a small containerized loop agent (internal m2m) | Three genuinely different client classes |
+| MCP clients | **Claude Code** (workforce), **MCP Inspector** (external/third-party), a small containerized loop agent (internal m2m), plus a **`workforce-dpop`** harness client exercising the DPoP sender-constraint path | Genuinely different client classes; the pytest harness mints DPoP proofs since no shipped client sends them yet |
 | SaaS vendor + MCP | **Real GitHub** — org-owned GitHub App against github.com, GitHub's remote MCP endpoint | The best part of the lab: real rotating refresh tokens, real revocation, real consent screens. Notion optional second vendor |
 | Vault + KMS | **OpenBao or HashiCorp Vault** (dev mode Phase 5, file storage after) | Real policies and audit device; loses HSM/KMS envelope — noted, not simulated |
 | SIEM | **OTel Collector → Grafana Loki + Tempo + Grafana** | The audit-tuple dashboard is a first-class deliverable |
@@ -54,7 +54,7 @@ Each phase ends with named acceptance checks; don't advance on red.
 
 **Phase 6 — Audit spine (1 weekend).** OTel from DPs, servers, broker → Loki/Tempo; the Grafana "tuple" dashboard keyed by `jti`. ✅ Pick any GitHub issue created in Phase 5 and walk it back to the human, client, gateway decision, and DLP verdict in one query.
 
-**Phase 7 — Red-team weekend.** Run the acceptance list from the arch doc §13 plus: cross-tier replay, scope-ceiling probes, `state` replay on the broker callback (expect the security alert), STALE-storm simulation (uninstall the GitHub App), token in a log grep (expect zero hits). Also probe: RFC 9207 `iss` tampering on the broker callback (expect rejection + alert), and a CIMD experiment — attempt a URL-form `client_id` from a non-allowlisted origin at the external tier (expect refusal). Findings become GitHub issues in this repo.
+**Phase 7 — Red-team weekend.** Run the acceptance list from the arch doc §13 plus: cross-tier replay, scope-ceiling probes, `state` replay on the broker callback (expect the security alert), STALE-storm simulation (uninstall the GitHub App), token in a log grep (expect zero hits). Also probe: RFC 9207 `iss` tampering on the broker callback (expect rejection + alert), and a CIMD experiment — attempt a URL-form `client_id` from a non-allowlisted origin at the external tier (expect refusal). The suite later grew a DPoP sender-constraint section (P8, 11 probes on the `workforce-dpop` client): a `cnf.jkt`-bound token replayed as a plain bearer or with a missing / wrong-`htu` / wrong-`htm` / wrong-`ath` / stale / replayed-`jti` / thumbprint-mismatch proof is refused, and the server re-checks even when the gateway is bypassed. `tests/phase7.sh` is green at 32 passed. Findings become GitHub issues in this repo.
 
 ## 4. Hardware and cost
 
@@ -67,7 +67,7 @@ docs/         architecture package (claims contract, broker design, e2e referenc
 compose/      phase 0–5 docker-compose stacks (phase4/ also carries the k3d/SPIRE manifests; phase5/ the mock vendor)
 realm/        keycloak realm exports (git-tracked identity config)
 deck/         Konnect/Kong declarative state
-plugins/      bespoke Kong Lua plugins: cnf-check, dlp-egress, vendor-token
+plugins/      bespoke Kong Lua plugins: cnf-check, dlp-egress, vendor-token, dpop-check
 broker/       vendor token broker service
 servers/      first-party MCP servers (generated + hand-built)
 agents/       the internal loop agent

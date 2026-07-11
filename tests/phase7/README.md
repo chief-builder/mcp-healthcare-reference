@@ -3,7 +3,9 @@
 Adversarial probes against the running phase-5 stack + phase-6 audit spine.
 The arch-doc §13 acceptance list plus the named probes: cross-tier replay,
 scope-ceiling, broker `state` replay, RFC 9207 `iss` tampering/omission,
-STALE-storm, token-in-log grep, and the CIMD external-tier experiment.
+STALE-storm, token-in-log grep, the CIMD external-tier experiment, and the
+P8 DPoP sender-constraint section (RFC 9449) on the `workforce-dpop` client.
+`tests/phase7.sh` is green at 32 passed, 0 xfail.
 
 Run against the same target as `tests/phase6.sh` (phase-5 stack up):
 
@@ -30,6 +32,12 @@ both issues closed.
 | Token-in-log grep | `test_no_token_material_in_any_log` | no secrets on logs/spine |
 | CIMD non-allowlisted | `test_cimd_url_form_client_id_is_refused` | refused (control absent — issue #3) |
 | Broker no-issuance | `test_broker_exposes_no_issuance_endpoint[*]`, `test_broker_resolve_requires_valid_hub_token` | custodian-not-issuer (design §11) |
+| **P8** DPoP token binding | `test_dpop_token_carries_cnf_jkt`, `test_dpop_valid_proof_admitted` | `cnf.jkt` issued + valid proof admitted (controls) |
+| P8 stolen-token replay | `test_dpop_token_replayed_as_plain_bearer_rejected`, `test_dpop_missing_proof_rejected` | bearer replay of a bound token refused (RFC 9449) |
+| P8 proof tampering | `test_dpop_wrong_htu_rejected`, `test_dpop_wrong_htm_rejected`, `test_dpop_stale_iat_rejected`, `test_dpop_wrong_ath_rejected`, `test_dpop_thumbprint_mismatch_rejected` | htu/htm/iat/ath/jkt binding enforced |
+| P8 proof replay | `test_dpop_jti_replay_rejected` | single-use `jti` (DP shared dict) |
+| P8 layered defense | `test_dpop_server_revalidates_without_gateway` | server `requireDpop` holds with the DP bypassed |
+| P8 bearer unaffected | `test_bearer_client_unaffected` | claude-code bearer path untouched |
 
 ## Findings (filed as issues)
 

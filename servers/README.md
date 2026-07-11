@@ -20,6 +20,9 @@ wall (server is authoritative, DP is the cheap early rejection; arch doc §6).
 - **Compartment (FHIR):** when the token carries `fhir_patient` (Auth0 patients),
   `fhir-clinical/src/authz-hook.ts` hard-scopes every query to that patient and
   blocks by-id reads of anyone else (contract §6.5).
+- **Sender-constraint (DPoP):** DPoP-bound tokens (`cnf.jkt`) are authoritatively
+  re-validated in-server by `requireDpop` (`src/dpop.ts`), with `dpopSchemeShim`
+  normalizing the `DPoP` auth scheme first; bearer tokens are unaffected.
 
 ## Regenerating the FHIR server
 

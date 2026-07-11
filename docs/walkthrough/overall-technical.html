@@ -9,7 +9,7 @@
 
 <section id="architecture"><h2>Runtime architecture</h2>
 <div class="arch">
-<div class="node"><b>Clients</b><p>Workforce PKCE client<br>Patient PKCE client<br>mTLS loop agent<br>Test clients</p></div><div class="arrow">→</div>
+<div class="node"><b>Clients</b><p>Workforce PKCE client<br>DPoP-bound workforce client<br>Patient PKCE client<br>mTLS loop agent<br>Test clients</p></div><div class="arrow">→</div>
 <div class="node sec"><b>Identity + gateway</b><p>Keycloak hub<br>Kong internal DP<br>Kong external DP<br>cnf / DLP / token plugins</p></div><div class="arrow">→</div>
 <div class="node data"><b>Destinations</b><p>FHIR MCP → HAPI<br>Scheduling MCP → Postgres<br>Broker → OpenBao<br>Vendor MCP</p></div>
 </div>
@@ -61,6 +61,7 @@
 <tr><td>Server resource audience</td><td><span class="partial">first-party routes defer to server</span></td><td><span class="yes">configured audience</span></td><td>not applicable</td></tr>
 <tr><td>Mandatory contract claims</td><td><span class="partial">route-specific</span></td><td><span class="no">incomplete</span></td><td><span class="partial">requires exp/iat/sub/jti plus contract/tier checks</span></td></tr>
 <tr><td>Certificate binding</td><td><span class="yes">cnf-check at internal DP</span></td><td><span class="no">not rechecked</span></td><td><span class="no">lab substitution; hub bearer revalidation</span></td></tr>
+<tr><td>DPoP sender-constraint</td><td><span class="yes">dpop-check early rejection at internal DP</span></td><td><span class="yes">re-checked via requireDpop against cnf.jkt</span></td><td>not applicable</td></tr>
 <tr><td>Tool scope</td><td><span class="partial">coarse route policy</span></td><td><span class="yes">per tools/call middleware</span></td><td>vendor scope ceiling and grant coverage</td></tr>
 <tr><td>Patient compartment</td><td>deferred</td><td><span class="yes">enforced; Auth0-origin tokens without a non-empty claim are rejected</span></td><td>not applicable</td></tr>
 </tbody></table></div></section>
@@ -69,7 +70,7 @@
 <h3>Workforce clinical call</h3><div class="sequence">
 <div class="actor">Client</div><div class="msg">Authorization code + PKCE via Keycloak, optionally brokered to fake Ping/Auth0. Receives a hub access token.</div>
 <div class="actor">Internal Kong</div><div class="msg">Global tier pre-function requires <code>mcp://tier/internal</code>. Rate limit applies. First-party route forwards to FHIR server.</div>
-<div class="actor">FHIR server</div><div class="msg">Bearer middleware verifies signature/issuer/expiry/resource audience. For <code>tools/call</code>, required scope is checked. Tool list is group-shaped.</div>
+<div class="actor">FHIR server</div><div class="msg">A DPoP scheme shim normalizes any <code>DPoP</code> auth header before bearer middleware verifies signature/issuer/expiry/resource audience; when the token carries <code>cnf.jkt</code>, <code>requireDpop</code> re-validates the proof. For <code>tools/call</code>, required scope is checked. Tool list is group-shaped.</div>
 <div class="actor">Authorization hook</div><div class="msg">When a patient claim exists, by-ID equality or forced search parameter is applied.</div>
 <div class="actor">HAPI</div><div class="msg">Receives a bounded GET request. Response is capped and converted to MCP text content. Final status determines audit allow/deny.</div>
 </div>

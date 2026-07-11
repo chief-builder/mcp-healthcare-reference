@@ -8,6 +8,9 @@ carry a hub JWT, validated in-server (issuer, `aud mcp://srv/fhir-clinical`,
 per-tool scope with 403 `insufficient_scope` step-up, `groups` visibility).
 The hand-written `src/authz-hook.ts` (preserved across regeneration)
 hard-scopes queries to the token's `fhir_patient` compartment when present.
+DPoP-bound tokens (`cnf.jkt`) are authoritatively re-validated in-server by
+`requireDpop` (`src/dpop.ts`), with `dpopSchemeShim` normalizing the `DPoP`
+auth scheme first; bearer tokens are unaffected.
 
 Tools (from `openapi.json`): `getPatient`, `patientEverything`,
 `searchObservation`, `searchCondition`, `searchMedicationRequest`.

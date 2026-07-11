@@ -624,9 +624,10 @@
         </article>
         <article class="component">
           <h3>Kong Policy Plugins</h3>
-          <p>Lua plugins enforce certificate-bound token checks, outbound DLP, and vendor-token injection on the egress route.</p>
+          <p>Lua plugins enforce certificate-bound token checks, DPoP sender-constraint binding, outbound DLP, and vendor-token injection.</p>
           <ul>
             <li><code>cnf-check</code></li>
+            <li><code>dpop-check</code> — DPoP sender-constraint / <code>cnf.jkt</code> binding at the internal DP</li>
             <li><code>dlp-egress</code></li>
             <li><code>vendor-token</code></li>
           </ul>
@@ -735,7 +736,7 @@
         <article class="phase">
           <div class="phase-head"><div class="number">1</div><span class="state done">gate green</span></div>
           <h3>Identity Hub</h3>
-          <p>Brokered workforce and customer flows plus homegrown token exchange all produce contract-conformant Keycloak JWTs.</p>
+          <p>Brokered workforce and customer flows plus homegrown token exchange all produce contract-conformant Keycloak JWTs, including a DPoP sender-constrained workforce path carrying <code>cnf.jkt</code>.</p>
         </article>
         <article class="phase">
           <div class="phase-head"><div class="number">2</div><span class="state done">gate green</span></div>
@@ -765,7 +766,7 @@
         <article class="phase">
           <div class="phase-head"><div class="number">7</div><span class="state done">gate green</span></div>
           <h3>Red-Team Weekend</h3>
-          <p>Cross-tier replay, scope probes, callback replay, issuer tampering, stale storms, and log leakage are exercised. Findings filed as issues and remediated in code.</p>
+          <p>Cross-tier replay, scope probes, DPoP sender-constraint checks, callback replay, issuer tampering, stale storms, and log leakage are exercised. Findings filed as issues and remediated in code.</p>
         </article>
       </div>
     </section>

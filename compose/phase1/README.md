@@ -53,9 +53,12 @@ user to a seeded Synthea patient via the admin API on first run; the
 
 ## Notes
 
-- Keycloak runs with `KC_FEATURES=token-exchange:v1,admin-fine-grained-authz:v1`
+- Keycloak runs with
+  `KC_FEATURES=token-exchange:v1,admin-fine-grained-authz:v1,dpop`
   (explicit `:v1` — unversioned names resolve to V2 on KC 26.2+, and the
-  external→internal exchange leg needs the V1 pair).
+  external→internal exchange leg needs the V1 pair). `dpop` enables the
+  DPoP sender-constraint (RFC 9449) used by the `workforce-dpop` client,
+  whose tokens carry `cnf.jkt`.
 - Keycloak validates homegrown subject tokens via the issuer's `/userinfo`
   (that is how V1 external exchange validates `access_token` subject types).
 - The two test users in `fake-ping` (`dr-alice` clinical, `bob-analyst`

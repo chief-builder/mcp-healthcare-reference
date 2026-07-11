@@ -39,6 +39,10 @@ named probes; its findings were filed as GitHub issues in this repo and the
 remediation is folded back into the code (contract-exact token validation,
 per-resource patient scopes, outcome-accurate audit, RFC 9207 iss-omission
 defense, mass-STALE paging, broker scope minimization, and scheduling hold
-lifecycle). Conformance is to the **draft** MCP 2026-07-28 model, not a final
+lifecycle). The suite later grew a DPoP sender-constraint section (RFC 9449):
+workforce tokens can be key-bound (`cnf.jkt`) and every request carries a
+signed proof, enforced gateway-first (`dpop-check` plugin) and re-checked in
+the servers (`requireDpop`); `tests/phase7.sh` is green at 32 passed.
+Conformance is to the **draft** MCP 2026-07-28 model, not a final
 certification; intentional lab substitutions are documented in
 `docs/prototype-plan.md` §2 and the claims contract §4.

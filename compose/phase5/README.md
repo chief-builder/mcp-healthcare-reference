@@ -6,7 +6,7 @@ The phase 4 stack (cert-bound m2m, k3d/SPIRE side included) plus:
 vault (OpenBao dev, host :8210)   vendor-tokens/ + vendor-clients/ KV v2
 broker (broker/, host :8300)      resolve / authorize / callback / grants
 mock-vendor (host :8310)          mockhub AS + fake vendor MCP endpoint
-kong-internal                     + dlp-egress + vendor-token plugins
+kong-internal                     + cnf-check + dpop-check + dlp-egress + vendor-token plugins
 ```
 
 Egress routes (deck/internal.yaml): `/egress/github` →
@@ -62,7 +62,7 @@ the phase 5 services.
 
 - **Kong DPs → OTLP**: a global `opentelemetry` plugin on both tiers
   (deck/*.yaml) exports traces and the bespoke plugins' `kong.log` audit
-  records (cnf-check / dlp-egress / vendor-token) to the collector →
+  records (cnf-check / dpop-check / dlp-egress / vendor-token) to the collector →
   Tempo/Loki, unwrapped from the nginx error log. Needs
   `KONG_TRACING_INSTRUMENTATIONS=all` (compose).
 - **Everything else → Alloy**: `alloy/config.alloy` tails every container
