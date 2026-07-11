@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomy of a Tool Call — Token Lifecycle</title>
+<style>
+  :root {
+    --ground: #F3ECE1; --surface: #FBF7EF; --surface-2: #ECE1CF;
+    --ink: #2E2318; --ink-soft: #6E5D4B;
+    --accent: #8A552A; --accent-ink: #6E4120;
+    --good: #5E7E3E; --warn: #A9702C;
+    --line: #DBCCB6; --thread: #B8763B; --code-bg: #EDE2CF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #1B140D; --surface: #241B12; --surface-2: #2E2318;
+      --ink: #EFE5D6; --ink-soft: #B5A08A;
+      --accent: #D29A5B; --accent-ink: #E0B078;
+      --good: #A3BE78; --warn: #E0A45C;
+      --line: #3B2D1F; --thread: #D29A5B; --code-bg: #140F09;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1B140D; --surface: #241B12; --surface-2: #2E2318;
+    --ink: #EFE5D6; --ink-soft: #B5A08A;
+    --accent: #D29A5B; --accent-ink: #E0B078;
+    --good: #A3BE78; --warn: #E0A45C;
+    --line: #3B2D1F; --thread: #D29A5B; --code-bg: #140F09;
+  }
+  :root[data-theme="light"] {
+    --ground: #F3ECE1; --surface: #FBF7EF; --surface-2: #ECE1CF;
+    --ink: #2E2318; --ink-soft: #6E5D4B;
+    --accent: #8A552A; --accent-ink: #6E4120;
+    --good: #5E7E3E; --warn: #A9702C;
+    --line: #DBCCB6; --thread: #B8763B; --code-bg: #EDE2CF;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  section[id] { scroll-margin-top: 4rem; }
+
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 16.5px/1.68 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1, h2, h3 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+    line-height: 1.13; text-wrap: balance; margin: 0 0 0.55rem;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 0.86em; background: var(--code-bg); border-radius: 4px; padding: 0.08em 0.35em;
+  }
+  a { color: var(--accent-ink); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  main { max-width: 980px; margin: 0 auto; padding: 0 1.4rem 5rem; }
+  section { margin-top: 4.6rem; }
+
+  .eyebrow {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent-ink); margin-bottom: 0.6rem;
+  }
+  header.hero { padding: 4rem 0 0; }
+  header.hero h1 { font-size: clamp(2.1rem, 5.4vw, 3.3rem); max-width: 22ch; }
+  .lede { font-size: 1.12rem; color: var(--ink-soft); max-width: 60ch; margin-top: 0.9rem; }
+
+  h2 { font-size: 1.8rem; }
+  .section-intro { color: var(--ink-soft); max-width: 66ch; margin: 0 0 1.5rem; }
+
+  /* numbered stage rail — the flow is a real sequence */
+  .stage { display: grid; grid-template-columns: 3.2rem 1fr; gap: 1.1rem; margin-top: 1.6rem; }
+  .stage .n {
+    width: 2.5rem; height: 2.5rem; border-radius: 50%;
+    border: 1.5px solid var(--thread); color: var(--accent-ink);
+    display: grid; place-items: center; font-weight: 700;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 1.15rem;
+    background: var(--surface);
+  }
+  .stage .body h3 { font-size: 1.18rem; }
+  .stage .body p { margin: 0.25rem 0 0; color: var(--ink-soft); max-width: 66ch; }
+  .stage .body .ux {
+    margin-top: 0.7rem; font-size: 0.92rem; color: var(--accent-ink);
+    border-left: 3px solid var(--thread); padding: 0.15rem 0 0.15rem 0.8rem;
+  }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-top: 1.4rem; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 0.93rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.7rem 0.95rem; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); background: var(--surface-2); }
+  td .sub { color: var(--ink-soft); font-size: 0.88em; }
+  .hl td { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+
+  /* request path strip */
+  .path { display: flex; align-items: stretch; gap: 0.6rem; overflow-x: auto; padding: 1.2rem 0 0.4rem; }
+  .hop {
+    flex: 1; min-width: 150px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 0.85rem 1rem;
+  }
+  .hop b { display: block; font-size: 0.95rem; }
+  .hop span { font-size: 0.82rem; color: var(--ink-soft); }
+  .path .arrow { align-self: center; color: var(--thread); font-size: 1.3rem; flex: none; }
+
+  .callout {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.3rem 1.5rem; margin-top: 1.5rem;
+  }
+  .callout p { margin: 0.3rem 0 0; color: var(--ink-soft); max-width: 68ch; }
+  .callout .big { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 1.15rem; color: var(--ink); margin: 0; }
+
+  .practices { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 1.15rem 1.3rem; min-width: 0; }
+  .card h3 { font-size: 1.02rem; }
+  .card p { margin: 0; font-size: 0.9rem; color: var(--ink-soft); }
+  .card .have { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--good); margin-bottom: 0.35rem; }
+  .card .todo { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warn); margin-bottom: 0.35rem; }
+
+  footer { margin-top: 4.5rem; border-top: 1px solid var(--line); padding-top: 1.3rem; font-size: 0.86rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<main>
+  <header class="hero">
+    <div class="eyebrow">Workforce path · Claude Code → internal tier → first-party MCP server</div>
+    <h1>Anatomy of a tool call: every token, from birth to expiry</h1>
+    <p class="lede">
+      What actually happens when an engineer's Claude Code calls the scheduling server: which tokens
+      get created, where each one lives, how long it survives, how refresh works — and what the
+      engineer sees, which is almost nothing.
+    </p>
+  </header>
+
+  <section id="connect">
+    <div class="eyebrow">Stage one</div>
+    <h2>First connect — the only visible moment</h2>
+    <p class="section-intro">The engineer adds the server once. The first tool call goes out with no token, and the machinery self-assembles.</p>
+
+    <div class="stage">
+      <div class="n">1</div>
+      <div class="body">
+        <h3>Discovery, not configuration</h3>
+        <p>The MCP server answers <code>401</code> with a pointer to its Protected Resource Metadata
+        (<code>/.well-known/oauth-protected-resource/mcp</code>). Claude Code fetches it and learns
+        which authorization server to talk to — the engineer never types an auth URL.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="n">2</div>
+      <div class="body">
+        <h3>One corporate login</h3>
+        <p>Claude Code is a pre-registered public client — no client secret; PKCE binds the flow.
+        It opens the browser once: Keycloak brokers to the workforce IdP for SSO + MFA, then redirects
+        back to a loopback listener (<code>localhost:8765</code>) Claude Code runs just for this moment.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="n">3</div>
+      <div class="body">
+        <h3>Code for tokens</h3>
+        <p>On the callback Claude Code validates the RFC 9207 <code>iss</code> parameter (mix-up defense),
+        then swaps the single-use authorization code + PKCE verifier for tokens at Keycloak's token endpoint.</p>
+        <p class="ux">UX: one browser tab, corporate login, "you can close this window." No API keys, nothing to paste.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="inventory">
+    <div class="eyebrow">Stage two</div>
+    <h2>The token inventory</h2>
+    <p class="section-intro">Five artifacts exist after login. Only one of them ever touches the MCP plane.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Token</th><th>Issued by</th><th>Lives where</th><th>Lifetime</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>IdP identity token <span class="sub">(brokering leg)</span></td>
+            <td>Workforce IdP</td>
+            <td>Consumed by Keycloak during login, then gone — it never reaches Claude Code or the MCP plane (single-issuer invariant)</td>
+            <td class="sub">seconds</td>
+          </tr>
+          <tr>
+            <td>Authorization code</td>
+            <td>Keycloak</td>
+            <td>In flight only, single use</td>
+            <td class="sub">~1 minute</td>
+          </tr>
+          <tr class="hl">
+            <td><strong>Access token</strong> <span class="sub">(JWT, PS256)</span></td>
+            <td>Keycloak</td>
+            <td>Claude Code's local credential store (macOS Keychain). Keycloak keeps no copy — it's a stateless JWT</td>
+            <td><strong>5 minutes</strong> <span class="sub">(lab realm; contract target 10 min interactive)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Refresh token</strong> <span class="sub">(opaque)</span></td>
+            <td>Keycloak</td>
+            <td>Same credential store; validity anchored to the server-side SSO session in Keycloak's database</td>
+            <td>as long as the SSO session <span class="sub">(~30 min idle / 10 h max by default)</span></td>
+          </tr>
+          <tr>
+            <td>SSO cookie</td>
+            <td>Keycloak</td>
+            <td>The browser only</td>
+            <td class="sub">same session limits</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p class="big">The access token's claims are the whole story.</p>
+      <p><code>aud</code> = <code>mcp://tier/internal</code> plus the server audiences the client may reach ·
+      <code>azp</code> = the client · <code>idp_origin</code> = where the human authenticated ·
+      <code>groups</code> and <code>amr</code> (the MFA fact travels in the token) ·
+      <code>mcp_contract</code> version pin · a unique <code>jti</code> that keys every audit record.</p>
+    </div>
+  </section>
+
+  <section id="percall">
+    <div class="eyebrow">Stage three</div>
+    <h2>Every tool call, for the next five minutes</h2>
+    <div class="path" role="img" aria-label="Request path: Claude Code, VPN, internal gateway, MCP server, audit record">
+      <div class="hop"><b>Claude Code</b><span>attaches <code>Bearer</code> access token to each <code>tools/call</code></span></div>
+      <div class="arrow">→</div>
+      <div class="hop"><b>Private ingress</b><span>VPN / tailnet — the internal tier is unreachable from the public internet</span></div>
+      <div class="arrow">→</div>
+      <div class="hop"><b>Internal gateway</b><span>tier wall: exactly one tier audience, and it must be <code>internal</code> — a replayed external token dies here</span></div>
+      <div class="arrow">→</div>
+      <div class="hop"><b>MCP server</b><span>re-validates everything: signature, issuer, own audience, contract, scope-for-this-tool</span></div>
+      <div class="arrow">→</div>
+      <div class="hop"><b>Audit spine</b><span>one record per call, keyed by the token's <code>jti</code></span></div>
+    </div>
+    <p class="section-intro" style="margin-top:1rem;">
+      No session exists anywhere on this path. Every request is self-contained — which is why killing
+      a server replica mid-conversation is a non-event.
+    </p>
+  </section>
+
+  <section id="refresh">
+    <div class="eyebrow">Stage four</div>
+    <h2>Expiry and refresh — invisible until it isn't</h2>
+    <div class="stage">
+      <div class="n">5m</div>
+      <div class="body">
+        <h3>Access token expires</h3>
+        <p>The next call gets a 401. Claude Code silently POSTs the refresh token to Keycloak — no
+        browser, no prompt — and retries with a fresh JWT. The engineer notices nothing. A leaked
+        access token is useful for at most five minutes; that is the entire point.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="n">10h</div>
+      <div class="body">
+        <h3>The session dies, and the refresh token with it</h3>
+        <p>At session idle (~30 min unused) or absolute max (~10 h), the refresh token stops working
+        because the SSO session behind it is gone. Claude Code re-runs the browser flow. If the IdP
+        session is still alive it's a browser tab that completes itself; otherwise it's a real re-login.</p>
+        <p class="ux">UX: one silent refresh every five minutes, one browser bounce a day.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="stepup">
+    <div class="eyebrow">Stage five</div>
+    <h2>Step-up — when a tool needs more than the floor</h2>
+    <p class="section-intro">
+      The default token authorizes floor tools only. Sensitive tools (confirm a booking, read a full
+      patient record) require optional scopes. Calling one under-scoped returns a single-shot
+      <code>403 insufficient_scope</code> naming the complete required set; Claude Code re-runs the
+      authorization flow requesting exactly those scopes — usually a blink, since the SSO session
+      exists. The elevated token is scoped to what was asked, the escalation is consented and audited,
+      and clinical scopes additionally require the <code>mfa</code> mark the IdP stamped at login.
+      This is the platform's minimum-necessary mechanism, not a UX accident.
+    </p>
+  </section>
+
+  <section id="hardening">
+    <div class="eyebrow">Stage six</div>
+    <h2>Protecting the tokens at rest</h2>
+    <p class="section-intro">
+      The local credential store is the one place tokens sit still, so it gets defense in depth from
+      both sides: make theft hard, and make stolen tokens nearly worthless.
+    </p>
+    <div class="practices">
+      <div class="card"><span class="have">In place</span><h3>Worthless quickly</h3><p>5-minute access tokens; refresh anchored to a revocable server-side session. Stealing the store buys minutes, not months.</p></div>
+      <div class="card"><span class="have">In place</span><h3>Worthless elsewhere</h3><p>Tier + server audiences mean an internal token is cryptographically useless at the external tier or against a server it wasn't minted for — and the internal tier is only reachable over the VPN anyway.</p></div>
+      <div class="card"><span class="have">In place</span><h3>Floor by default</h3><p>The standing token holds floor scopes only; anything sensitive needs a fresh, consented, audited step-up.</p></div>
+      <div class="card"><span class="have">In place</span><h3>One kill switch</h3><p>Revoking the user's Keycloak SSO session (offboarding, incident) kills every refresh token instantly; access tokens age out within minutes.</p></div>
+      <div class="card"><span class="have">In place</span><h3>Keychain, not files</h3><p>Tokens live in the OS keychain with per-app ACLs — encrypted at rest, locked with the screen, not greppable in dotfiles or env vars.</p></div>
+      <div class="card"><span class="todo">Strengthen</span><h3>Sender-constraining</h3><p>Interactive tokens are bearer tokens — whoever holds one can use it. DPoP (RFC 9449) would bind them to a client-held key, as <code>cnf</code>/mTLS already does on the m2m path.</p></div>
+      <div class="card"><span class="todo">Strengthen</span><h3>Anomaly detection</h3><p>The audit spine can flag a <code>jti</code> reused from two network paths, or an internal-tier token appearing off-VPN — theft becomes visible even when it succeeds.</p></div>
+      <div class="card"><span class="todo">Strengthen</span><h3>Device posture</h3><p>FileVault, screen-lock keychain relock, MDM posture as a VPN precondition, EDR on the endpoint: a stolen laptop shouldn't mean a live credential store.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Companion to the <a href="technical-overview.html">technical overview</a>
+    and <a href="product.html">product showcase</a>.
+    Lifetimes are the lab realm's actual configuration; production targets noted where they differ.
+  </footer>
+</main>
+
+</body>
+</html>

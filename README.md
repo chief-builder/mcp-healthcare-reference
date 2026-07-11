@@ -16,6 +16,7 @@ broker for SaaS MCP egress with DLP.
 
 - [Product showcase](docs/showcase/product.html) — what the platform is and why it matters: promises, persona threads, scenarios
 - [Technical overview](docs/showcase/technical-overview.html) — invariants, master diagram, EMA alignment, phase gates, consistency-review verdict
+- [Token lifecycle](docs/showcase/token-lifecycle.html) — the workforce path token by token: creation, storage, lifetimes, refresh, step-up, credential-store hardening
 
 ### Verified codebase walkthroughs
 
