@@ -84,7 +84,11 @@ Clients request server URIs via the `resource` parameter at the token endpoint; 
 > parameter from the endpoint URL. The MCP servers now serve their PRM at the
 > path-inserted URI (`/.well-known/oauth-protected-resource/mcp`, with the root
 > path kept as an alias) so discovery is spec-shaped even though the resource
-> value is not an HTTPS URL. Migrating to endpoint-URL resources is a major
+> value is not an HTTPS URL. The deviation also touches Enterprise-Managed
+> Authorization adoption: EMA §4 requires the token-exchange `resource`
+> parameter (and the ID-JAG `resource` claim) to be the RFC 9728 Resource
+> Identifier of the MCP Server, so the EMA upgrade path (§6.1) presumes the
+> endpoint-URL migration. Migrating to endpoint-URL resources is a major
 > contract version (Section 11) and is tracked in issue #13.
 
 ## 5. Scope grammar
@@ -104,7 +108,7 @@ Five paths produce contract-conformant tokens. Each profile lists the front-leg 
 
 ### 6.1 Workforce — PingID broker (Claude Code, Codex CLI, VS Code)
 
-Front leg: OIDC authorization code + PKCE at Keycloak, with Keycloak brokering PingID for authentication. When Ping ships ID-JAG/XAA support, the front leg becomes the EMA exchange (ID-JAG presented as grant at Keycloak); **no claim in this contract changes** — that is the point of the hub.
+Front leg: OIDC authorization code + PKCE at Keycloak, with Keycloak brokering PingID for authentication. When Ping ships Identity Assertion JWT Authorization Grant (ID-JAG) issuance, the front leg becomes the MCP Enterprise-Managed Authorization flow: the client exchanges its Ping identity assertion for an ID-JAG at the IdP (RFC 8693 token exchange, EMA §4), then presents the ID-JAG at Keycloak — the Resource Authorization Server — as a JWT authorization grant (RFC 7523, EMA §5); **no claim in this contract changes** — that is the point of the hub.
 
 | Claim | Value on this path |
 |---|---|
@@ -145,7 +149,7 @@ Validators MUST verify `cnf` against the client certificate on the mTLS connecti
 
 ### 6.4 Third parties — Keycloak native (ChatGPT, B2B partners)
 
-Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; Dynamic Client Registration is disabled (and is deprecated by the draft MCP authorization spec). Client ID Metadata Documents are accepted only from origin-allowlisted metadata URLs per Reference Architecture §5.1. Per-user consent screens are retained deliberately.
+Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; Dynamic Client Registration is disabled (and is deprecated by the draft MCP authorization spec). Client ID Metadata Documents are accepted only from origin-allowlisted metadata URLs per Reference Architecture §5.1. Per-user consent screens are retained deliberately. (Lab delta: no third-party client is committed in the realm — the external tier is exercised by `patient-agent` (§6.5) and test clients; this profile is the production target.)
 
 | Claim | Value on this path |
 |---|---|
@@ -157,7 +161,7 @@ Front leg: authorization code + PKCE directly at Keycloak. Clients are individua
 
 ### 6.5 End customers — Auth0 broker (patient-facing agents)
 
-Front leg: Keycloak brokers Auth0. Auth0's forthcoming native XAA/ID-JAG support may later replace the broker leg; claims unchanged.
+Front leg: Keycloak brokers Auth0. Auth0's forthcoming native ID-JAG issuance may later replace the broker leg; claims unchanged.
 
 | Claim | Value on this path |
 |---|---|
@@ -185,11 +189,11 @@ Rules: chains are at most two levels deep (`act.act` requires platform-admin app
 
 ## 8. Validation requirements (normative)
 
-**Kong DP (both tiers), on every request:** verify signature against cached JWKS; `iss` exact match; `exp/nbf/iat` with ≤ 30 s skew; tier audience matches the DP's tier; `jti` present; if `cnf` present, mTLS client cert thumbprint MUST match, and absence of a client cert is a hard failure; map `groups`/`scope` through MCP ACLs to tool visibility; inject `jti`, `sub`, `azp`, `act.sub`, `idp_origin` as upstream headers for the MCP server and strip any client-supplied copies of those headers.
+**Kong DP (both tiers), on every request:** verify signature against cached JWKS; `iss` exact match; `exp/nbf/iat` with ≤ 30 s skew; tier audience matches the DP's tier; `jti` present; if `cnf` present, mTLS client cert thumbprint MUST match, and absence of a client cert is a hard failure; map `groups`/`scope` through MCP ACLs to tool visibility; inject `jti`, `sub`, `azp`, `act.sub`, `idp_origin` as upstream headers for the MCP server and strip any client-supplied copies of those headers. (Lab delta: on the first-party MCP routes the DP tier wall in `deck/internal.yaml` enforces the tier audience without signature verification — signature verification there is carried by the servers' §8 re-validation, and by `openid-connect` on the egress routes. Full DP-side JWT verification on every route is the production target.)
 
 **MCP servers, on every tool call:** re-verify signature and `iss` (do not trust the DP blindly — defense in depth); `aud` contains this server's URI; scope authorizes this specific tool + verb; when `fhir_patient` present, compartment-filter; when absent on a path that requires it, reject.
 
-**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events. 401 challenges include `resource_metadata` and the operation's `scope`; insufficient-permission cases return 403 `error="insufficient_scope"` with the complete required scope set in one challenge (single-shot, never incremental), enabling the draft spec's step-up flow. PRM `scopes_supported` lists the minimal baseline only; `offline_access` never appears in PRM or challenges.
+**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events. 401 challenges include `resource_metadata` and, when the attempted operation requires one, the operation's `scope` (floor tools advertise none); insufficient-permission cases return 403 `error="insufficient_scope"` with the complete required scope set in one challenge (single-shot, never incremental), enabling the draft spec's step-up flow. PRM `scopes_supported` lists the minimal baseline only; `offline_access` never appears in PRM or challenges.
 
 **All OAuth clients on the plane (interactive clients, broker):** validate RFC 9207 `iss` on authorization responses — including error responses — against the issuer recorded from validated AS metadata, using strict string comparison without URI normalization, before any use of the authorization code. Keycloak advertises `authorization_response_iss_parameter_supported: true`.
 
@@ -209,6 +213,8 @@ Every DP and MCP-server audit record carries, at minimum:
 | `tool`, `verb`, `server`, `decision`, `ts` | Gateway/server context |
 
 This tuple answers the HIPAA questions directly: which human (or on whose behalf), through which agent, touched which tool, in which patient compartment, when, and with what outcome. Records never contain the token itself or request/response bodies.
+
+Lab note: the first-party servers' audit records (`servers/*/src/audit.ts`) emit `tool` but no separate `verb` field — the verb is recoverable as the suffix of the tool's required scope (`mcp:<server>:<tool>:<verb>`). A production implementation should emit it explicitly.
 
 ## 10. Keys, rotation, FIPS
 

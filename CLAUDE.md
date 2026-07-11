@@ -49,7 +49,8 @@ xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker state
 replay, RFC 9207 iss tamper/omission, per-entry + mass STALE, token-in-log
 grep, broker no-issuance all hold.
 
-An external review (sol-rec.md, since triaged) drove a remediation pass —
+An external review (fully triaged into GitHub issues; the sol-rec*.md
+notes were removed from the repo after triage) drove a remediation pass —
 all gates 0–7 green after it. Landed: contract-exact token validation
 (broker + servers pin PS256/ES256, drop RS256, enforce mcp_contract +
 exactly-one tier aud + forbidden fhir_patient); per-resource patient scopes
@@ -63,9 +64,11 @@ path-inserted well-known URI + documented mcp:// deviation (#13); ops batch
 (#14: Kong rate-limits, broker compose healthcheck, multi-stage non-root
 Node images, .github/workflows/ci.yml, refreshed README/overview, authed
 broker admin GET). GitHub #1,#2,#4-#7,#9-#14 closed. Still open: #3 (Low,
-external-tier CIMD control — tracked gap) and #8 (MCP 2026-07-28 wire
+external-tier CIMD control — tracked gap), #8 (MCP 2026-07-28 wire
 migration to @modelcontextprotocol/server@2.0 — deferred off an unstable
-12h-old beta; statelessness already holds on SDK 1.29). Applying the
+12h-old beta; statelessness already holds on SDK 1.29), #15 (realm wildcard
+redirect URIs vs RFC 9700 exact-match), and #16 (scheduling server missing
+the Origin/Host rebinding guard fhir-clinical has). Applying the
 gateway-side changes live needs setup-phase5.sh (vendor-token schema
 re-register + deck sync + internal DP restart); the realm scope additions
 need a realm re-import (not done live — avoids a destructive re-import of

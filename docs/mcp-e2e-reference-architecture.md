@@ -14,7 +14,7 @@ Five invariants define the design; every section below is an elaboration of one 
 1. **One token issuer for the MCP plane.** Keycloak mints every token that a Kong data plane or MCP server validates. PingID, Athenz, Auth0, and (transitionally) the homegrown AS authenticate their populations; none of their tokens reach the plane directly.
 2. **PHI stays inside the customer AWS boundary.** The Konnect control plane (Kong's AWS accounts) receives configuration and aggregate telemetry only; vendor clouds receive only DLP-screened, allowlisted tool traffic; audit flows to the customer SIEM, never through Konnect.
 3. **Stateless MCP from day one.** All first-party servers target the 2026-07-28 specification revision: no protocol session, identity and capabilities on every request, horizontal scaling behind ordinary load balancing.
-4. **Governance at two layers, never conflated.** EMA / identity-provider policy governs *connections*; Kong ACLs and MCP-server scope checks govern *tool calls*. No control assumes the other's job is done.
+4. **Governance at two layers, never conflated.** Enterprise-Managed Authorization (EMA) / IdP policy governs *connections* — the spec itself scopes IdP visibility to access-token issuance, not MCP traffic (EMA §7.2); Kong ACLs and MCP-server scope checks govern *tool calls*. No control assumes the other's job is done.
 5. **Every transitional component has a defined exit.** The homegrown AS sunsets into Athenz + Keycloak; the vendor token broker shrinks vendor-by-vendor as EMA/ID-JAG adoption spreads; PingID's brokered leg upgrades in place to ID-JAG.
 
 ## 2. Scope
@@ -26,7 +26,7 @@ In scope: MCP client connectivity, identity and token architecture, gateway topo
 | Layer | Baseline | Notes |
 |---|---|---|
 | MCP core | 2026-07-28 revision | Stateless transport; `_meta` version/capability carriage; `server/discover`; explicit state handles as tool arguments. Conformance suite in CI once Tier 1 SDKs land. |
-| MCP extensions | Extensions framework (reverse-DNS negotiation) | `io.modelcontextprotocol/enterprise-managed-authorization` declared where client/vendor support exists |
+| MCP authorization extensions | Enterprise-Managed Authorization (EMA, **stable**, modelcontextprotocol/ext-auth) — an application of the Identity Assertion JWT Authorization Grant (ID-JAG, draft-ietf-oauth-identity-assertion-authz-grant) | Adopted per leg where the IdP issues ID-JAGs; support discovered via `urn:ietf:params:oauth:grant-profile:id-jag` in the Resource Authorization Server's `authorization_grant_profiles_supported` metadata (EMA §6) |
 | Authorization discovery | RFC 9728 Protected Resource Metadata | Every first-party MCP server advertises Keycloak as its AS |
 | Token grammar | OAuth 2.1; RFC 8707 resource indicators; RFC 8693 token exchange; RFC 8705 mTLS client auth + certificate-bound tokens | Enforced per the Claims Contract |
 | Client identity | Client ID Metadata Documents (draft-ietf-oauth-client-id-metadata-document) > pre-registration > DCR (deprecated in the draft spec) | Per-tier policy in §5.1 |
@@ -40,13 +40,13 @@ In scope: MCP client connectivity, identity and token architecture, gateway topo
 
 Four authoritative identity systems converge on Keycloak (realm `mcp-plane`), which is the sole Resource Authorization Server for every MCP audience.
 
-**PingID (workforce).** Brokered into Keycloak via OIDC. Interactive clients (Claude Code, Codex CLI, VS Code) perform authorization code + PKCE through the brokered login. Claude-family clients are EMA-capable; the flow upgrades to ID-JAG grant presentation at Keycloak the day PingID ships issuance, with zero downstream change — this is a deferred upgrade, not a blocker.
+**PingID (workforce).** Brokered into Keycloak via OIDC. Interactive clients (Claude Code, Codex CLI, VS Code) perform authorization code + PKCE through the brokered login. Claude-family clients are EMA-capable; the day PingID ships ID-JAG issuance the front leg upgrades to the EMA flow — the MCP Client exchanges its PingID identity assertion for an ID-JAG (RFC 8693 token exchange at the IdP, EMA §4) and presents it at Keycloak's token endpoint as a JWT authorization grant (RFC 7523, EMA §5), with zero downstream change. In EMA role terms PingID is the IdP Authorization Server and Keycloak stays the Resource Authorization Server. This is a deferred upgrade, not a blocker.
 
 **Athenz (workloads — target state for all m2m).** ZTS issues short-lived X.509 SVIDs to attested workloads (Copper Argos, SIA rotation). Agents perform `tls_client_auth` client-credentials at Keycloak and receive certificate-bound tokens (`cnf.x5t#S256`). No client secrets exist on this path. On-behalf-of flows use RFC 8693 exchange producing `sub` = user, `act.sub` = agent.
 
 **Homegrown AS (transitional, frozen).** Registered as a trusted external issuer for RFC 8693 exchange only. No new onboarding; each service migrating to the Athenz path removes an issuer mapping; the leg is deleted when empty. Rationale: retire a bespoke token-issuance surface from HIPAA assessment scope. The team's OAuth expertise transfers to the Vendor Token Broker (companion doc §14).
 
-**Auth0 (end customers).** Brokered into Keycloak; tokens carry SMART-style `patient/...` scopes and a mandatory `fhir_patient` compartment claim resolved from the customer↔patient linkage store. Customer tokens are structurally incapable of reaching another patient's record. Auth0's Okta lineage means native XAA/ID-JAG support may arrive here before the workforce leg.
+**Auth0 (end customers).** Brokered into Keycloak; tokens carry SMART-style `patient/...` scopes and a mandatory `fhir_patient` compartment claim resolved from the customer↔patient linkage store. Customer tokens are structurally incapable of reaching another patient's record. Auth0's Okta lineage means native ID-JAG issuance (Okta's product name: Cross App Access) may arrive here before the workforce leg.
 
 **Third parties (ChatGPT, B2B).** Native Keycloak clients: pre-registered, pinned redirect URIs, dynamic client registration disabled, per-user consent retained deliberately. External-tier audience only.
 
@@ -65,6 +65,91 @@ All tokens conform to the Claims Contract: `PS256`/`ES256` on FIPS modules, 5–
 | Egress | Corporate clients and internal agents calling SaaS MCP servers | Brokered vendor routes (`mcp://egress/*` audiences) | Tool allowlists per vendor; outbound DLP tuned for PHI signatures; vendor-token injection via broker; hub JWT stripped upstream |
 
 Tier isolation is cryptographic, not just topological: tier audiences in every token make cross-tier replay fail signature-independent validation.
+
+**Master diagram** — every client population, token path, and flow in one view. Solid edges are current state; dashed labeled edges are the future EMA (ID-JAG) upgrade paths; unlabeled dashed edges feed the audit spine.
+
+```mermaid
+flowchart LR
+    subgraph CL["MCP Clients"]
+        WF["Workforce interactive clients<br/>Claude Code · Codex CLI · VS Code"]
+        AG["Internal autonomous agents<br/>(loop agent)"]
+        EXTC["External SaaS agents + B2B<br/>ChatGPT · partners"]
+        PAT["End-customer clients<br/>(patient-facing agents)"]
+    end
+
+    subgraph IDP["Identity plane"]
+        PING["PingID — workforce SSO<br/>(EMA IdP Authorization Server)"]
+        AUTH0["Auth0 — end customers"]
+        HG["Homegrown AS<br/>(transitional, frozen)"]
+        ATZ["Athenz ZTS<br/>short-lived X.509 SVIDs"]
+        KC["Keycloak realm mcp-plane<br/>sole Resource Authorization Server<br/>named in every server's RFC 9728 PRM"]
+    end
+
+    subgraph GW["Kong gateway tiers (DPs in customer AWS)"]
+        INT["Internal DP<br/>JWT + cnf checks · mcp://tier/internal"]
+        EXT["External DP (WAF front)<br/>curated catalog · mcp://tier/external"]
+        EGR["Egress tier<br/>vendor allowlist · DLP · vendor-token injection"]
+    end
+
+    subgraph FP["First-party MCP servers (Resource Servers)"]
+        SCH["scheduling — stateless, explicit handles"]
+        FHI["fhir-clinical — patient-compartment enforced"]
+    end
+
+    EHR["FHIR R4 backends<br/>Epic · Cerner"]
+
+    BRK["Vendor Token Broker<br/>OAuth client + custodian — never issues tokens"]
+    VLT["Vault custody<br/>per vendor + hub sub"]
+
+    subgraph SAAS["SaaS vendor (GitHub)"]
+        GAS["GitHub Authorization Server<br/>(vendor Resource Authorization Server)"]
+        GMCP["GitHub MCP server<br/>(Resource Server)"]
+    end
+
+    subgraph AUD["Audit spine"]
+        OTL["OTel / log shipping"]
+        SIEM["SIEM — jti-joinable audit tuple"]
+    end
+
+    %% identity front legs → single issuer
+    PING -->|"OIDC broker (today)"| KC
+    AUTH0 -->|"OIDC broker"| KC
+    HG -->|"RFC 8693 token exchange (sunsetting)"| KC
+    ATZ -->|"X.509 SVID"| AG
+    WF -->|"authorization code + PKCE"| KC
+    AG -->|"tls_client_auth client credentials → cnf-bound token"| KC
+    EXTC -->|"authorization code + PKCE (pre-registered)"| KC
+    PAT -->|"authorization code + PKCE (Auth0 brokered)"| KC
+
+    %% future EMA legs
+    PING -.->|"issues ID-JAG (EMA §4, future)"| WF
+    WF -.->|"ID-JAG as JWT authorization grant<br/>(RFC 7523, EMA §5, future)"| KC
+    WF -.->|"Pattern A — EMA direct (ID-JAG),<br/>per-vendor after risk assessment"| GAS
+
+    %% data paths
+    WF -->|"hub JWT via VPN"| INT
+    AG -->|"hub JWT + mTLS"| INT
+    EXTC -->|"hub JWT via WAF"| EXT
+    PAT -->|"hub JWT via WAF"| EXT
+    INT --> SCH
+    INT --> FHI
+    EXT -->|"curated catalog · patient-compartment tools"| FHI
+    FHI -->|"Athenz mTLS service creds (no token transit)"| EHR
+
+    %% governed egress (feed drawn from internal agents; see diagram note)
+    AG -->|"vendor-bound tool calls"| EGR
+    EGR -->|"resolve (mTLS + hub JWT)"| BRK
+    BRK --> VLT
+    BRK -->|"consent dance · single-flight refresh · RFC 7009 revoke"| GAS
+    EGR -->|"tool call — vendor token injected, hub JWT stripped"| GMCP
+
+    %% audit spine
+    GW -.-> OTL
+    FP -.-> OTL
+    BRK -.-> OTL
+    KC -.-> OTL
+    OTL --> SIEM
+```
 
 **Diagram note:** the master diagram draws the egress feed from the internal-agents node for routing clarity; developer clients reach the egress tier through the same private ingress, and the external tier has no route to egress by construction.
 
@@ -98,7 +183,7 @@ Promotion gate: MCP conformance suite green, claims-contract validation tests gr
 
 Two sanctioned patterns, stackable where the vendor supports both:
 
-**Pattern A — EMA direct.** For vendors whose AS accepts ID-JAG (current set includes Asana, Atlassian, Canva, Figma, Granola, Linear, Supabase; growing). IdP policy governs the connection centrally; traffic flows client→vendor. Granted per-vendor only after a risk assessment concludes the connector cannot plausibly carry PHI, and only for enterprise-managed clients.
+**Pattern A — EMA direct.** For vendors whose Resource Authorization Server supports the ID-JAG grant profile, discovered via `urn:ietf:params:oauth:grant-profile:id-jag` in `authorization_grant_profiles_supported` (EMA §6; current set includes Asana, Atlassian, Canva, Figma, Granola, Linear, Supabase; growing). IdP policy governs the connection centrally (EMA §4.1); traffic flows client→vendor. Granted per-vendor only after a risk assessment concludes the connector cannot plausibly carry PHI, and only for enterprise-managed clients.
 
 **Pattern B — governed egress (default).** All corporate SaaS MCP traffic routes through the egress tier: vendor tool allowlist, outbound DLP (MRN/name/code-pattern screening — the control that prevents reportable disclosures to non-BAA vendors), full audit tuple, and vendor-token injection. Credentials are acquired per-user through the Vendor Token Broker (companion doc): org-owned vendor apps, one-time OAuth consent, vault custody keyed by hub `sub`, single-flight rotating-refresh handling, RFC 7009 revocation on offboarding. No PATs, no shared service accounts, no credentials on laptops.
 
@@ -129,7 +214,7 @@ DPs, MCP servers, Keycloak, broker, and Athenz components run on EKS across ≥2
 | Transition | Mechanism | Exit test |
 |---|---|---|
 | Homegrown AS → Athenz+Keycloak | Dual grant paths per service; issuer-trust mappings removed per migration | Zero mappings; profile deleted from Claims Contract |
-| PingID broker → ID-JAG/EMA | Front-leg swap at Keycloak on Ping availability | 30-day dual-run parity in SIEM |
+| PingID broker → EMA (ID-JAG) | Front-leg swap at Keycloak on Ping availability | 30-day dual-run parity in SIEM |
 | Broker per-vendor → EMA direct | Sunset criteria (Broker doc §15) | Vendor registry entry disabled; grants revoked on drain |
 | 2025-11-25 → 2026-07-28 servers | Built stateless from day one; conformance suite gate | Suite green on all servers |
 

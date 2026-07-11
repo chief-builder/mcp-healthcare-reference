@@ -22,7 +22,7 @@ Everything else is negotiable.
 |---|---|---|
 | Kong Konnect hybrid (CP in Kong's AWS) | **Konnect free/dev tier CP + local data planes in Docker** | Preserves the real hybrid split: cloud CP, DPs on your hardware, decK-driven config, cached-config resilience (kill your uplink and watch DPs keep serving). Fallback: Kong Gateway OSS DB-less if Konnect free limits bite — loses the CP/DP boundary demo |
 | PingID (workforce) | **Dex** (or a second Keycloak realm) as a fake upstream OIDC IdP, brokered into the hub realm | Preserves the brokered-login leg and claim normalization; loses nothing architectural — Ping is just another OIDC broker |
-| Auth0 (customers) | **Auth0 free tier (real)** — generous and permanent | Real product, real broker leg, and a front-row seat when Auth0 ships native XAA/ID-JAG |
+| Auth0 (customers) | **Auth0 free tier (real)** — generous and permanent | Real product, real broker leg, and a front-row seat when Auth0 ships native ID-JAG issuance |
 | Homegrown AS | **~150-line FastAPI/Node token issuer** registered as a trusted external issuer | Preserves the RFC 8693 exchange leg and the "frozen, sunsetting" migration story |
 | Athenz (ZMS/ZTS, Copper Argos, SIA) | **Phase 4a: step-ca or SPIRE** issuing short-lived SPIFFE-SAN certs; **Phase 4b (stretch): real Athenz OSS** via its docker-compose | 4a preserves the property that matters (short-lived X.509 → `tls_client_auth` → cert-bound token); loses provider attestation. 4b adds real ZMS/ZTS + role model — valuable since Athenz is the actual target, but it's the heaviest lift; do it second |
 | EKS | **k3d or kind** (Phase ≥4); plain docker-compose for Phases 0–3 | k8s enters exactly when workload identity does |

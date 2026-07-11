@@ -11,7 +11,7 @@ The Vendor Token Broker acquires, custodies, refreshes, and revokes OAuth creden
 
 **The broker is an OAuth client and credential custodian. It is not an authorization server and MUST NOT mint, sign, or transform tokens.** Keycloak remains the sole issuer for the MCP plane (Claims Contract §2). Any future requirement that appears to need broker-issued tokens is a design error to be escalated, not implemented.
 
-The broker exists because most SaaS vendors' authorization servers do not yet accept cross-domain identity assertions (ID-JAG / MCP Enterprise-Managed Authorization). It is deliberately transitional: Section 15 defines per-vendor sunset criteria. Architect every vendor integration as a removable module.
+The broker exists because most SaaS vendors' authorization servers do not yet accept the Identity Assertion JWT Authorization Grant (ID-JAG) on which MCP Enterprise-Managed Authorization (EMA, stable extension) is built. It is deliberately transitional: Section 15 defines per-vendor sunset criteria. Architect every vendor integration as a removable module.
 
 ## 2. Standards basis
 
@@ -26,7 +26,7 @@ The broker exists because most SaaS vendors' authorization servers do not yet ac
 | Lifecycle | RFC 6749 §6 refresh | Single-flight refresh per entry (Section 9) |
 | Lifecycle | RFC 7009 revocation | Offboarding calls the vendor revocation endpoint before deleting the vault entry |
 | Lifecycle | RFC 7662 introspection | Optional health probe where offered |
-| Exchange (future) | RFC 8693 / draft-ietf-oauth-identity-chaining / ID-JAG / MCP EMA extension | The standardized replacement; drives Section 15 sunset |
+| Exchange (future) | MCP Enterprise-Managed Authorization (stable extension): ID-JAG (draft-ietf-oauth-identity-assertion-authz-grant, profiling draft-ietf-oauth-identity-chaining) via RFC 8693 token exchange at the IdP + RFC 7523 JWT authorization grant at the vendor's Resource Authorization Server | The standardized replacement; drives Section 15 sunset |
 
 The custodial pattern itself ("store foreign-domain tokens keyed by local identity") has no RFC; it is the token-handler/BFF pattern applied at gateway scale. RFC 9700 discipline plus Sections 10–12 substitute for the missing standard.
 
@@ -47,7 +47,7 @@ All endpoints: mTLS required; JSON; errors follow RFC 9457 problem details; no t
 
 ### 4.1 `POST /v1/tokens/resolve`
 Caller: Kong egress DP only.
-Request: `{ "vendor": "github", "sub": "wf-user-8842", "hub_jti": "…", "min_ttl_s": 120 }` plus the hub JWT in `Authorization`.
+Request: `{ "vendor": "github", "sub": "wf-user-8842", "hub_jti": "…", "min_ttl_s": 120, "required_scopes": ["repo"] }` plus the hub JWT in `Authorization`. `required_scopes` is derived by the caller from the authenticated MCP tool; the broker caps it at the registry `scope_ceiling` and answers `409 needs-reconsent-scope` when the held grant is narrower.
 Responses:
 - `200 { "access_token": "…", "expires_at": …, "granted_scopes": […] }` — token guaranteed live for ≥ `min_ttl_s` (refresh performed inline if needed).
 - `404 { "type": "…/needs-consent", "authorize_uri": "https://broker…/v1/authorize/github?txn=…" }` — no entry or STALE entry; Kong translates this into the MCP authorization-required response so the client opens the consent flow.
@@ -59,13 +59,13 @@ SLO: p99 ≤ 25 ms on cache hit; ≤ 400 ms when an inline refresh is required.
 Builds the vendor authorization URL: `state` = opaque handle to a server-side transaction record `{sub, vendor, nonce, pkce_verifier, created_at, requested_scopes}` (TTL 10 min, single use). `state` is never a JWT and never decodable client-side. Scopes requested = min(tool requirement, vendor scope ceiling from the registry). Redirects the browser to the vendor.
 
 ### 4.3 `GET /v1/callback/{vendor}?code=…&state=…`
-Validates `state` (exists, unexpired, unconsumed, vendor matches); validates RFC 9207 `iss` against the issuer recorded in the transaction (mix-up defense — a mismatch is a security alert and the code is never redeemed); exchanges `code` + PKCE verifier at the vendor token endpoint; captures the vendor account id from the token response or userinfo; writes the vault entry; marks the transaction consumed; renders a "connection complete — return to your client" page. A `state` mismatch or reuse is a security event (alert), not a 400.
+Validates `state` (exists, unexpired, unconsumed, vendor matches); validates RFC 9207 `iss` against the issuer recorded in the transaction (mix-up defense — a mismatch is a security alert and the code is never redeemed); exchanges `code` + PKCE verifier at the vendor token endpoint; captures the vendor account id from the token response or userinfo; writes the vault entry; marks the transaction consumed; renders a "connection complete — return to your client" page. A `state` mismatch or reuse returns a 4xx to the browser **and** raises a security alert (possible CSRF/binding attack, §10) — the alert is the point; the status code alone is not an adequate response.
 
 ### 4.4 `DELETE /v1/grants/{vendor}/{sub}`
 Callers: the user themself (sub match) or the offboarding automation (admin SVID). Order of operations: RFC 7009 revoke at vendor → delete vault entry → emit audit. Vendor revocation failure leaves the entry in `REVOKE_PENDING` with retry; the entry is unusable for resolve while pending.
 
 ### 4.5 `GET /v1/grants` (self-service) · `GET/PUT /v1/admin/vendors/{vendor}` (registry)
-Registry record: `{ vendor_id, client_id, auth_metadata_url | endpoints, token_endpoint_auth_method, scope_ceiling: […], refresh_rotation: true|false, ema_status: none|announced|available }`. Changing `scope_ceiling` requires the same sign-off as a Claims Contract change.
+Registry record: `{ vendor_id, auth_metadata_url | endpoints, token_endpoint_auth_method, scope_ceiling: […], refresh_rotation: true|false, ema_status: none|announced|available }` plus operational fields (`enabled_env`, `vendor_user_endpoint`, `revocation`). Per-request scope needs travel in the resolve body (`required_scopes`, §4.1), not the registry — the registry holds only the ceiling. The vendor `client_id` lives with its credential in `vendor-clients/{vendor}` (Section 5), never in the registry. Changing `scope_ceiling` requires the same sign-off as a Claims Contract change. Lab delta: only the authenticated `GET` is implemented — registry mutation is a reviewed git change to `broker/registry.json`, which is the stronger control for a lab; the `PUT` leg is production intent (Section 16).
 
 ## 5. Vault schema
 
@@ -84,32 +84,35 @@ Envelope encryption via KMS CMK dedicated to the broker; vault policy: broker ro
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as Developer (browser + MCP client)
+    participant UA as Browser
+    participant C as MCP Client
     participant K as Kong egress DP
     participant B as Broker
     participant V as Vault
-    participant G as GitHub AS
+    participant G as GitHub Authorization Server
+    participant M as GitHub MCP server (Resource Server)
 
-    U->>K: MCP tool call (hub JWT, sub=wf-user-8842)
+    C->>K: MCP tool call (hub JWT, sub=wf-user-8842)
     K->>B: POST /v1/tokens/resolve {github, sub}
     B->>V: read vendor-tokens/github/wf-user-8842
     V-->>B: not found
     B-->>K: 404 needs-consent + authorize_uri(txn)
-    K-->>U: MCP authorization-required (elicits browser)
-    U->>B: GET /v1/authorize/github?txn=…
+    K-->>C: MCP authorization-required
+    C->>UA: open authorize_uri
+    UA->>B: GET /v1/authorize/github?txn=…
     Note over B: create state txn {sub, nonce,<br/>PKCE verifier, scopes≤ceiling}, TTL 10m
-    B-->>U: 302 → GitHub authorize (client_id, PKCE S256, state)
-    U->>G: consent as themself (org-owned GitHub App)
-    G-->>U: 302 → broker /v1/callback?code&state
-    U->>B: GET /v1/callback/github?code&state
+    B-->>UA: 302 → GitHub authorize (client_id, PKCE S256, state)
+    UA->>G: consent as themself (org-owned GitHub App)
+    G-->>UA: 302 → broker /v1/callback?code&state
+    UA->>B: GET /v1/callback/github?code&state
     Note over B: validate state: exists, unexpired,<br/>unconsumed, vendor match — else ALERT
     B->>G: token endpoint: code + PKCE verifier + client auth
     G-->>B: access (≈8h) + refresh (rotating) tokens
     B->>V: write vendor-tokens/github/{sub} state=ACTIVE gen=1
-    B-->>U: "connected — return to your client"
-    U->>K: retry MCP tool call
+    B-->>UA: "connected — return to your client"
+    C->>K: retry MCP tool call
     K->>B: resolve → 200 access_token
-    K->>G: upstream MCP call, vendor token injected, hub JWT stripped
+    K->>M: upstream MCP call, vendor token injected, hub JWT stripped
 ```
 
 Properties enforced by the design: the PKCE verifier and `state` never leave the broker in decodable form; `state` binds the callback to the initiating `sub` so a stolen callback URL cannot attach someone else's GitHub account to your identity (login-CSRF / account-binding attack); scopes are capped by the registry ceiling regardless of what the tool asked for.
@@ -163,7 +166,7 @@ sequenceDiagram
     participant B as Broker
     participant L as Lock (per-entry)
     participant V as Vault
-    participant G as GitHub AS
+    participant G as GitHub Authorization Server
 
     par concurrent resolves inside buffer
         K1->>B: resolve {github, sub}
@@ -176,7 +179,7 @@ sequenceDiagram
     B->>G: refresh_token grant (RT gen41)
     G-->>B: new AT + new RT (rotated)
     B->>V: CAS write gen 41→42 (fails if gen moved)
-    B->>L: release; wake parked waiters
+    B->>L: release — wake parked waiters
     B-->>K1: 200 AT(gen42)
     B-->>K2: 200 AT(gen42)  — same token, zero extra vendor calls
 ```
@@ -214,4 +217,13 @@ Owner: the homegrown-AS team, as a new service — the AS itself continues its s
 
 ## 15. Sunset criteria (per vendor)
 
-A vendor exits the broker when all hold: vendor AS advertises `urn:ietf:params:oauth:grant-profile:id-jag` (or MCP EMA support), the workforce IdP issues ID-JAGs, and a 30-day dual-run shows EMA-path parity in the SIEM. Exit = registry flag flips, consent flow disabled for the vendor, existing entries revoked per RFC 7009 on a drain schedule. The broker's success metric is its own shrinking registry.
+A vendor exits the broker when all hold: the vendor's Resource Authorization Server advertises `urn:ietf:params:oauth:grant-profile:id-jag` in `authorization_grant_profiles_supported` (EMA §6 discovery), the workforce IdP issues ID-JAGs, and a 30-day dual-run shows EMA-path parity in the SIEM. Exit = registry flag flips, consent flow disabled for the vendor, existing entries revoked per RFC 7009 on a drain schedule. The broker's success metric is its own shrinking registry.
+
+## 16. Lab implementation deltas
+
+The lab broker (`broker/`) realizes every security-critical mechanic of this design — single-flight + generation-CAS refresh, RFC 9207 `iss` and `iss`-omission defense, single-use `state` with TTL, PKCE S256, 409 needs-reconsent-scope, hub-JWT re-validation with PS256/ES256 pinning, mass-STALE paging, fail-closed vault behavior, and the no-issuance rule. Known deltas from the production design, accepted for the single-replica lab:
+
+- **`REFRESHING` is never persisted.** Single-flight uses an in-process `asyncio` lock (single-replica scoping); the persisted `REFRESHING` state in §5/§8 is a multi-replica production construct. The state machine's observable transitions (`ACTIVE`, `STALE`, `REVOKE_PENDING`) match §8.
+- **Client authentication is `client_secret_post` only.** The registry records `token_endpoint_auth_method` but the code does not yet branch on it; `private_key_jwt` (§3) and the `private_key` credential shape (§5) are unimplemented. RFC 9126 PAR and RFC 7662 introspection (§2, both conditional) are likewise not yet wired.
+- **Registry mutation is git, not API.** `GET /v1/admin/vendors/{vendor}` is authenticated and read-only; there is no `PUT` (§4.5).
+- **The proactive sweeper runs on a fixed interval** rather than jittered (§8) — jitter matters at fleet scale, not for one replica.
