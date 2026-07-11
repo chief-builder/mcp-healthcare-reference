@@ -42,7 +42,7 @@ Every MCP-plane access token carries the claims below. `M` = mandatory on all pa
 | `idp_origin` | M | string | `ping` \| `athenz` \| `homegrown` \| `keycloak` \| `auth0`. Which upstream system authenticated the principal. Drives audit and anomaly detection (e.g., an `auth0` token at the internal tier is always an incident). |
 | `scope` | M | string | Space-delimited, per the grammar in Section 5. |
 | `act` | C | object | Delegation chain per RFC 8693 §4.1. Mandatory whenever the requesting party is not the effective principal — all on-behalf-of flows (Section 7). |
-| `cnf` | C | object | `{"x5t#S256": "<thumbprint>"}`. Mandatory on the Athenz path; forbidden absent mTLS (a `cnf` the DP cannot verify is a rejection, not a no-op). |
+| `cnf` | C | object | Sender-constraint confirmation. `{"x5t#S256": "<thumbprint>"}` binds to an mTLS client cert (RFC 8705, Athenz path — mandatory there, forbidden absent mTLS). `{"jkt": "<thumbprint>"}` binds to a client-held DPoP key (RFC 9449, `workforce-dpop` path §6.6). A `cnf` the validator cannot satisfy is a rejection, not a no-op. |
 | `fhir_patient` | C | string | FHIR Patient resource id. Mandatory on the Auth0 end-customer path; forbidden on all others. MCP servers MUST compartment-filter every FHIR query by it when present. |
 | `groups` | C | array | Normalized role names (Section 3.1). Mandatory on workforce path; the *only* group vocabulary any consumer may reference. |
 | `amr` | C | array | Authentication methods from the upstream IdP (e.g., `["mfa","swk"]`). Mandatory on interactive paths; DP policy MAY require `mfa` for designated tool scopes. |
@@ -173,6 +173,18 @@ Front leg: Keycloak brokers Auth0. Auth0's forthcoming native ID-JAG issuance ma
 
 MCP servers MUST apply `fhir_patient` as a hard compartment filter on every FHIR interaction. A missing or unresolvable linkage means no token is issued, not a token without the claim.
 
+### 6.6 Workforce — DPoP sender-constrained (`workforce-dpop`)
+
+Front leg: identical to 6.1 (authorization code + PKCE, brokered Ping), but the client carries `dpop.bound.access.tokens=true`, so it presents a DPoP proof (RFC 9449) at the token endpoint and Keycloak stamps `cnf.jkt` — the RFC 7638 thumbprint of the client's key. This is the public-client analogue of 6.3's cert binding: the token is useless without the private key that signs a fresh proof per request, closing the "token lifted from the credential store" replay.
+
+| Claim | Value on this path |
+|---|---|
+| `sub`, `azp`, `idp_origin`, `mcp_tier`/`aud`, `groups`, `amr` | As 6.1; `azp` = `workforce-dpop` |
+| `cnf` | `{"jkt": <thumbprint of the client's DPoP key>}` — mandatory |
+| `act`, `fhir_patient` | Absent |
+
+`claude-code` (6.1) stays bearer until real Claude Code ships DPoP — a tracked gap (arch doc gap register); this profile proves the path end-to-end. Every request MUST carry a valid, matching, single-use DPoP proof (§8).
+
 ## 7. Delegation semantics (`act`)
 
 On-behalf-of tokens follow RFC 8693 §4.1: the effective principal is `sub`; the acting party chain nests in `act`.
@@ -190,6 +202,8 @@ Rules: chains are at most two levels deep (`act.act` requires platform-admin app
 ## 8. Validation requirements (normative)
 
 **Kong DP (both tiers), on every request:** verify signature against cached JWKS; `iss` exact match; `exp/nbf/iat` with ≤ 30 s skew; tier audience matches the DP's tier; `jti` present; if `cnf` present, mTLS client cert thumbprint MUST match, and absence of a client cert is a hard failure; map `groups`/`scope` through MCP ACLs to tool visibility; inject `jti`, `sub`, `azp`, `act.sub`, `idp_origin` as upstream headers for the MCP server and strip any client-supplied copies of those headers. (Lab delta: on the first-party MCP routes the DP tier wall in `deck/internal.yaml` enforces the tier audience without signature verification — signature verification there is carried by the servers' §8 re-validation, and by `openid-connect` on the egress routes. Full DP-side JWT verification on every route is the production target.)
+
+**DPoP sender-constraint (RFC 9449), when `cnf.jkt` present:** the token MUST be presented as `Authorization: DPoP <token>` with exactly one `DPoP` proof header; the proof is a `dpop+jwt`/`ES256` JWS whose embedded public key's RFC 7638 thumbprint equals `cnf.jkt`, with `htm`/`htu` matching the request, `iat` within ±60 s, `ath` = `base64url(SHA-256(token))`, and a single-use `jti`. Gateway-first: the `dpop-check` DP plugin is early rejection (structure + binding + request match + `jti` replay via a shared dict, the DP being the single entry point); the MCP servers' `requireDpop` is the authoritative re-check and additionally verifies the proof signature (jose `EmbeddedJWK`). Consistent with §8's "servers re-validate, never trust the gateway," and mirroring the cnf/mTLS split, a `cnf.jkt` token without a valid matching proof is a rejection, not a no-op. Server-side `jti` dedup is absent by design (stateless replicas); the DP is authoritative for replay (arch doc gap register).
 
 **MCP servers, on every tool call:** re-verify signature and `iss` (do not trust the DP blindly — defense in depth); `aud` contains this server's URI; scope authorizes this specific tool + verb; when `fhir_patient` present, compartment-filter; when absent on a path that requires it, reject.
 

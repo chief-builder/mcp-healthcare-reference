@@ -44,10 +44,24 @@ Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
 Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
 broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
 First-party MCP servers = servers/; loop agent = agents/loop-agent.
-Phase 7 (red-team weekend, plan §3): tests/phase7.sh green (20 passed, 0
+Phase 7 (red-team weekend, plan §3): tests/phase7.sh green (32 passed, 0
 xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker state
 replay, RFC 9207 iss tamper/omission, per-entry + mass STALE, token-in-log
-grep, broker no-issuance all hold.
+grep, broker no-issuance all hold. P8 = DPoP sender-constraint (11 probes):
+bound-token-as-bearer, missing/wrong-htu/htm/ath proofs, stale iat, jti
+replay, thumbprint mismatch, and server-revalidates-without-gateway.
+
+DPoP (RFC 9449) sender-constraint for interactive tokens: parallel public
+client `workforce-dpop` (dpop.bound.access.tokens=true → cnf.jkt; needs
+KC_FEATURES+=dpop, enabled in compose). Enforced gateway-first —
+plugins/dpop-check (structure + jkt binding + htm/htu/iat/ath + jti replay
+via a KONG_NGINX_HTTP_LUA_SHARED_DICT dpop_jti dict; does NOT verify the
+proof signature, matching the DP's no-crypto-on-first-party-routes posture)
+AND authoritatively re-checked by servers/*/src/dpop.ts (jose EmbeddedJWK +
+calculateJwkThumbprint; the dpopSchemeShim rewrites `DPoP <t>`→`Bearer <t>`
+so requireBearerAuth still parses it). The deck tier-wall pre-function now
+accepts both Bearer and DPoP schemes (else DPoP requests bypass the wall).
+claude-code stays bearer (real Claude Code sends no proofs) — tracked gap.
 
 An external review (fully triaged into GitHub issues; the sol-rec*.md
 notes were removed from the repo after triage) drove a remediation pass —
