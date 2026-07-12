@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Healthcare Reference — Documentation</title>
+<style>
+  :root {
+    --ground: #F3ECE1; --surface: #FBF7EF; --ink: #2E2318; --ink-soft: #6E5D4B;
+    --accent-ink: #6E4120; --line: #DBCCB6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground: #1B140D; --surface: #241B12; --ink: #EFE5D6; --ink-soft: #B5A08A;
+            --accent-ink: #E0B078; --line: #3B2D1F; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+         font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 4rem 1.4rem 5rem; }
+  h1 { font-family: "Iowan Old Style", Palatino, Charter, Georgia, serif;
+       font-size: 2.2rem; margin: 0 0 0.4rem; }
+  .lede { color: var(--ink-soft); margin: 0 0 2.5rem; }
+  h2 { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+       color: var(--accent-ink); margin: 2.2rem 0 0.8rem; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+  li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  li a { display: block; padding: 0.85rem 1.1rem; color: var(--ink); text-decoration: none; }
+  li a:hover b { text-decoration: underline; }
+  li b { color: var(--accent-ink); }
+  li span { display: block; font-size: 0.88rem; color: var(--ink-soft); }
+  footer { margin-top: 3.5rem; border-top: 1px solid var(--line); padding-top: 1.2rem;
+           font-size: 0.85rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<main>
+  <h1>MCP Healthcare Reference</h1>
+  <p class="lede">A home-lab reference implementation of governed MCP for regulated healthcare —
+  one token issuer, tiered gateways, sender-constrained tokens, egress DLP, brokered vendor
+  credentials, and a jti-joinable audit spine. Patient data is synthetic.</p>
+
+  <h2>Showcase</h2>
+  <ul>
+    <li><a href="showcase/product.html"><b>Product overview</b><span>What the platform promises, for any stakeholder</span></a></li>
+    <li><a href="showcase/technical-overview.html"><b>Technical overview</b><span>Invariants, master diagram, token contract, phase gates</span></a></li>
+    <li><a href="showcase/token-lifecycle.html"><b>Token lifecycle</b><span>Anatomy of a tool call, from login to expiry</span></a></li>
+  </ul>
+
+  <h2>Walkthroughs</h2>
+  <ul>
+    <li><a href="walkthrough/overall-functional.html"><b>Overall · Functional</b><span>What the system does, end to end</span></a></li>
+    <li><a href="walkthrough/overall-technical.html"><b>Overall · Technical</b><span>Ports, protocols, validation matrix, compliance deltas</span></a></li>
+    <li><a href="walkthrough/modules-functional.html"><b>Modules · Functional</b><span>What each part of the repository does</span></a></li>
+    <li><a href="walkthrough/modules-technical.html"><b>Modules · Technical</b><span>Source-level module detail</span></a></li>
+  </ul>
+
+  <footer>Documents the lab as of Phase 7 · 2026-07-12</footer>
+</main>
+</body>
+</html>
