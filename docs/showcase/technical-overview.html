@@ -374,17 +374,27 @@
   <section id="docs" data-sources="docs/">
     <div class="eyebrow">The document set</div>
     <h2>Where the authority lives</h2>
+    <p class="section-intro">
+      The design documents below live in the project's source repository (private); the paths are
+      cited here as provenance, not links. The rendered tours are hosted on this site.
+    </p>
+    <h3>Design authority — source repository</h3>
     <ul class="doc-list">
       <li><span class="path">docs/mcp-e2e-reference-architecture.md</span> — <span class="why">the five invariants, gateway tiers, master diagram, HIPAA mapping, WAF appendix</span></li>
       <li><span class="path">docs/mcp-token-claims-contract.md</span> — <span class="why">the canonical JWT every component validates; grant-path profiles; audit vocabulary</span></li>
       <li><span class="path">docs/vendor-token-broker-design.md</span> — <span class="why">consent dance, refresh race, vault schema, sunset criteria (all sequence diagrams spec-role aligned)</span></li>
       <li><span class="path">docs/prototype-plan.md</span> — <span class="why">fidelity contract, substitution map, phases 0–7</span></li>
-      <li><span class="path">docs/walkthrough/*.html · overview.html</span> — <span class="why">rendered tours: functional and technical, module-level and overall</span></li>
+    </ul>
+    <h3 style="margin-top:1.6rem;">Rendered tours — on this site</h3>
+    <ul class="doc-list">
+      <li><span class="path"><a href="product.html">Product overview</a> · <a href="token-lifecycle.html">Token lifecycle</a></span> — <span class="why">the promises for any stakeholder, and every token from birth to expiry</span></li>
+      <li><span class="path"><a href="../walkthrough/overall-functional.html">Overall · Functional</a> · <a href="../walkthrough/overall-technical.html">Overall · Technical</a></span> — <span class="why">the system end to end: journeys, then ports, protocols, and validation matrix</span></li>
+      <li><span class="path"><a href="../walkthrough/modules-functional.html">Modules · Functional</a> · <a href="../walkthrough/modules-technical.html">Modules · Technical</a></span> — <span class="why">what each part does, then source-level module detail</span></li>
     </ul>
   </section>
 
   <footer>
-    Reference lab · architecture authority lives in <code>docs/</code>, executable proof in <code>tests/</code>.
+    Reference lab · design authority lives in the source repository's <code>docs/</code>, executable proof in its <code>tests/</code> suites.
     Conformance targets the draft MCP 2026-07-28 model; intentional substitutions are documented in the prototype plan.
     <br>Documents the lab as of Phase 7 · 2026-07-12
   </footer>
