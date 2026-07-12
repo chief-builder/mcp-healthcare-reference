@@ -78,7 +78,13 @@ services:
 
   hapi:
     image: hapiproject/hapi:v8.0.0
+    # Uncapped, the JVM sizes its heap off the whole Docker VM and the kernel
+    # OOM-kills it (exit 137) under stack-wide pressure. Bound the container
+    # and let the JVM size to it; restart if the kernel kills it anyway.
+    mem_limit: 1536m
+    restart: unless-stopped
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70"
       "spring.datasource.url": jdbc:postgresql://postgres:5432/hapi
       "spring.datasource.username": hapi
       "spring.datasource.password": ${POSTGRES_PASSWORD}
@@ -142,6 +148,9 @@ services:
       KONG_SSL_CERT_KEY: /certs/kong-internal.key
       KONG_PLUGINS: bundled,cnf-check,dlp-egress,vendor-token,dpop-check
       KONG_LUA_PACKAGE_PATH: /opt/kong-plugins/?.lua;;
+      # worker_processes auto = one per host core (~140 MB each) — far more
+      # than a lab DP needs, and enough to OOM the JVMs elsewhere in the VM.
+      KONG_NGINX_WORKER_PROCESSES: "2"
       # DPoP proof replay cache (dpop-check); single-entry DP → authoritative.
       KONG_NGINX_HTTP_LUA_SHARED_DICT: "dpop_jti 5m"
       KONG_STATUS_LISTEN: 0.0.0.0:8007
@@ -178,6 +187,7 @@ services:
       KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: cjson.safe
       KONG_PROXY_LISTEN: 0.0.0.0:8000
       KONG_STATUS_LISTEN: 0.0.0.0:8007
+      KONG_NGINX_WORKER_PROCESSES: "2"
       KONG_TRACING_INSTRUMENTATIONS: "all"
       KONG_TRACING_SAMPLING_RATE: "1.0"
     env_file:
