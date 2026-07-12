@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Governed MCP for Healthcare — Product Overview</title>
+<script type="application/json" id="canvas-manifest">
+{
+  "generated": "2026-07-12",
+  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "phase": 7,
+  "sections": {
+    "why": "docs/prototype-plan.md",
+    "what": "docs/mcp-e2e-reference-architecture.md",
+    "promises": "plugins/, broker/, realm/, servers/",
+    "scenarios": "plugins/dlp-egress/, agents/loop-agent/, compose/phase4/",
+    "governance": "realm/, docs/mcp-e2e-reference-architecture.md",
+    "proof": "tests/"
+  }
+}
+</script>
 <style>
   :root {
     --ground: #F3ECE1;
@@ -333,7 +348,7 @@
     </script>
   </header>
 
-  <section id="why">
+  <section id="why" data-sources="docs/prototype-plan.md">
     <div class="eyebrow">Why this exists</div>
     <h2>AI arrived faster than the guardrails</h2>
     <p class="section-intro">
@@ -359,7 +374,7 @@
     </div>
   </section>
 
-  <section id="what">
+  <section id="what" data-sources="docs/mcp-e2e-reference-architecture.md">
     <div class="eyebrow">What it is</div>
     <h2>One front door for every AI conversation</h2>
     <p class="section-intro">
@@ -385,7 +400,7 @@
     </div>
   </section>
 
-  <section id="promises">
+  <section id="promises" data-sources="plugins/, broker/, realm/, servers/">
     <div class="eyebrow">The promises</div>
     <h2>What the platform guarantees</h2>
     <div class="promises">
@@ -420,7 +435,7 @@
     </div>
   </section>
 
-  <section id="scenarios">
+  <section id="scenarios" data-sources="plugins/dlp-egress/, agents/loop-agent/, compose/phase4/">
     <div class="eyebrow">How it feels</div>
     <h2>Three ordinary moments</h2>
 
@@ -449,7 +464,7 @@
     </div>
   </section>
 
-  <section id="governance">
+  <section id="governance" data-sources="realm/, docs/mcp-e2e-reference-architecture.md">
     <div class="eyebrow">The governance story</div>
     <h2>Connections are policy. Tool calls are enforcement.</h2>
     <div class="gov-band">
@@ -465,7 +480,7 @@
     </div>
   </section>
 
-  <section id="proof">
+  <section id="proof" data-sources="tests/">
     <div class="eyebrow">Not slideware</div>
     <h2>It runs</h2>
     <p class="section-intro">
@@ -487,6 +502,7 @@
   <footer>
     Governed MCP for healthcare — a reference implementation of enterprise AI connectivity with
     HIPAA-shaped controls. Names in scenarios are illustrative; patient data in the lab is synthetic.
+    <br>Documents the lab as of Phase 7 · 2026-07-12
   </footer>
 </main>
 

@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anatomy of a Tool Call — Token Lifecycle</title>
+<script type="application/json" id="canvas-manifest">
+{
+  "generated": "2026-07-12",
+  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "phase": 7,
+  "sections": {
+    "connect": "realm/, servers/, docs/mcp-token-claims-contract.md",
+    "inventory": "realm/, docs/mcp-token-claims-contract.md",
+    "percall": "deck/, servers/, docs/mcp-token-claims-contract.md",
+    "refresh": "realm/",
+    "stepup": "realm/, servers/, tests/phase3/",
+    "hardening": "plugins/dpop-check/, plugins/cnf-check/, realm/, servers/"
+  }
+}
+</script>
 <style>
   :root {
     --ground: #F3ECE1; --surface: #FBF7EF; --surface-2: #ECE1CF;
@@ -134,7 +149,7 @@
     </p>
   </header>
 
-  <section id="connect">
+  <section id="connect" data-sources="realm/, servers/, docs/mcp-token-claims-contract.md">
     <div class="eyebrow">Stage one</div>
     <h2>First connect — the only visible moment</h2>
     <p class="section-intro">The engineer adds the server once. The first tool call goes out with no token, and the machinery self-assembles.</p>
@@ -168,7 +183,7 @@
     </div>
   </section>
 
-  <section id="inventory">
+  <section id="inventory" data-sources="realm/, docs/mcp-token-claims-contract.md">
     <div class="eyebrow">Stage two</div>
     <h2>The token inventory</h2>
     <p class="section-intro">Five artifacts exist after login. Only one of them ever touches the MCP plane.</p>
@@ -218,7 +233,7 @@
     </div>
   </section>
 
-  <section id="percall">
+  <section id="percall" data-sources="deck/, servers/, docs/mcp-token-claims-contract.md">
     <div class="eyebrow">Stage three</div>
     <h2>Every tool call, for the next five minutes</h2>
     <div class="path" role="img" aria-label="Request path: Claude Code, VPN, internal gateway, MCP server, audit record">
@@ -238,7 +253,7 @@
     </p>
   </section>
 
-  <section id="refresh">
+  <section id="refresh" data-sources="realm/">
     <div class="eyebrow">Stage four</div>
     <h2>Expiry and refresh — invisible until it isn't</h2>
     <div class="stage">
@@ -262,7 +277,7 @@
     </div>
   </section>
 
-  <section id="stepup">
+  <section id="stepup" data-sources="realm/, servers/, tests/phase3/">
     <div class="eyebrow">Stage five</div>
     <h2>Step-up — when a tool needs more than the floor</h2>
     <p class="section-intro">
@@ -276,7 +291,7 @@
     </p>
   </section>
 
-  <section id="hardening">
+  <section id="hardening" data-sources="plugins/dpop-check/, plugins/cnf-check/, realm/, servers/">
     <div class="eyebrow">Stage six</div>
     <h2>Protecting the tokens at rest</h2>
     <p class="section-intro">
@@ -299,6 +314,7 @@
     Companion to the <a href="technical-overview.html">technical overview</a>
     and <a href="product.html">product showcase</a>.
     Lifetimes are the lab realm's actual configuration; production targets noted where they differ.
+    <br>Documents the lab as of Phase 7 · 2026-07-12
   </footer>
 </main>
 

@@ -196,6 +196,22 @@
 </head>
 <body>
 
+<script type="application/json" id="canvas-manifest">
+{
+  "generated": "2026-07-12",
+  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "phase": 7,
+  "sections": {
+    "invariants": "docs/prototype-plan.md, docs/mcp-e2e-reference-architecture.md",
+    "architecture": "docs/mcp-e2e-reference-architecture.md, deck/",
+    "ema": "docs/mcp-e2e-reference-architecture.md, broker/",
+    "token": "docs/mcp-token-claims-contract.md, servers/, plugins/",
+    "phases": "tests/, docs/prototype-plan.md",
+    "review": "docs/, servers/, broker/, realm/",
+    "docs": "docs/"
+  }
+}
+</script>
 <nav>
   <div class="rail">
     <span class="brand">mcp-healthcare-reference</span>
@@ -228,7 +244,7 @@
     </div>
   </header>
 
-  <section id="invariants">
+  <section id="invariants" data-sources="docs/prototype-plan.md, docs/mcp-e2e-reference-architecture.md">
     <div class="eyebrow">The fidelity contract</div>
     <h2>Five invariants, never stubbed</h2>
     <p class="section-intro">Every section of the architecture elaborates one of these; the lab is only useful because each is actually enforced and tested.</p>
@@ -241,7 +257,7 @@
     </div>
   </section>
 
-  <section id="architecture">
+  <section id="architecture" data-sources="docs/mcp-e2e-reference-architecture.md, deck/">
     <div class="eyebrow">Master diagram</div>
     <h2>Every population, token path, and flow</h2>
     <p class="section-intro">
@@ -257,7 +273,7 @@
     </p>
   </section>
 
-  <section id="ema">
+  <section id="ema" data-sources="docs/mcp-e2e-reference-architecture.md, broker/">
     <div class="eyebrow">Spec alignment</div>
     <h2>Enterprise-Managed Authorization, mapped</h2>
     <p class="section-intro">
@@ -281,7 +297,7 @@
     </div>
   </section>
 
-  <section id="token">
+  <section id="token" data-sources="docs/mcp-token-claims-contract.md, servers/, plugins/">
     <div class="eyebrow">Claims contract</div>
     <h2>One canonical JWT, five grant paths</h2>
     <p class="section-intro">
@@ -310,7 +326,7 @@
     </div>
   </section>
 
-  <section id="phases">
+  <section id="phases" data-sources="tests/, docs/prototype-plan.md">
     <div class="eyebrow">Executable acceptance</div>
     <h2>Phase gates, in order</h2>
     <p class="section-intro">A phase is done only when <code>tests/phaseN.sh</code> is green. All eight are.</p>
@@ -326,7 +342,7 @@
     </div>
   </section>
 
-  <section id="review">
+  <section id="review" data-sources="docs/, servers/, broker/, realm/">
     <div class="eyebrow">Verification</div>
     <h2>Code ↔ docs consistency review</h2>
     
@@ -355,7 +371,7 @@
 
   </section>
 
-  <section id="docs">
+  <section id="docs" data-sources="docs/">
     <div class="eyebrow">The document set</div>
     <h2>Where the authority lives</h2>
     <ul class="doc-list">
@@ -370,6 +386,7 @@
   <footer>
     Reference lab · architecture authority lives in <code>docs/</code>, executable proof in <code>tests/</code>.
     Conformance targets the draft MCP 2026-07-28 model; intentional substitutions are documented in the prototype plan.
+    <br>Documents the lab as of Phase 7 · 2026-07-12
   </footer>
 </main>
 
