@@ -178,13 +178,32 @@ function DpopCheck:access(conf)
 
   -- Single-use replay defense. The internal DP is the single entry point, so a
   -- shared dict is globally authoritative here (production: a shared cache at
-  -- the resource servers, since their replicas are stateless).
+  -- the resource servers, since their replicas are stateless). Fail closed: a
+  -- missing dict or a failed insert means replay can no longer be excluded.
   local cache = ngx.shared.dpop_jti
-  if cache then
-    local ok, err = cache:add(cnf.jkt .. ":" .. payload.jti, true, JTI_TTL)
-    if not ok and err == "exists" then
+  if not cache then
+    kong.log.err("dpop_jti shared dict is not configured; refusing DPoP traffic")
+    return kong.response.exit(503, { message = "dpop: replay cache unavailable" })
+  end
+  local ok, err, forcible = cache:add(cnf.jkt .. ":" .. payload.jti, true, JTI_TTL)
+  if not ok then
+    if err == "exists" then
       return deny("proof_replay", claims)
     end
+    kong.log.err("dpop_jti cache add failed: ", err)
+    return kong.response.exit(503, { message = "dpop: replay cache unavailable" })
+  end
+  if forcible then
+    -- The dict evicted unexpired entries to fit this one: replay tracking is
+    -- degraded under memory pressure. Detection-only — the evicted entry is
+    -- already gone, so denying THIS request would not protect anyone.
+    kong.log.warn(cjson.encode({
+      audit = "dpop-check",
+      decision = "degraded",
+      reason = "jti_cache_eviction",
+      token_id = claims.jti or ngx.null,
+      ts = ngx.now(),
+    }))
   end
 end
 
