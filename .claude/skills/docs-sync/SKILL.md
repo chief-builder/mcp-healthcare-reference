@@ -64,6 +64,16 @@ North star and phases: `docs/prototype-plan.md`. Architecture:
 `docs/vendor-token-broker-design.md`. Known gaps: open GitHub issues
 (`gh issue list`) + tracked gaps in CLAUDE.md — report them candidly.
 
+## Publish (after a sync commits)
+
+The pages are served publicly by GitHub Pages from the separate public repo
+`chief-builder/mcp-healthcare-reference-docs` (this repo is private; Pages
+can't serve it). After committing a sync here, mirror the published set —
+`docs/index.html`, `docs/.nojekyll`, `docs/showcase/`, `docs/walkthrough/`
+(paths rebased to the docs repo root) — into that repo and push. Live URL:
+https://chief-builder.github.io/mcp-healthcare-reference-docs/ — spot-check
+it after the Pages build. Never mirror anything else from this repo.
+
 ## Self-check (before reporting done)
 
 Every internal `#link` resolves · no external `script`/`link`/`img` loads ·
