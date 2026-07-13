@@ -361,7 +361,7 @@
       <div class="phase"><h3>4 · Cert-bound m2m</h3><p class="gate">tests/phase4.sh · 9 tests</p><p>SPIRE-issued SPIFFE certs; <code>client-x509</code> at Keycloak; the <code>cnf-check</code> plugin rejects tokens without the presenting cert.</p></div>
       <div class="phase"><h3>5 · Egress + broker</h3><p class="gate">tests/phase5.sh · 16 tests</p><p>Vendor Token Broker over OpenBao custody; DLP blocks planted MRNs; 20 parallel resolves produce exactly one vendor refresh (single-flight + generation CAS).</p></div>
       <div class="phase"><h3>6 · Audit spine</h3><p class="gate">tests/phase6.sh · 6 tests</p><p>One Loki query keyed by <code>jti</code> walks a vendor call across gateway verdicts, broker resolve, and the vendor action.</p></div>
-      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh · 32 tests</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, and DPoP sender-constraint (RFC 9449): 32 passed, 0 xfail.</p></div>
+      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh · 32 tests</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, and DPoP sender-constraint (RFC 9449).</p></div>
     </div>
   </section>
 
@@ -425,13 +425,16 @@
       <li><span class="path">ID-JAG</span> — <span class="why">Identity Assertion JWT Authorization Grant: the token-exchange profile EMA applies (RFC 8693 exchange at the IdP, then an RFC 7523 grant at the resource authorization server)</span></li>
       <li><span class="path">DPoP</span> — <span class="why">Demonstrating Proof of Possession (RFC 9449): each request carries a fresh signature from a client-held key, so a stolen token is useless without the key</span></li>
       <li><span class="path">cnf</span> — <span class="why">the JWT confirmation claim binding a token to a key or certificate — <code>jkt</code> on the DPoP path, <code>x5t#S256</code> on the mTLS path</span></li>
+      <li><span class="path">Hub JWT</span> — <span class="why">the Keycloak-issued MCP-plane access token every request carries; "hub" distinguishes it from upstream IdP tokens (which never cross into the plane) and vendor tokens (which exist only past the egress boundary)</span></li>
       <li><span class="path">jti</span> — <span class="why">the token's unique ID; the join key that lets one query walk an action across gateway, broker, and server audit records</span></li>
       <li><span class="path">PRM</span> — <span class="why">Protected Resource Metadata (RFC 9728): a server's machine-readable statement of which authorization server protects it — how clients discover where to log in</span></li>
       <li><span class="path">Tier wall</span> — <span class="why">the gateway check that a token carries exactly the tier audience (internal or external) of the gateway it arrived at, so cross-tier replay fails</span></li>
       <li><span class="path">SPIFFE / SVID</span> — <span class="why">the workload-identity framework and its short-lived X.509 certificates (issued in this lab by SPIRE) — how services authenticate with no secrets</span></li>
       <li><span class="path">DLP</span> — <span class="why">data-loss prevention: pattern screening of outbound vendor-bound request bodies (medical record numbers, SSNs) before they leave the boundary</span></li>
       <li><span class="path">Vendor Token Broker</span> — <span class="why">the custodian that keeps per-user vendor OAuth grants in a vault and hands the gateway short-lived vendor tokens; it never mints MCP-plane tokens</span></li>
+      <li><span class="path">Single-flight refresh</span> — <span class="why">when parallel calls find an expired vendor grant, exactly one refresh reaches the vendor; the rest wait and reuse the result (per broker process, CAS-guarded in the vault)</span></li>
       <li><span class="path">Konnect CP / DP</span> — <span class="why">Kong's SaaS control plane (configuration and aggregate telemetry only) versus the local data planes that proxy traffic — PHI never reaches the control plane</span></li>
+      <li><span class="path">Synthea</span> — <span class="why">the synthetic-patient generator behind the lab's FHIR data — no real PHI exists anywhere in the lab</span></li>
     </ul>
   </section>
 

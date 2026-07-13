@@ -336,7 +336,7 @@
       <div class="card"><span class="have">In place</span><h3>Floor by default</h3><p>The standing token holds floor scopes only; anything sensitive needs a fresh, consented, audited step-up.</p></div>
       <div class="card"><span class="have">In place</span><h3>One kill switch</h3><p>Revoking the user's Keycloak SSO session (offboarding, incident) kills every refresh token instantly; access tokens age out within minutes.</p></div>
       <div class="card"><span class="have">In place</span><h3>Keychain, not files</h3><p>Tokens live in the OS keychain with per-app ACLs — encrypted at rest, locked with the screen, not greppable in dotfiles or env vars.</p></div>
-      <div class="card"><span class="have">In place</span><h3>Sender-constraining</h3><p>Bearer tokens are replayable by whoever holds one — so the <code>workforce-dpop</code> client binds its tokens to a client-held key (DPoP, RFC 9449, <code>cnf.jkt</code>): every request carries a fresh signed proof, checked at the gateway and re-checked at the server. A lifted token is inert without the key. The mTLS path (<code>cnf.x5t#S256</code>) already did this for workloads; <code>claude-code</code> stays bearer until the client ships proof support.</p></div>
+      <div class="card"><span class="have">In place</span><h3>Sender-constraining</h3><p>Bearer tokens are replayable by whoever holds one — so the <code>workforce-dpop</code> client key-binds its tokens (DPoP, RFC 9449, <code>cnf.jkt</code>), exactly as traced in stage three: a lifted token is inert without the key. The mTLS path (<code>cnf.x5t#S256</code>) does the same for workloads; <code>claude-code</code> stays bearer until the client ships proof support.</p></div>
       <div class="card"><span class="todo">Strengthen</span><h3>Anomaly detection</h3><p>The audit spine can flag a <code>jti</code> reused from two network paths, or an internal-tier token appearing off-VPN — theft becomes visible even when it succeeds.</p></div>
       <div class="card"><span class="todo">Strengthen</span><h3>Device posture</h3><p>FileVault, screen-lock keychain relock, MDM posture as a VPN precondition, EDR on the endpoint: a stolen laptop shouldn't mean a live credential store.</p></div>
     </div>
@@ -345,6 +345,8 @@
   <footer>
     Companion to the <a href="technical-overview.html">technical overview</a>
     and <a href="product.html">product showcase</a>.
+    This page follows the workforce path end to end; the certificate-bound workload and governed vendor
+    paths are traced in the <a href="../walkthrough/overall-technical.html#flows">Overall Technical walkthrough</a>.
     Lifetimes are the lab realm's actual configuration; production targets noted where they differ.
     <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-12
   </footer>

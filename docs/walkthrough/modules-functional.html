@@ -175,7 +175,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
       <div class="card status">
         <span class="dot"></span><div><strong>Present:</strong> single Keycloak issuer for the plane, two gateway tiers, independent server JWT validation, audience checks, group/tool restrictions, step-up 403s, patient filter, Postgres hold handles, mTLS-bound workload path, DLP, vendor credential isolation, Vault CAS, and audit pipeline.</div>
         <span class="dot warn"></span><div><strong>Lab substitutions:</strong> HTTP endpoints, development Keycloak/OpenBao modes, SPIRE stand-in for Athenz, synthetic FHIR, mock vendor, local rate limiting, and no FIPS enforcement.</div>
-        <span class="dot bad"></span><div><strong>Not yet compliant:</strong> MCP 2026-07-28 wire behavior, RFC 9728 canonical HTTPS resource identifiers, full claims-contract validation in the MCP servers, and Origin enforcement in scheduling.</div>
+        <span class="dot bad"></span><div><strong>Not yet compliant:</strong> the modern MCP wire protocol, HTTPS resource identifiers, full claims-contract validation, and scheduling Origin enforcement — itemized with remediations in the <a href="overall-technical.html#mcp">Overall Technical walkthrough</a>.</div>
       </div>
     </section>
   </main>
