@@ -64,8 +64,8 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
       <div class="eyebrow">Verified module guide · Functional view</div>
       <h1>What every part of the platform does</h1>
       <p class="lede">A module-by-module explanation of the repository in operational language: who uses each component, what outcome it creates, where data moves, and which controls it demonstrates.</p>
-      <img class="hero-img" src="assets/platform-landscape.png" alt="Conceptual illustration of clients, identity, gateways, protected services, vault, and audit systems">
-      <p class="small">Conceptual enterprise topology — illustrative, not the lab’s literal service list. The lab implements two first-party MCP servers: FHIR clinical and scheduling.</p>
+      <img class="hero-img" src="assets/platform-landscape.svg" alt="Lab topology: client populations, the Keycloak issuer, two Kong gateway tiers, first-party MCP servers, governed vendor egress, and the audit spine">
+      <p class="small">The lab as implemented: client populations, the Keycloak issuer, two Kong tiers, first-party MCP servers, governed vendor egress, and the audit spine.</p>
       <div class="notice"><strong>Accuracy boundary.</strong> This is a home-lab reference implementation. “Implemented” means present in source and exercised by the repository; “target” means described for production but substituted or intentionally deferred. Module and file paths cite the project's private source repository — they are provenance, not links. The current MCP wire layer is legacy SDK 1.29 stateless mode, not yet the 2026-07-28 modern wire protocol.</div>
     </section>
 
@@ -94,7 +94,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 
     <section id="identity" data-sources="realm/, compose/phase1/">
       <h2>2. Identity modules</h2>
-      <img class="visual" src="assets/identity-normalization.png" alt="Conceptual identity normalization and isolated gateway lanes">
+      <img class="visual" src="assets/identity-normalization.svg" alt="Five upstream identity sources normalizing through the Keycloak hub into one canonical JWT">
       <p class="small">Five upstream identities normalize to one canonical JWT.</p>
       <div class="flow"><div class="step"><strong>Upstream identity</strong><br><span class="small">Workforce, customer, workload, legacy service, or native Keycloak client.</span></div><div class="arrow">→</div><div class="step"><strong>Keycloak hub</strong><br><span class="small">Authenticates or brokers the principal and applies protocol mappers.</span></div><div class="arrow">→</div><div class="step"><strong>Normalized token</strong><br><span class="small">One issuer and one claims vocabulary, with tier and server audiences.</span></div><div class="arrow">→</div><div class="step"><strong>Protected plane</strong><br><span class="small">Gateway and MCP server independently validate the token.</span></div></div>
       <div class="grid">
@@ -121,7 +121,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 
     <section id="servers" data-sources="servers/">
       <h2>4. First-party MCP server modules</h2>
-      <img class="visual" src="assets/clinical-scheduling.png" alt="Conceptual clinical compartment and scheduling handle flows">
+      <img class="visual" src="assets/clinical-scheduling.svg" alt="Patient-compartment enforcement in the FHIR server and stateless scheduling holds across replicas">
       <p class="small">Patient-compartment FHIR reads and stateless scheduling holds.</p>
       <div class="grid">
         <article class="card"><h3>FHIR clinical server</h3><p>Exposes five curated read tools over a HAPI FHIR R4 backend: patient read, patient-everything, and searches for observations, conditions, and medication requests.</p><p>It performs OAuth bearer validation, filters tool visibility by group, challenges for per-tool scopes, forces customer searches into the token’s patient compartment, caps result count and response size, and audits final outcomes.</p><div class="source">Source: <code>servers/fhir-clinical/</code></div></article>
@@ -133,7 +133,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 
     <section id="broker" data-sources="broker/, compose/phase5/mock-vendor/">
       <h2>5. Vendor token broker modules</h2>
-      <img class="visual" src="assets/governed-egress.png" alt="Conceptual vault, broker, DLP, vendor token isolation, and audit flow">
+      <img class="visual" src="assets/governed-egress.svg" alt="Governed egress: DLP screening at the gateway, broker resolve from vault custody, vendor token swap">
       <p class="small">Vault custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p>
       <div class="flow"><div class="step"><strong>Resolve</strong><br><span class="small">Gateway asks for a vendor credential for the validated hub subject.</span></div><div class="arrow">→</div><div class="step"><strong>Consent if absent</strong><br><span class="small">Browser authorization uses state and PKCE.</span></div><div class="arrow">→</div><div class="step"><strong>Vault custody</strong><br><span class="small">Access and refresh tokens are stored per vendor and hub subject.</span></div><div class="arrow">→</div><div class="step"><strong>Refresh safely</strong><br><span class="small">One in-process refresh wins; Vault CAS prevents stale writes.</span></div><div class="arrow">→</div><div class="step"><strong>Vendor call</strong><br><span class="small">Gateway injects only the vendor token after DLP passes.</span></div></div>
       <div class="grid">

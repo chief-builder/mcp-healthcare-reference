@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" role="img" aria-label="Left: patient-compartment enforcement forces every FHIR query into the token's patient; a cross-patient read is denied. Right: stateless scheduling holds survive across replicas via a Postgres-backed handle.">
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#B5A08A"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="700" fill="#1F1811"/>
+  <line x1="800" y1="50" x2="800" y2="650" stroke="#4A3826" stroke-dasharray="4 8"/>
+
+  <!-- LEFT: patient compartment -->
+  <text x="56" y="70" fill="#B5A08A" font-size="19" letter-spacing="2" font-weight="700">PATIENT COMPARTMENT — fhir-clinical</text>
+
+  <rect x="56" y="100" width="300" height="96" rx="12" fill="#2A2013" stroke="#D29A5B" stroke-width="1.5"/>
+  <text x="76" y="138" fill="#EFE5D6" font-size="22" font-weight="650">Patient token</text>
+  <text x="76" y="170" fill="#EDCFA2" font-size="18" font-family="ui-monospace,'SF Mono',Consolas,monospace">fhir_patient: "218"</text>
+
+  <rect x="440" y="90" width="320" height="116" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="460" y="128" fill="#EFE5D6" font-size="22" font-weight="650">Authorization hook</text>
+  <text x="460" y="158" fill="#B5A08A" font-size="17">by-ID must equal 218</text>
+  <text x="460" y="184" fill="#B5A08A" font-size="17">searches: patient=218 forced in</text>
+
+  <path d="M356 148 L440 148" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="440" y="260" width="320" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="460" y="296" fill="#EFE5D6" font-size="22" font-weight="650">HAPI FHIR (R4)</text>
+  <text x="460" y="326" fill="#B5A08A" font-size="17">bounded: _count · timeout · size cap</text>
+  <path d="M600 206 L600 260" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <g>
+    <rect x="56" y="420" width="704" height="150" rx="12" fill="#241B12" stroke="#7A4038" stroke-width="1.5"/>
+    <text x="76" y="460" fill="#EFE5D6" font-size="21" font-weight="650">Cross-patient read</text>
+    <text x="76" y="494" fill="#EDCFA2" font-size="18" font-family="ui-monospace,'SF Mono',Consolas,monospace">getPatient(id: "999")</text>
+    <text x="76" y="534" fill="#E8938C" font-size="20" font-weight="700">✗ denied — compartment mismatch, audited with the token's jti</text>
+    <text x="76" y="558" fill="#B5A08A" font-size="16">the credential cannot express another patient's chart</text>
+  </g>
+
+  <!-- RIGHT: stateless scheduling -->
+  <text x="856" y="70" fill="#B5A08A" font-size="19" letter-spacing="2" font-weight="700">STATELESS HOLDS — scheduling × 2</text>
+
+  <rect x="856" y="100" width="300" height="96" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="876" y="138" fill="#EFE5D6" font-size="22" font-weight="650">Replica 1</text>
+  <text x="876" y="170" fill="#B5A08A" font-size="17">find-slots → hold-slot</text>
+
+  <rect x="1240" y="100" width="320" height="96" rx="12" fill="#2A2013" stroke="#D29A5B" stroke-width="1.5"/>
+  <text x="1260" y="138" fill="#EFE5D6" font-size="22" font-weight="650">The handle</text>
+  <text x="1260" y="170" fill="#EDCFA2" font-size="18" font-family="ui-monospace,'SF Mono',Consolas,monospace">slot_hold_id: 7f3a…</text>
+  <path d="M1156 148 L1240 148" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="1020" y="280" width="360" height="96" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="1040" y="318" fill="#EFE5D6" font-size="22" font-weight="650">Postgres</text>
+  <text x="1040" y="350" fill="#B5A08A" font-size="17">held-only uniqueness · advisory-lock migration</text>
+  <path d="M1330 196 C 1300 230 1270 255 1240 280" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="856" y="440" width="300" height="96" rx="12" fill="#241B12" stroke="#56683F" stroke-width="1.5"/>
+  <text x="876" y="478" fill="#EFE5D6" font-size="22" font-weight="650">Replica 2</text>
+  <text x="876" y="510" fill="#A3BE78" font-size="18" font-weight="650">✓ confirms the same hold</text>
+  <path d="M1100 376 C 1060 410 1030 425 1000 440" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <text x="856" y="610" fill="#E0A45C" font-size="19" font-weight="650">No MCP session anywhere — continuity lives in the handle,</text>
+  <text x="856" y="638" fill="#E0A45C" font-size="19" font-weight="650">so killing a replica mid-conversation is a non-event.</text>
+</svg>

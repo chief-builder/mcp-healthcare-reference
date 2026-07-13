@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" role="img" aria-label="Lab topology: client populations reach Keycloak-issued tokens, two Kong gateway tiers, first-party MCP servers, governed vendor egress, and an audit spine.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#B5A08A"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#D29A5B"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="900" fill="#1F1811"/>
+
+  <!-- client population column -->
+  <rect x="36" y="60" width="330" height="520" rx="16" fill="none" stroke="#4A3826" stroke-dasharray="7 6"/>
+  <text x="56" y="96" fill="#B5A08A" font-size="19" letter-spacing="2" font-weight="700">CLIENT POPULATIONS</text>
+  <g>
+    <rect x="56" y="118" width="290" height="92" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="156" fill="#EFE5D6" font-size="24" font-weight="650">Claude Code</text>
+    <text x="76" y="186" fill="#B5A08A" font-size="18">workforce · bearer hub JWT</text>
+  </g>
+  <g>
+    <rect x="56" y="226" width="290" height="92" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="264" fill="#EFE5D6" font-size="24" font-weight="650">workforce-dpop</text>
+    <text x="76" y="294" fill="#B5A08A" font-size="18">DPoP proof + cnf.jkt token</text>
+  </g>
+  <g>
+    <rect x="56" y="334" width="290" height="92" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="372" fill="#EFE5D6" font-size="24" font-weight="650">Loop agent</text>
+    <text x="76" y="402" fill="#B5A08A" font-size="18">SPIFFE cert · mTLS · cnf.x5t#S256</text>
+  </g>
+  <g>
+    <rect x="56" y="442" width="290" height="92" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="480" fill="#EFE5D6" font-size="24" font-weight="650">Patient app</text>
+    <text x="76" y="510" fill="#B5A08A" font-size="18">Auth0 identity · fhir_patient</text>
+  </g>
+
+  <!-- keycloak -->
+  <rect x="560" y="60" width="420" height="110" rx="14" fill="#2A2013" stroke="#D29A5B" stroke-width="2"/>
+  <text x="580" y="104" fill="#EFE5D6" font-size="26" font-weight="700">Keycloak — the single issuer</text>
+  <text x="580" y="138" fill="#B5A08A" font-size="18">realm mcp-plane · PS256 · normalized claims · tier audiences</text>
+
+  <!-- gateways -->
+  <rect x="560" y="230" width="420" height="150" rx="14" fill="#241B12" stroke="#D29A5B" stroke-width="2"/>
+  <text x="580" y="272" fill="#EFE5D6" font-size="26" font-weight="700">Kong internal DP</text>
+  <text x="580" y="304" fill="#B5A08A" font-size="18">tier wall (internal) · cnf-check · dpop-check</text>
+  <text x="580" y="332" fill="#B5A08A" font-size="18">rate limits · egress: dlp-egress + vendor-token</text>
+  <text x="580" y="364" fill="#E0A45C" font-size="17">VPN-only ingress</text>
+
+  <rect x="560" y="430" width="420" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="2"/>
+  <text x="580" y="472" fill="#EFE5D6" font-size="26" font-weight="700">Kong external DP</text>
+  <text x="580" y="504" fill="#B5A08A" font-size="18">tier wall (external) · curated patient surface</text>
+  <text x="580" y="532" fill="#B5A08A" font-size="18">a replayed internal token dies here — and vice versa</text>
+
+  <!-- servers -->
+  <rect x="1180" y="200" width="380" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="1200" y="242" fill="#EFE5D6" font-size="25" font-weight="700">fhir-clinical MCP</text>
+  <text x="1200" y="272" fill="#B5A08A" font-size="18">re-validates JWT · patient compartment</text>
+  <text x="1200" y="300" fill="#B5A08A" font-size="18">→ HAPI FHIR (synthetic R4)</text>
+
+  <rect x="1180" y="360" width="380" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="1200" y="402" fill="#EFE5D6" font-size="25" font-weight="700">scheduling MCP × 2 replicas</text>
+  <text x="1200" y="432" fill="#B5A08A" font-size="18">stateless · slot_hold_id handles</text>
+  <text x="1200" y="460" fill="#B5A08A" font-size="18">→ Postgres</text>
+
+  <!-- egress chain -->
+  <rect x="560" y="620" width="300" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="580" y="662" fill="#EFE5D6" font-size="24" font-weight="700">Vendor Token Broker</text>
+  <text x="580" y="692" fill="#B5A08A" font-size="18">consent · single-flight refresh</text>
+  <text x="580" y="720" fill="#B5A08A" font-size="18">OpenBao custody · CAS writes</text>
+
+  <rect x="940" y="620" width="250" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+  <text x="960" y="662" fill="#EFE5D6" font-size="24" font-weight="700">Vendor / SaaS</text>
+  <text x="960" y="692" fill="#B5A08A" font-size="18">mockhub · GitHub</text>
+  <text x="960" y="720" fill="#A3BE78" font-size="18">sees its own token only</text>
+
+  <!-- arrows: clients to gateways -->
+  <path d="M346 164 C 470 164 480 285 560 293" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M346 272 C 450 272 470 295 560 303" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M346 380 C 450 380 470 330 560 322" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M346 488 C 450 488 470 490 560 490" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+
+  <!-- keycloak to DPs -->
+  <path d="M770 170 L770 230" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
+  <path d="M620 170 C 510 210 495 390 552 470" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
+  <text x="790" y="212" fill="#D29A5B" font-size="17">JWKS</text>
+
+  <!-- DPs to servers -->
+  <path d="M980 280 C 1080 270 1080 262 1180 260" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M980 330 C 1080 340 1080 415 1180 420" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M980 490 C 1090 490 1090 300 1180 285" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="1030" y="470" fill="#B5A08A" font-size="17">curated FHIR only</text>
+
+  <!-- internal DP to broker to vendor -->
+  <path d="M600 380 C 510 440 470 580 552 655" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="440" y="640" fill="#B5A08A" font-size="17" text-anchor="end">DLP-screened egress</text>
+  <path d="M860 680 L940 680" fill="none" stroke="#D29A5B" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="862" y="664" fill="#D29A5B" font-size="16">vendor token</text>
+
+  <!-- audit spine -->
+  <rect x="36" y="800" width="1524" height="64" rx="12" fill="#2A2013" stroke="#77603A"/>
+  <text x="800" y="840" fill="#ECC894" font-size="21" text-anchor="middle" font-weight="650">Audit spine — one record per decision, joinable by the token's jti · Alloy → Loki · Kong traces → Tempo · Grafana dashboard</text>
+  <path d="M1370 480 C 1370 620 1300 740 1200 800" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <path d="M710 740 C 710 770 700 785 690 800" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
+</svg>

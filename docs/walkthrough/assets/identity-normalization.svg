@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" role="img" aria-label="Five upstream identity sources normalize through the Keycloak hub into one canonical JWT, validated again at the gateway and the server.">
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#B5A08A"/>
+    </marker>
+    <marker id="ag2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#D29A5B"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="700" fill="#1F1811"/>
+
+  <text x="56" y="60" fill="#B5A08A" font-size="19" letter-spacing="2" font-weight="700">FIVE FRONT DOORS</text>
+  <g>
+    <rect x="56" y="84" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="120" fill="#EFE5D6" font-size="23" font-weight="650">PingID (fake-ping realm)</text>
+    <text x="76" y="150" fill="#B5A08A" font-size="17">workforce SSO + MFA · raw upstream groups</text>
+  </g>
+  <g>
+    <rect x="56" y="192" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="228" fill="#EFE5D6" font-size="23" font-weight="650">Auth0 — real tenant</text>
+    <text x="76" y="258" fill="#B5A08A" font-size="17">patients · linked to a FHIR patient record</text>
+  </g>
+  <g>
+    <rect x="56" y="300" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="336" fill="#EFE5D6" font-size="23" font-weight="650">Homegrown AS (legacy)</text>
+    <text x="76" y="366" fill="#B5A08A" font-size="17">frozen issuer · RFC 8693 exchange only</text>
+  </g>
+  <g>
+    <rect x="56" y="408" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="444" fill="#EFE5D6" font-size="23" font-weight="650">SPIRE workloads</text>
+    <text x="76" y="474" fill="#B5A08A" font-size="17">mTLS client-x509 · no client secret</text>
+  </g>
+  <g>
+    <rect x="56" y="516" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
+    <text x="76" y="552" fill="#EFE5D6" font-size="23" font-weight="650">Keycloak-native clients</text>
+    <text x="76" y="582" fill="#B5A08A" font-size="17">PKCE public clients · confidential services</text>
+  </g>
+
+  <!-- hub -->
+  <rect x="620" y="230" width="380" height="230" rx="16" fill="#2A2013" stroke="#D29A5B" stroke-width="2"/>
+  <text x="640" y="278" fill="#EFE5D6" font-size="27" font-weight="700">Keycloak hub</text>
+  <text x="640" y="316" fill="#B5A08A" font-size="19">brokers logins · exchanges legacy tokens</text>
+  <text x="640" y="346" fill="#B5A08A" font-size="19">protocol mappers · normalized mcp-* groups</text>
+  <text x="640" y="376" fill="#B5A08A" font-size="19">upstream vocabulary never leaks through</text>
+  <text x="640" y="424" fill="#E0A45C" font-size="18" font-weight="650">no upstream token ever reaches the MCP plane</text>
+
+  <!-- arrows sources → hub -->
+  <path d="M416 128 C 540 128 540 265 620 280" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar2)"/>
+  <path d="M416 236 C 530 236 540 295 620 310" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar2)"/>
+  <path d="M416 344 L 620 344" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar2)"/>
+  <path d="M416 452 C 530 452 540 395 620 380" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar2)"/>
+  <path d="M416 560 C 540 560 540 425 620 410" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar2)"/>
+
+  <!-- canonical JWT card -->
+  <rect x="1180" y="120" width="380" height="400" rx="16" fill="#241B12" stroke="#D29A5B" stroke-width="2"/>
+  <text x="1200" y="164" fill="#EFE5D6" font-size="25" font-weight="700">One canonical JWT</text>
+  <g font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="18">
+    <text x="1200" y="206" fill="#EDCFA2">iss   mcp-plane (only)</text>
+    <text x="1200" y="238" fill="#EDCFA2">aud   one tier + server URIs</text>
+    <text x="1200" y="270" fill="#EDCFA2">jti   audit join key</text>
+    <text x="1200" y="302" fill="#EDCFA2">mcp_tier · idp_origin</text>
+    <text x="1200" y="334" fill="#EDCFA2">scope · groups (mcp-*)</text>
+    <text x="1200" y="366" fill="#EDCFA2">cnf   jkt | x5t#S256</text>
+    <text x="1200" y="398" fill="#EDCFA2">fhir_patient (patients only)</text>
+  </g>
+  <text x="1200" y="446" fill="#B5A08A" font-size="17">PS256/ES256 · 5-minute lifetime</text>
+  <text x="1200" y="490" fill="#A3BE78" font-size="18" font-weight="650">validated again at gateway AND server</text>
+
+  <path d="M1000 345 L 1180 330" fill="none" stroke="#D29A5B" stroke-width="2.5" marker-end="url(#ag2)"/>
+  <text x="1010" y="308" fill="#D29A5B" font-size="18" font-weight="650">one shape, every path</text>
+</svg>
