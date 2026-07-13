@@ -12,7 +12,7 @@
   "sections": {
     "connect": "realm/, servers/, docs/mcp-token-claims-contract.md",
     "inventory": "realm/, docs/mcp-token-claims-contract.md",
-    "percall": "deck/, servers/, docs/mcp-token-claims-contract.md",
+    "percall": "deck/, servers/, plugins/dpop-check/, docs/mcp-token-claims-contract.md",
     "refresh": "realm/",
     "stepup": "realm/, servers/, tests/phase3/",
     "hardening": "plugins/dpop-check/, plugins/cnf-check/, realm/, servers/"
@@ -244,7 +244,7 @@
     </div>
   </section>
 
-  <section id="percall" data-sources="deck/, servers/, docs/mcp-token-claims-contract.md">
+  <section id="percall" data-sources="deck/, servers/, plugins/dpop-check/, docs/mcp-token-claims-contract.md">
     <div class="eyebrow">Stage three</div>
     <h2>Every tool call, for the next five minutes</h2>
     <div class="path" role="img" aria-label="Request path: Claude Code, VPN, internal gateway, MCP server, audit record">
@@ -261,6 +261,13 @@
     <p class="section-intro" style="margin-top:1rem;">
       No session exists anywhere on this path. Every request is self-contained — which is why killing
       a server replica mid-conversation is a non-event.
+    </p>
+    <p class="section-intro">
+      On the sender-constrained variant of this path (the <code>workforce-dpop</code> client), every
+      one of these calls also carries a DPoP proof header — a fresh signature over the method, URL,
+      timestamp, and a hash of this exact access token, made with a key only that client holds. The
+      gateway checks the proof and its single-use ID, the server re-verifies the signature, and a
+      replayed proof dies at the gateway. On that path, the token alone authorizes nothing.
     </p>
   </section>
 
@@ -325,7 +332,7 @@
     Companion to the <a href="technical-overview.html">technical overview</a>
     and <a href="product.html">product showcase</a>.
     Lifetimes are the lab realm's actual configuration; production targets noted where they differ.
-    <br>Documents the lab as of Phase 7 · 2026-07-12
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-12
   </footer>
 </main>
 

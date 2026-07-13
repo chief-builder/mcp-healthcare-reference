@@ -215,7 +215,8 @@
     "token": "docs/mcp-token-claims-contract.md, servers/, plugins/",
     "phases": "tests/, docs/prototype-plan.md",
     "review": "docs/, servers/, broker/, realm/",
-    "docs": "docs/"
+    "docs": "docs/",
+    "glossary": "docs/"
   }
 }
 </script>
@@ -230,6 +231,7 @@
     <a href="#phases">Phase gates</a>
     <a href="#review">Consistency review</a>
     <a href="#docs">Documents</a>
+    <a href="#glossary">Glossary</a>
   </div>
 </nav>
 
@@ -351,16 +353,17 @@
   <section id="phases" data-sources="tests/, docs/prototype-plan.md">
     <div class="eyebrow">Executable acceptance</div>
     <h2>Phase gates, in order</h2>
-    <p class="section-intro">A phase is done only when <code>tests/phaseN.sh</code> is green. All eight are.</p>
+    <p class="section-intro">A phase is done only when <code>tests/phaseN.sh</code> is green. All eight are —
+    the last full run (2026-07-12) passed 154 tests across phases 1–7, plus the phase-0 smoke checks.</p>
     <div class="phases">
       <div class="phase"><h3>0 · Skeleton</h3><p class="gate">tests/phase0.sh</p><p>Keycloak + Postgres + HAPI FHIR + Grafana stack; ~50 Synthea patients; hub realm from a git-tracked export.</p></div>
-      <div class="phase"><h3>1 · Identity hub</h3><p class="gate">tests/phase1.sh</p><p>Dex-as-Ping, real Auth0, and a toy homegrown issuer all normalize to contract-conformant JWTs from the single issuer.</p></div>
-      <div class="phase"><h3>2 · Gateway tiers</h3><p class="gate">tests/phase2.sh</p><p>Konnect CP + local DPs; internal-tier token replayed at the external DP fails; DPs keep serving with the CP uplink severed.</p></div>
-      <div class="phase"><h3>3 · First-party MCP</h3><p class="gate">tests/phase3.sh</p><p>Generated FHIR server + hand-built stateless scheduling server; scope step-up via single-shot <code>insufficient_scope</code> challenges; replica kill mid-conversation survives.</p></div>
-      <div class="phase"><h3>4 · Cert-bound m2m</h3><p class="gate">tests/phase4.sh</p><p>SPIRE-issued SPIFFE certs; <code>client-x509</code> at Keycloak; the <code>cnf-check</code> plugin rejects tokens without the presenting cert.</p></div>
-      <div class="phase"><h3>5 · Egress + broker</h3><p class="gate">tests/phase5.sh</p><p>Vendor Token Broker over OpenBao custody; DLP blocks planted MRNs; 20 parallel resolves produce exactly one vendor refresh (single-flight + generation CAS).</p></div>
-      <div class="phase"><h3>6 · Audit spine</h3><p class="gate">tests/phase6.sh</p><p>One Loki query keyed by <code>jti</code> walks a vendor call across gateway verdicts, broker resolve, and the vendor action.</p></div>
-      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, and DPoP sender-constraint (RFC 9449): 32 passed, 0 xfail.</p></div>
+      <div class="phase"><h3>1 · Identity hub</h3><p class="gate">tests/phase1.sh · 72 tests</p><p>Dex-as-Ping, real Auth0, and a toy homegrown issuer all normalize to contract-conformant JWTs from the single issuer.</p></div>
+      <div class="phase"><h3>2 · Gateway tiers</h3><p class="gate">tests/phase2.sh · 11 tests</p><p>Konnect CP + local DPs; internal-tier token replayed at the external DP fails; DPs keep serving with the CP uplink severed.</p></div>
+      <div class="phase"><h3>3 · First-party MCP</h3><p class="gate">tests/phase3.sh · 8 tests</p><p>Generated FHIR server + hand-built stateless scheduling server; scope step-up via single-shot <code>insufficient_scope</code> challenges; replica kill mid-conversation survives.</p></div>
+      <div class="phase"><h3>4 · Cert-bound m2m</h3><p class="gate">tests/phase4.sh · 9 tests</p><p>SPIRE-issued SPIFFE certs; <code>client-x509</code> at Keycloak; the <code>cnf-check</code> plugin rejects tokens without the presenting cert.</p></div>
+      <div class="phase"><h3>5 · Egress + broker</h3><p class="gate">tests/phase5.sh · 16 tests</p><p>Vendor Token Broker over OpenBao custody; DLP blocks planted MRNs; 20 parallel resolves produce exactly one vendor refresh (single-flight + generation CAS).</p></div>
+      <div class="phase"><h3>6 · Audit spine</h3><p class="gate">tests/phase6.sh · 6 tests</p><p>One Loki query keyed by <code>jti</code> walks a vendor call across gateway verdicts, broker resolve, and the vendor action.</p></div>
+      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh · 32 tests</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, and DPoP sender-constraint (RFC 9449): 32 passed, 0 xfail.</p></div>
     </div>
   </section>
 
@@ -415,10 +418,29 @@
     </ul>
   </section>
 
+  <section id="glossary" data-sources="docs/">
+    <div class="eyebrow">Terms used on this site</div>
+    <h2>Glossary</h2>
+    <ul class="doc-list">
+      <li><span class="path">MCP</span> — <span class="why">Model Context Protocol: the open standard AI clients use to discover and call tools on servers</span></li>
+      <li><span class="path">EMA</span> — <span class="why">Enterprise-Managed Authorization: the MCP extension that lets an enterprise IdP govern which AI clients may connect to which servers</span></li>
+      <li><span class="path">ID-JAG</span> — <span class="why">Identity Assertion JWT Authorization Grant: the token-exchange profile EMA applies (RFC 8693 exchange at the IdP, then an RFC 7523 grant at the resource authorization server)</span></li>
+      <li><span class="path">DPoP</span> — <span class="why">Demonstrating Proof of Possession (RFC 9449): each request carries a fresh signature from a client-held key, so a stolen token is useless without the key</span></li>
+      <li><span class="path">cnf</span> — <span class="why">the JWT confirmation claim binding a token to a key or certificate — <code>jkt</code> on the DPoP path, <code>x5t#S256</code> on the mTLS path</span></li>
+      <li><span class="path">jti</span> — <span class="why">the token's unique ID; the join key that lets one query walk an action across gateway, broker, and server audit records</span></li>
+      <li><span class="path">PRM</span> — <span class="why">Protected Resource Metadata (RFC 9728): a server's machine-readable statement of which authorization server protects it — how clients discover where to log in</span></li>
+      <li><span class="path">Tier wall</span> — <span class="why">the gateway check that a token carries exactly the tier audience (internal or external) of the gateway it arrived at, so cross-tier replay fails</span></li>
+      <li><span class="path">SPIFFE / SVID</span> — <span class="why">the workload-identity framework and its short-lived X.509 certificates (issued in this lab by SPIRE) — how services authenticate with no secrets</span></li>
+      <li><span class="path">DLP</span> — <span class="why">data-loss prevention: pattern screening of outbound vendor-bound request bodies (medical record numbers, SSNs) before they leave the boundary</span></li>
+      <li><span class="path">Vendor Token Broker</span> — <span class="why">the custodian that keeps per-user vendor OAuth grants in a vault and hands the gateway short-lived vendor tokens; it never mints MCP-plane tokens</span></li>
+      <li><span class="path">Konnect CP / DP</span> — <span class="why">Kong's SaaS control plane (configuration and aggregate telemetry only) versus the local data planes that proxy traffic — PHI never reaches the control plane</span></li>
+    </ul>
+  </section>
+
   <footer>
     Reference lab · design authority lives in the source repository's <code>docs/</code>, executable proof in its <code>tests/</code> suites.
     Conformance targets the draft MCP 2026-07-28 model; intentional substitutions are documented in the prototype plan.
-    <br>Documents the lab as of Phase 7 · 2026-07-12
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-12
   </footer>
 </main>
 
