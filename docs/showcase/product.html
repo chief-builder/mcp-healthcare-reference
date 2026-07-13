@@ -235,21 +235,35 @@
 
   footer { margin-top: 5rem; border-top: 1px solid var(--line); padding-top: 1.5rem; font-size: 0.88rem; color: var(--ink-soft); }
 
-  .site-nav { display: flex; gap: 1.4rem; flex-wrap: wrap; padding: 1rem 0; border-bottom: 1px solid var(--line); font-size: 0.88rem; }
-  .site-nav a { color: var(--ink-soft); text-decoration: none; font-weight: 600; }
-  .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--accent-ink); }
+
+/* shared site chrome */
+.chrome{position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--ground) 92%, transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.chrome a{text-decoration:none}
+.chrome-inner{max-width:var(--chrome-w,1180px);margin:0 auto;padding:.6rem 1.4rem;display:flex;align-items:baseline;justify-content:space-between;gap:.5rem 1.2rem;flex-wrap:wrap}
+.chrome-brand{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Georgia,serif;font-weight:700;font-size:1.02rem;color:var(--ink)}
+.chrome-nav{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.85rem;font-weight:600}
+.chrome-nav a{color:var(--ink-soft)}
+.chrome-nav a:hover,.chrome-nav a[aria-current="page"]{color:var(--accent-ink)}
+.chrome-local{max-width:var(--chrome-w,1180px);margin:0 auto;padding:.35rem 1.4rem .6rem;display:flex;gap:.5rem 1rem;flex-wrap:wrap;font-size:.78rem}
+.chrome-local a{color:var(--ink-soft)}
+.chrome-local a:hover,.chrome-local a[aria-current="page"]{color:var(--accent-ink)}
 </style>
 </head>
 <body>
+<header class="chrome" style="--chrome-w:1020px">
+  <div class="chrome-inner">
+    <a class="chrome-brand" href="../index.html">MCP Healthcare Reference</a>
+    <nav class="chrome-nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="../showcase/product.html" aria-current="page">Product</a>
+      <a href="../showcase/technical-overview.html">Technical</a>
+      <a href="../showcase/token-lifecycle.html">Token lifecycle</a>
+      <a href="../walkthrough/overall-functional.html">Walkthroughs</a>
+    </nav>
+  </div>
+</header>
 
 <main>
-  <nav class="site-nav" aria-label="Site">
-    <a href="../index.html">Home</a>
-    <a href="product.html" aria-current="page">Product overview</a>
-    <a href="technical-overview.html">Technical overview</a>
-    <a href="token-lifecycle.html">Token lifecycle</a>
-    <a href="../walkthrough/overall-functional.html">Walkthroughs</a>
-  </nav>
   <header class="hero">
     <div class="eyebrow">Governed MCP for regulated healthcare</div>
     <h1>Give AI a key to the hospital — and a name on every door it opens.</h1>

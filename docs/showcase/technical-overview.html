@@ -100,19 +100,6 @@
   a { color: var(--accent-ink); }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  nav {
-    position: sticky; top: 0; z-index: 10;
-    background: color-mix(in srgb, var(--ground) 88%, transparent);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
-  }
-  nav .rail {
-    max-width: 1080px; margin: 0 auto; padding: 0.6rem 1.25rem;
-    display: flex; align-items: baseline; gap: 1.4rem; flex-wrap: wrap;
-  }
-  nav .brand { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.01em; }
-  nav a { color: var(--ink-soft); text-decoration: none; font-size: 0.85rem; }
-  nav a:hover { color: var(--accent-ink); }
 
   main { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem 5rem; }
   section { margin-top: 4rem; }
@@ -199,6 +186,18 @@
   .doc-list .why { color: var(--ink-soft); }
 
   footer { border-top: 1px solid var(--line); margin-top: 4.5rem; padding-top: 1.4rem; font-size: 0.82rem; color: var(--ink-soft); }
+
+/* shared site chrome */
+.chrome{position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--ground) 92%, transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.chrome a{text-decoration:none}
+.chrome-inner{max-width:var(--chrome-w,1180px);margin:0 auto;padding:.6rem 1.4rem;display:flex;align-items:baseline;justify-content:space-between;gap:.5rem 1.2rem;flex-wrap:wrap}
+.chrome-brand{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Georgia,serif;font-weight:700;font-size:1.02rem;color:var(--ink)}
+.chrome-nav{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.85rem;font-weight:600}
+.chrome-nav a{color:var(--ink-soft)}
+.chrome-nav a:hover,.chrome-nav a[aria-current="page"]{color:var(--accent-ink)}
+.chrome-local{max-width:var(--chrome-w,1180px);margin:0 auto;padding:.35rem 1.4rem .6rem;display:flex;gap:.5rem 1rem;flex-wrap:wrap;font-size:.78rem}
+.chrome-local a{color:var(--ink-soft)}
+.chrome-local a:hover,.chrome-local a[aria-current="page"]{color:var(--accent-ink)}
 </style>
 </head>
 <body>
@@ -220,20 +219,19 @@
   }
 }
 </script>
-<nav>
-  <div class="rail">
-    <span class="brand">mcp-healthcare-reference</span>
-    <a href="../index.html">Home</a>
-    <a href="#invariants">Invariants</a>
-    <a href="#architecture">Architecture</a>
-    <a href="#ema">EMA alignment</a>
-    <a href="#token">Token contract</a>
-    <a href="#phases">Phase gates</a>
-    <a href="#review">Consistency review</a>
-    <a href="#docs">Documents</a>
-    <a href="#glossary">Glossary</a>
+<header class="chrome" style="--chrome-w:1080px">
+  <div class="chrome-inner">
+    <a class="chrome-brand" href="../index.html">MCP Healthcare Reference</a>
+    <nav class="chrome-nav" aria-label="Site">
+      <a href="../index.html">Home</a>
+      <a href="../showcase/product.html">Product</a>
+      <a href="../showcase/technical-overview.html" aria-current="page">Technical</a>
+      <a href="../showcase/token-lifecycle.html">Token lifecycle</a>
+      <a href="../walkthrough/overall-functional.html">Walkthroughs</a>
+    </nav>
   </div>
-</nav>
+  <div class="chrome-local"><a href="#invariants">Invariants</a><a href="#architecture">Architecture</a><a href="#ema">EMA alignment</a><a href="#token">Token contract</a><a href="#phases">Phase gates</a><a href="#review">Consistency review</a><a href="#docs">Documents</a><a href="#glossary">Glossary</a></div>
+</header>
 
 <main>
   <header class="hero">
