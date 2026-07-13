@@ -234,11 +234,22 @@
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
 
   footer { margin-top: 5rem; border-top: 1px solid var(--line); padding-top: 1.5rem; font-size: 0.88rem; color: var(--ink-soft); }
+
+  .site-nav { display: flex; gap: 1.4rem; flex-wrap: wrap; padding: 1rem 0; border-bottom: 1px solid var(--line); font-size: 0.88rem; }
+  .site-nav a { color: var(--ink-soft); text-decoration: none; font-weight: 600; }
+  .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--accent-ink); }
 </style>
 </head>
 <body>
 
 <main>
+  <nav class="site-nav" aria-label="Site">
+    <a href="../index.html">Home</a>
+    <a href="product.html" aria-current="page">Product overview</a>
+    <a href="technical-overview.html">Technical overview</a>
+    <a href="token-lifecycle.html">Token lifecycle</a>
+    <a href="../walkthrough/overall-functional.html">Walkthroughs</a>
+  </nav>
   <header class="hero">
     <div class="eyebrow">Governed MCP for regulated healthcare</div>
     <h1>Give AI a key to the hospital — and a name on every door it opens.</h1>

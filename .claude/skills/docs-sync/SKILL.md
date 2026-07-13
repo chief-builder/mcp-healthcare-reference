@@ -64,15 +64,19 @@ North star and phases: `docs/prototype-plan.md`. Architecture:
 `docs/vendor-token-broker-design.md`. Known gaps: open GitHub issues
 (`gh issue list`) + tracked gaps in CLAUDE.md — report them candidly.
 
-## Publish (after a sync commits)
+## Publish (automated)
 
 The pages are served publicly by GitHub Pages from the separate public repo
 `chief-builder/mcp-healthcare-reference-docs` (this repo is private; Pages
-can't serve it). After committing a sync here, mirror the published set —
-`docs/index.html`, `docs/.nojekyll`, `docs/showcase/`, `docs/walkthrough/`
-(paths rebased to the docs repo root) — into that repo and push. Live URL:
-https://chief-builder.github.io/mcp-healthcare-reference-docs/ — spot-check
-it after the Pages build. Never mirror anything else from this repo.
+can't serve it). `.github/workflows/mirror-docs.yml` mirrors the published
+set — `docs/index.html`, `docs/.nojekyll`, `docs/showcase/`,
+`docs/walkthrough/` — automatically on every push to main touching
+`docs/**`. After a sync lands, confirm the workflow ran (`gh run list
+--workflow=mirror-docs`) and spot-check the live URL:
+https://chief-builder.github.io/mcp-healthcare-reference-docs/.
+The design .md docs are private — never widen what the workflow mirrors.
+Remember the site is PUBLIC: the no-secrets self-check below is what
+stands between a sync and public exposure.
 
 ## Self-check (before reporting done)
 

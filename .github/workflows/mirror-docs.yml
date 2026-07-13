@@ -1,0 +1,42 @@
+# Mirrors the public stakeholder pages to chief-builder/mcp-healthcare-reference-docs
+# (served by GitHub Pages; this repo is private, so Pages can't serve it directly).
+# Only the published set crosses over: index.html, .nojekyll, showcase/, walkthrough/.
+# The design .md docs in docs/ are private and MUST NOT be mirrored.
+name: mirror-docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**']
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push published pages to the docs repo
+        env:
+          DEPLOY_KEY: ${{ secrets.DOCS_MIRROR_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone --depth 1 git@github.com:chief-builder/mcp-healthcare-reference-docs.git mirror
+          rsync -a --delete docs/showcase/ mirror/showcase/
+          rsync -a --delete docs/walkthrough/ mirror/walkthrough/
+          cp docs/index.html docs/.nojekyll mirror/
+          cd mirror
+          git config user.name "docs-mirror"
+          git config user.email "docs-mirror@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "mirror already up to date"
+            exit 0
+          fi
+          git commit -m "docs: mirror from source ${GITHUB_SHA}"
+          git push
