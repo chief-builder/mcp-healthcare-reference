@@ -51,9 +51,18 @@ stamped as fresh. Audiences are already encoded in the page split
 3. Re-derive every number this run (probe counts from `tests/phaseN.sh`
    output or the test files, container/RAM figures from compose) — never
    copy one from the old page. Never carry a claim you can't still point at.
-4. Refresh manifest, footer stamp, and any current-state/phase-status
+4. New-feature enumeration sweep. When the diff ADDS a capability (a
+   plugin, claim, probe family, datastore, client), prefix matching will
+   miss the pages that should mention it but don't: enumerations that list
+   its siblings (plugin lists, control ledgers, evidence sources, probe
+   coverage, "implemented" buckets, glossaries, diagram node labels) won't
+   be flagged because their own sources didn't change. Grep every page for
+   the siblings' names and update each list that now omits the newcomer.
+   Prose lists rot faster than fact tables — a 2026-07-14 editorial pass
+   found ~15 such omissions (all DPoP/OpenBao-era), zero false claims.
+5. Refresh manifest, footer stamp, and any current-state/phase-status
    content on every touched page.
-5. Manifest commit unknown to git, or most sections stale → say so and
+6. Manifest commit unknown to git, or most sections stale → say so and
    rebuild instead.
 
 ## Sources of truth
