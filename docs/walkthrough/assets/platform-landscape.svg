@@ -80,8 +80,8 @@
   <text x="1200" y="460" fill="#B5A08A" font-size="18">→ Postgres</text>
 
   <!-- clients authenticate at Keycloak -->
-  <path d="M346 130 C 470 100 500 92 560 104" fill="none" stroke="#D29A5B" stroke-width="2" marker-end="url(#ag)"/>
-  <text x="380" y="80" fill="#D29A5B" font-size="17" font-weight="650">authenticate → hub JWT</text>
+  <path d="M366 96 C 460 78 505 82 560 100" fill="none" stroke="#D29A5B" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="394" y="64" fill="#D29A5B" font-size="17" font-weight="650">authenticate → hub JWT</text>
 
   <!-- clients to internal DP -->
   <path d="M346 164 C 470 164 480 285 560 293" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
@@ -113,6 +113,7 @@
 
   <!-- JWKS re-validation (servers + broker; the tier wall itself does no crypto) -->
   <path d="M980 100 C 1120 100 1150 170 1225 198" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
+  <path d="M940 170 C 1080 240 1140 320 1178 396" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
   <text x="1060" y="86" fill="#D29A5B" font-size="17">JWKS — servers re-validate every token</text>
   <path d="M980 150 C 1060 220 1000 380 870 440" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
   <text x="1022" y="310" fill="#D29A5B" font-size="17">JWKS</text>
