@@ -96,12 +96,12 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <div class="step"><span class="num">2</span><br><b>Gateway tiers</b><p>Internal/external data planes, audience walls, Git-managed state.</p></div>
 <div class="step"><span class="num">3</span><br><b>First-party MCP</b><p>Clinical and scheduling tools, scopes, compartment, replicas.</p></div>
 <div class="step"><span class="num">4</span><br><b>Workload identity</b><p>Lab CA, SPIRE, mTLS, certificate-bound loop agent.</p></div>
-<div class="step"><span class="num">5–7</span><br><b>Egress + evidence</b><p>Broker, Vault, DLP, mock vendor, audit joins, red-team probes.</p></div>
+<div class="step"><span class="num">5–7</span><br><b>Egress + evidence</b><p>Broker, OpenBao, DLP, mock vendor, audit joins, red-team probes.</p></div>
 </div></section>
 
 <section id="reality" data-sources="docs/prototype-plan.md, tests/"><h2>What is real, simulated, and unfinished</h2>
 <div class="card status">
-<span class="dot"></span><div><strong>Implemented and exercised:</strong> identity normalization, tier audiences, server audience validation, tool scope challenges, patient filtering when the claim is present, Postgres hold handles, certificate-binding path, DLP, broker consent/refresh/revocation, and joined audit records.</div>
+<span class="dot"></span><div><strong>Implemented and exercised:</strong> identity normalization, tier audiences, server audience validation, tool scope challenges, patient filtering when the claim is present, Postgres hold handles, certificate-binding path, DPoP sender-constraint, DLP, broker consent/refresh/revocation, and joined audit records.</div>
 <span class="dot warn"></span><div><strong>Faithful lab substitutes:</strong> fake Ping realm, synthetic FHIR, SPIRE instead of Athenz, mockhub instead of a production vendor, OpenBao dev mode, and local Grafana/Loki/Tempo.</div>
 <span class="dot bad"></span><div><strong>Not ready for a compliance claim:</strong> modern MCP 2026-07-28 wire behavior, RFC 9728 HTTPS canonical resource identifiers, complete server-side claims-contract validation, scheduling Origin enforcement, exact production OAuth/TLS settings, and complete booking semantics.</div>
 </div>
