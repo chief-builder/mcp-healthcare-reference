@@ -164,6 +164,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <tr><td>Redirect URIs</td><td>PKCE clients use localhost wildcard registrations</td><td>Register exact callbacks; only native loopback port may vary</td></tr>
 <tr><td>Transport security</td><td>mTLS workload leg; otherwise HTTP lab</td><td>Production TLS everywhere with consistent public issuer/resource URLs</td></tr>
 <tr><td>Refresh protection</td><td>mock rotation/replay burn; broker CAS/single-flight</td><td>Distributed lock for multi-replica broker; sender constrain or rotate public-client refresh tokens at AS</td></tr>
+<tr><td>Sender-constrained tokens</td><td>DPoP enforced at the internal DP and re-checked at the servers for <code>workforce-dpop</code>; mTLS <code>cnf</code> binding for workloads</td><td>Extend to <code>claude-code</code> when the client ships proof support; production should enforce DPoP at the AS for all public interactive clients</td></tr>
 <tr><td>Token passthrough</td><td>vendor route replaces hub token; FHIR mode hardcoded none</td><td>Delete dormant passthrough branch so it cannot be enabled</td></tr>
 </tbody></table></div></section>
 
@@ -173,14 +174,14 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
                      → server / route → tool → decision / reason → timestamp</pre>
 <div class="grid">
 <article class="card"><h3>Server evidence</h3><p>FHIR and scheduling audit the final tool outcome. FHIR distinguishes compartment, upstream exception, and upstream HTTP denial. Scope middleware audits insufficient scope.</p></article>
-<article class="card"><h3>Gateway evidence</h3><p>cnf-check logs certificate-binding denials. DLP logs both clean passes and blocks. vendor-token logs broker decisions. OpenTelemetry adds request traces.</p></article>
+<article class="card"><h3>Gateway evidence</h3><p>cnf-check logs certificate-binding denials. dpop-check logs proof rejections and degraded-cache events. DLP logs both clean passes and blocks. vendor-token logs broker decisions. OpenTelemetry adds request traces.</p></article>
 <article class="card"><h3>Broker evidence</h3><p>Consent, resolve path, refresh generation, stale transition, mass-stale page, revoke, security callback failures, and admin denial are JSON events.</p></article>
 <article class="card"><h3>Limitations</h3><p>The lab is not an immutable SIEM, has no production retention policy, and uses unauthenticated local Loki/Tempo. Audit completeness still depends on every rejection path emitting a record.</p></article>
 </div></section>
 
 <section id="verification" data-sources=".github/workflows/, tests/"><h2>Verification and next assessment gate</h2>
 <div class="grid">
-<article class="card"><h3>Current checks</h3><p>Two TypeScript builds are clean. Production npm trees reported zero known vulnerabilities on 2026-07-10. Six read-only Phase 3 clinical/tool integration tests passed during the latest assessment. The running stack’s PRM and Origin behavior were inspected directly.</p></article>
+<article class="card"><h3>Current checks</h3><p>All eight phase gates were green on the last full run (2026-07-12, 154 tests). Two TypeScript builds are clean. Production npm trees reported zero known vulnerabilities on 2026-07-10. Six read-only Phase 3 clinical/tool integration tests passed during the latest assessment. The running stack’s PRM and Origin behavior were inspected directly.</p></article>
 <article class="card"><h3>CI boundary</h3><p>GitHub Actions performs offline build/compile/config parsing. npm audit is non-blocking. Live Docker/Konnect/Auth0/GitHub/k3d acceptance remains manual.</p></article>
 <article class="card"><h3>Reassessment prerequisites</h3><ol><li>Modern SDK/wire migration and conformance tests.</li><li>HTTPS canonical resource migration.</li><li>Central contract-exact token validation.</li><li>Scheduling Origin and booking-state fixes.</li><li>OAuth metadata/redirect/TLS hardening.</li></ol></article>
 <article class="card"><h3>Required evidence</h3><p>Run builds, dependency audits, new unit tests, modern MCP conformance, Origin negatives, OAuth discovery/PKCE/redirect tests, phases 0–7, race tests, and a fresh token-in-log scan. Record exact versions and the deployed configuration commit.</p></article>
