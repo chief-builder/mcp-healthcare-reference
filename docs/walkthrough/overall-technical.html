@@ -113,7 +113,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <section id="flows" data-sources="servers/, plugins/, broker/, agents/loop-agent/"><h2>End-to-end request sequences</h2>
 <h3>Workforce clinical call</h3><div class="sequence">
 <div class="actor">Client</div><div class="msg">Authorization code + PKCE via Keycloak, optionally brokered to fake Ping/Auth0. Receives a hub access token.</div>
-<div class="actor">Internal Kong</div><div class="msg">Global tier pre-function requires <code>mcp://tier/internal</code>. Rate limit applies. First-party route forwards to FHIR server.</div>
+<div class="actor">Internal Kong</div><div class="msg">Global tier pre-function requires <code>mcp://tier/internal</code>. The claim-driven sender-constraint plugins (<code>cnf-check</code>, <code>dpop-check</code>) pass plain bearer tokens untouched and enforce only when the token carries a binding. Rate limit applies. First-party route forwards to FHIR server.</div>
 <div class="actor">FHIR server</div><div class="msg">A DPoP scheme shim normalizes any <code>DPoP</code> auth header before bearer middleware verifies signature/issuer/expiry/resource audience; when the token carries <code>cnf.jkt</code>, <code>requireDpop</code> re-validates the proof. For <code>tools/call</code>, required scope is checked. Tool list is group-shaped.</div>
 <div class="actor">Authorization hook</div><div class="msg">When a patient claim exists, by-ID equality or forced search parameter is applied.</div>
 <div class="actor">HAPI</div><div class="msg">Receives a bounded GET request. Response is capped and converted to MCP text content. Final status determines audit allow/deny.</div>
@@ -129,7 +129,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <h3>Governed vendor call</h3><div class="sequence">
 <div class="actor">Internal Kong</div><div class="msg">OIDC validates the egress resource audience. DLP scans the raw JSON body and records allow/deny.</div>
 <div class="actor">vendor-token</div><div class="msg">Calls broker resolve with hub Authorization plus vendor, subject, JTI, TTL, and required scopes.</div>
-<div class="actor">Broker</div><div class="msg">Revalidates hub JWT; reads Vault; returns token, consent URL, re-consent URL, or a closed failure. Refresh is single-flight per process and CAS-protected in Vault.</div>
+<div class="actor">Broker</div><div class="msg">Revalidates hub JWT; reads OpenBao; returns token, consent URL, re-consent URL, or a closed failure. Refresh is single-flight per process and CAS-protected in OpenBao.</div>
 <div class="actor">Kong</div><div class="msg">Replaces the hub Authorization header with the vendor access token.</div>
 <div class="actor">Vendor</div><div class="msg">Receives screened MCP body and its own credential only.</div>
 </div><img class="visual" src="assets/governed-egress.svg" alt="Governed egress: DLP screening at the gateway, broker resolve from vault custody, vendor token swap"><p class="caption">OpenBao custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p></section>
