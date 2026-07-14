@@ -54,13 +54,13 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <section id="architecture" data-sources="compose/phase5/, deck/, docs/mcp-e2e-reference-architecture.md"><h2>Runtime architecture</h2>
 <div class="arch">
 <div class="node"><b>Clients</b><p>Workforce PKCE client<br>DPoP-bound workforce client<br>Patient PKCE client<br>mTLS loop agent<br>Test clients</p></div><div class="arrow">→</div>
-<div class="node sec"><b>Identity + gateway</b><p>Keycloak hub<br>Kong internal DP<br>Kong external DP<br>cnf / DLP / token plugins</p></div><div class="arrow">→</div>
+<div class="node sec"><b>Identity + gateway</b><p>Keycloak hub<br>Kong internal DP<br>Kong external DP<br>cnf · dpop · DLP · vendor-token plugins</p></div><div class="arrow">→</div>
 <div class="node data"><b>Destinations</b><p>FHIR MCP → HAPI<br>Scheduling MCP → Postgres<br>Broker → OpenBao<br>Vendor MCP</p></div>
 </div>
 <div class="grid">
 <article class="card"><h3>Control plane</h3><p>Two Konnect hybrid control planes are created and configured through API/decK. Local Kong data planes establish mTLS uplinks through an Nginx alias proxy and cache configuration for disconnected operation.</p></article>
 <article class="card"><h3>Data plane</h3><p>Requests stay on local Docker/k3d paths except real Konnect control traffic and optional real Auth0/GitHub integrations. HAPI data is synthetic. Kong first-party routes forward to container ports; egress routes forward only to registered vendor service URLs.</p></article>
-<article class="card"><h3>Application state</h3><p>MCP transport sessions are disabled. FHIR calls are request-local. Scheduling continuity is a UUID handle in Postgres. Broker grants are versioned Vault entries, while consent transactions and single-flight locks are process-local memory.</p></article>
+<article class="card"><h3>Application state</h3><p>MCP transport sessions are disabled. FHIR calls are request-local. Scheduling continuity is a UUID handle in Postgres. Broker grants are versioned OpenBao entries, while consent transactions and single-flight locks are process-local memory.</p></article>
 <article class="card"><h3>Evidence plane</h3><p>Services emit JSON audit lines. Alloy ships Docker logs to Loki. Kong exports OTel logs/traces through Collector to Loki/Tempo. Grafana queries by token ID or hub JTI.</p></article>
 </div></section>
 
