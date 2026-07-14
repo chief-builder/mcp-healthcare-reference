@@ -174,7 +174,7 @@ GET/DELETE /mcp: authenticated 405</pre></div></details>
     </section>
 
     <section id="tests" data-sources="tests/, .github/workflows/"><h2>Tests, CI, and presentation</h2><div class="grid">
-      <article class="card"><h3>Phase tests</h3><p>Phase 0–7 suites cover claims, normalization, tier isolation, CP loss, decK drift, tools, step-up, compartments, stateless handles, mTLS/cnf, consent, DLP, refresh race, revocation, audit joins, and red-team probes.</p></article>
+      <article class="card"><h3>Phase tests</h3><p>Phase 0–7 suites cover claims, normalization, tier isolation, CP loss, decK drift, tools, step-up, compartments, stateless handles, mTLS/cnf, consent, DLP, refresh race, revocation, audit joins, and red-team probes including the DPoP proof suite.</p></article>
       <article class="card"><h3><code>tests/phase3/mcp_http.py</code></h3><p>Legacy JSON-RPC helper that sends no modern protocol metadata or mirrored headers. It verifies current application behavior, not 2026 wire compliance.</p></article>
       <article class="card"><h3>GitHub Actions</h3><p>Builds TypeScript, compiles/imports Python, parses JSON/YAML. Production npm audit is non-blocking; live stack gates remain manual.</p></article>
       <article class="card"><h3>Presentation</h3><p>The stakeholder documentation is rendered as the showcase and walkthrough pages on this site; repository READMEs guide operators.</p></article>
