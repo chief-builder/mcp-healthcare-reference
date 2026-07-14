@@ -6,6 +6,12 @@
     <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#D29A5B"/>
     </marker>
+    <marker id="req" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#D8C8B2"/>
+    </marker>
+    <marker id="egr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#A3BE78"/>
+    </marker>
   </defs>
   <rect width="1600" height="900" fill="#1F1811"/>
 
@@ -78,32 +84,32 @@
   <text x="380" y="80" fill="#D29A5B" font-size="17" font-weight="650">authenticate → hub JWT</text>
 
   <!-- clients to internal DP -->
-  <path d="M346 164 C 470 164 480 285 560 293" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
-  <path d="M346 272 C 450 272 470 295 560 303" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
-  <path d="M346 380 C 450 380 470 330 560 322" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M346 164 C 470 164 480 285 560 293" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
+  <path d="M346 272 C 450 272 470 295 560 303" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
+  <path d="M346 380 C 450 380 470 330 560 322" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
 
   <!-- patient app to external DP -->
-  <path d="M346 500 C 460 520 480 640 560 668" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
-  <text x="400" y="600" fill="#B5A08A" font-size="17">external tier</text>
+  <path d="M346 500 C 460 520 480 640 560 668" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
+  <text x="400" y="600" fill="#D8C8B2" font-size="17">external tier</text>
 
   <!-- internal DP to servers -->
-  <path d="M980 280 C 1080 270 1080 262 1180 260" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
-  <path d="M980 330 C 1080 340 1080 415 1180 420" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M980 280 C 1080 270 1080 262 1180 260" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
+  <path d="M980 330 C 1080 340 1080 415 1180 420" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
 
   <!-- external DP to fhir-clinical (curated), routed right of the vendor box -->
-  <path d="M980 705 C 1420 700 1590 540 1532 330" fill="none" stroke="#B5A08A" stroke-width="2" marker-end="url(#ar)"/>
-  <text x="1050" y="772" fill="#B5A08A" font-size="17">curated FHIR only</text>
+  <path d="M980 705 C 1420 700 1590 540 1532 330" fill="none" stroke="#D8C8B2" stroke-width="2.2" marker-end="url(#req)"/>
+  <text x="1050" y="772" fill="#D8C8B2" font-size="17">curated FHIR only</text>
 
   <!-- egress: DP resolves at broker, then proxies to vendor -->
-  <path d="M700 380 L700 440" fill="none" stroke="#B5A08A" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ar)"/>
-  <text x="714" y="416" fill="#B5A08A" font-size="17">resolve</text>
-  <path d="M905 380 C 960 400 1000 410 1035 440" fill="none" stroke="#D29A5B" stroke-width="2.5" marker-end="url(#ag)"/>
-  <text x="898" y="406" fill="#D29A5B" font-size="17" font-weight="650" text-anchor="end">DLP ✓</text>
-  <text x="1056" y="428" fill="#D29A5B" font-size="17" font-weight="650">vendor token</text>
+  <path d="M700 380 L700 440" fill="none" stroke="#A3BE78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#egr)"/>
+  <text x="714" y="416" fill="#A3BE78" font-size="17">resolve</text>
+  <path d="M905 380 C 960 400 1000 410 1035 440" fill="none" stroke="#A3BE78" stroke-width="2.5" marker-end="url(#egr)"/>
+  <text x="898" y="406" fill="#A3BE78" font-size="17" font-weight="650" text-anchor="end">DLP ✓</text>
+  <text x="1056" y="428" fill="#A3BE78" font-size="17" font-weight="650">vendor token</text>
 
   <!-- broker's own OAuth leg to the vendor -->
-  <path d="M860 520 L940 520" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#ar)"/>
-  <text x="900" y="584" fill="#B5A08A" font-size="15" text-anchor="middle">OAuth consent · refresh</text>
+  <path d="M860 520 L940 520" fill="none" stroke="#A3BE78" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#egr)"/>
+  <text x="900" y="584" fill="#A3BE78" font-size="15" text-anchor="middle">OAuth consent · refresh</text>
 
   <!-- JWKS re-validation (servers + broker; the tier wall itself does no crypto) -->
   <path d="M980 100 C 1120 100 1150 170 1225 198" fill="none" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ag)"/>
@@ -117,4 +123,16 @@
   <path d="M580 560 C 500 620 480 720 500 800" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
   <path d="M770 740 L770 800" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
   <path d="M1370 480 C 1380 620 1330 740 1280 800" fill="none" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
+
+  <!-- legend -->
+  <g font-size="16">
+    <line x1="60" y1="636" x2="112" y2="636" stroke="#D8C8B2" stroke-width="2.2"/>
+    <text x="124" y="641" fill="#D8C8B2">tool calls</text>
+    <line x1="60" y1="668" x2="112" y2="668" stroke="#D29A5B" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="124" y="673" fill="#D29A5B">identity — issue &amp; re-validate</text>
+    <line x1="60" y1="700" x2="112" y2="700" stroke="#A3BE78" stroke-width="2"/>
+    <text x="124" y="705" fill="#A3BE78">governed vendor egress</text>
+    <line x1="60" y1="732" x2="112" y2="732" stroke="#77603A" stroke-width="1.5" stroke-dasharray="4 6"/>
+    <text x="124" y="737" fill="#B5A08A">audit feed</text>
+  </g>
 </svg>
