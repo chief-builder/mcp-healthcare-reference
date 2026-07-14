@@ -134,7 +134,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
     <section id="broker" data-sources="broker/, compose/phase5/mock-vendor/">
       <h2>5. Vendor token broker modules</h2>
       <img class="visual" src="assets/governed-egress.svg" alt="Governed egress: DLP screening at the gateway, broker resolve from vault custody, vendor token swap">
-      <p class="small">Vault custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p>
+      <p class="small">OpenBao custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p>
       <div class="flow"><div class="step"><strong>Resolve</strong><br><span class="small">Gateway asks for a vendor credential for the validated hub subject.</span></div><div class="arrow">→</div><div class="step"><strong>Consent if absent</strong><br><span class="small">Browser authorization uses state and PKCE.</span></div><div class="arrow">→</div><div class="step"><strong>Vault custody</strong><br><span class="small">Access and refresh tokens are stored per vendor and hub subject.</span></div><div class="arrow">→</div><div class="step"><strong>Refresh safely</strong><br><span class="small">One in-process refresh wins; Vault CAS prevents stale writes.</span></div><div class="arrow">→</div><div class="step"><strong>Vendor call</strong><br><span class="small">Gateway injects only the vendor token after DLP passes.</span></div></div>
       <div class="grid">
         <article class="card"><h3><code>broker/app/main.py</code></h3><p>Owns the HTTP API and state machine: resolve, consent start, OAuth callback, grant listing, grant revocation, admin vendor inspection, proactive refresh, stale-grant detection, and audit.</p></article>

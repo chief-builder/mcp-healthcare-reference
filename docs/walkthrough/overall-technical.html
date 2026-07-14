@@ -132,7 +132,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <div class="actor">Broker</div><div class="msg">Revalidates hub JWT; reads Vault; returns token, consent URL, re-consent URL, or a closed failure. Refresh is single-flight per process and CAS-protected in Vault.</div>
 <div class="actor">Kong</div><div class="msg">Replaces the hub Authorization header with the vendor access token.</div>
 <div class="actor">Vendor</div><div class="msg">Receives screened MCP body and its own credential only.</div>
-</div><img class="visual" src="assets/governed-egress.svg" alt="Governed egress: DLP screening at the gateway, broker resolve from vault custody, vendor token swap"><p class="caption">Vault custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p></section>
+</div><img class="visual" src="assets/governed-egress.svg" alt="Governed egress: DLP screening at the gateway, broker resolve from vault custody, vendor token swap"><p class="caption">OpenBao custody, single-flight refresh, DLP verdicts, and vendor-token isolation.</p></section>
 
 <section id="state" data-sources="broker/, servers/, compose/phase5/"><h2>State ownership and failure behavior</h2><div class="table-wrap"><table class="tbl"><thead><tr><th>State</th><th>Owner</th><th>Durability</th><th>Failure behavior</th></tr></thead><tbody>
 <tr><td>Keycloak users, clients, grants</td><td>Postgres</td><td>Compose volume</td><td>identity unavailable if Keycloak/Postgres down</td></tr>
