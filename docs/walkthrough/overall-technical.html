@@ -79,7 +79,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <tr><td>8310</td><td>mockhub</td><td>mock OAuth AS and vendor MCP</td><td>HTTP test service</td></tr>
 <tr><td>8443</td><td>Keycloak TLS</td><td>mTLS client credentials</td><td>lab-CA TLS; requests client cert</td></tr>
 </tbody></table></div>
-<div class="callout">These ports describe the Phase 5 Compose lab. Production target URLs in the architecture are HTTPS and privately/publicly exposed according to tier; the committed Compose configuration is not a production network policy.</div></section>
+<div class="callout">Note what is absent: the first-party MCP servers expose no host ports at all — they are reachable only through the gateway tiers. These ports describe the Phase 5 Compose lab. Production target URLs in the architecture are HTTPS and privately/publicly exposed according to tier; the committed Compose configuration is not a production network policy.</div></section>
 
 <section id="claims" data-sources="docs/mcp-token-claims-contract.md, servers/, plugins/, broker/"><h2>Token model and validation matrix</h2>
 <pre>{
