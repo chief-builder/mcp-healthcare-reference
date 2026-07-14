@@ -68,8 +68,8 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <section id="journey" data-sources="realm/, deck/, servers/"><h2>Core functional journey</h2><div class="journey">
 <div class="step"><span class="num">1</span><br><b>Authenticate</b><p>A person or workload proves identity through its appropriate upstream mechanism.</p></div>
 <div class="step"><span class="num">2</span><br><b>Normalize</b><p>Keycloak issues the MCP-plane token with identity, tier, server audiences, scopes, and conditional claims.</p></div>
-<div class="step"><span class="num">3</span><br><b>Enter a tier</b><p>Kong rejects the wrong tier and applies route-level controls, certificate binding, rate limiting, or egress policy.</p></div>
-<div class="step"><span class="num">4</span><br><b>Authorize a tool</b><p>The MCP server verifies its audience and applies tool scope, group visibility, and patient rules.</p></div>
+<div class="step"><span class="num">3</span><br><b>Enter a tier</b><p>Kong rejects the wrong tier and applies route-level controls, sender-constraint checks (certificate or DPoP proof), rate limiting, or egress policy.</p></div>
+<div class="step"><span class="num">4</span><br><b>Authorize a tool</b><p>The MCP server re-validates the token itself — signature, issuer, its own audience — then applies tool scope, group visibility, and patient rules.</p></div>
 <div class="step"><span class="num">5</span><br><b>Execute and audit</b><p>The backend action runs and the final result is recorded with a joinable token identifier.</p></div>
 </div><img class="visual" src="assets/identity-normalization.svg" alt="Five upstream identity sources normalizing through the Keycloak hub into one canonical JWT"><p class="caption">Five upstream identities normalize to one canonical JWT.</p></section>
 
