@@ -87,6 +87,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <div class="grid">
 <article class="card"><h3>Hub token stops at the validating component</h3><p>First-party servers use their own backend posture. On vendor routes, the gateway replaces the hub token with the vendor token. The repository contains dormant passthrough code in the FHIR server, but it is not enabled.</p></article>
 <article class="card"><h3>Credential custody is separate from identity issuance</h3><p>The broker stores and refreshes vendor grants but exposes no token minting, JWKS, or authorization-server endpoint. Keycloak remains the MCP-plane issuer.</p></article>
+<article class="card"><h3>PHI never reaches the management plane</h3><p>The gateways are managed from Kong’s SaaS control plane, but that plane sees configuration and aggregate telemetry only. Clinical traffic, tokens, and audit records stay on the local data planes and land in the customer-side audit store — proven by the DPs continuing to serve with the control-plane uplink severed.</p></article>
 </div></section>
 
 <section id="phase-growth" data-sources="docs/prototype-plan.md, tests/"><h2>How the lab grows phase by phase</h2>
