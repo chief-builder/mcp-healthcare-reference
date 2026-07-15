@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/kit/canonical-jwt.schema.json",
+  "title": "MCP-plane canonical access-token claims",
+  "description": "Claim shape from kit/blueprints/token-claims-contract.md §3. Validates the decoded JWT payload. Deployment parameters (issuer, audience URIs) are patterns here; a deployment SHOULD tighten them to exact values. Path-conditional rules that need issuance context (which grant path produced the token) are enforced by validators and the vectors/ fixtures, not expressible purely in-schema; the schema encodes the structural and both-direction rules it can.",
+  "type": "object",
+  "required": [
+    "iss",
+    "sub",
+    "aud",
+    "azp",
+    "exp",
+    "iat",
+    "jti",
+    "mcp_tier",
+    "idp_origin",
+    "mcp_contract",
+    "scope"
+  ],
+  "properties": {
+    "iss": {
+      "type": "string",
+      "description": "Exactly the deployment's HUB_ISSUER. Tighten to a const per deployment.",
+      "minLength": 1
+    },
+    "sub": {
+      "type": "string",
+      "description": "Stable effective-principal id. Never an email.",
+      "not": { "pattern": "@" }
+    },
+    "aud": {
+      "type": "array",
+      "description": "Exactly one tier audience plus at least one server resource URI (TIER-01).",
+      "minItems": 2,
+      "items": { "type": "string" },
+      "contains": { "pattern": "^mcp://tier/(internal|external)$" },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "azp": { "type": "string", "minLength": 1 },
+    "exp": { "type": "integer" },
+    "iat": { "type": "integer" },
+    "nbf": { "type": "integer" },
+    "jti": {
+      "type": "string",
+      "description": "Opaque unique token id — consumers MUST NOT parse its structure.",
+      "minLength": 1
+    },
+    "mcp_tier": { "enum": ["internal", "external"] },
+    "idp_origin": {
+      "enum": ["ping", "athenz", "homegrown", "keycloak", "auth0"],
+      "description": "Deployment-specific enumeration; replace with the deployment's IDP_ORIGINS."
+    },
+    "mcp_contract": { "const": "1.0" },
+    "scope": {
+      "type": "string",
+      "pattern": "^((mcp:[a-z0-9-]+:([a-z0-9-]+|\\*):(read|write|execute))|(patient/[A-Za-z]+\\.(read|write|execute))|(openid|profile))( ((mcp:[a-z0-9-]+:([a-z0-9-]+|\\*):(read|write|execute))|(patient/[A-Za-z]+\\.(read|write|execute))|(openid|profile)))*$"
+    },
+    "act": {
+      "type": "object",
+      "description": "RFC 8693 delegation chain; at most two levels.",
+      "required": ["sub"],
+      "properties": {
+        "sub": { "type": "string" },
+        "act": {
+          "type": "object",
+          "required": ["sub"],
+          "properties": { "sub": { "type": "string" } },
+          "not": { "required": ["act"] }
+        }
+      }
+    },
+    "cnf": {
+      "type": "object",
+      "description": "Sender-constraint confirmation: exactly one binding.",
+      "oneOf": [
+        {
+          "required": ["x5t#S256"],
+          "properties": { "x5t#S256": { "type": "string", "minLength": 1 } },
+          "not": { "required": ["jkt"] }
+        },
+        {
+          "required": ["jkt"],
+          "properties": { "jkt": { "type": "string", "minLength": 1 } },
+          "not": { "required": ["x5t#S256"] }
+        }
+      ]
+    },
+    "fhir_patient": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Customer path only; mandatory there, forbidden elsewhere (AZ-04). The forbidden direction is encoded in allOf below; the mandatory direction needs issuance context — see vectors/."
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^mcp-[a-z0-9-]+$",
+        "description": "Normalized vocabulary only (IDN-05)."
+      }
+    },
+    "amr": { "type": "array", "items": { "type": "string" } },
+    "email": false,
+    "name": false,
+    "preferred_username": false,
+    "given_name": false,
+    "family_name": false,
+    "phone_number": false
+  },
+  "allOf": [
+    {
+      "description": "mcp_tier must agree with the tier audience.",
+      "if": { "properties": { "mcp_tier": { "const": "internal" } } },
+      "then": {
+        "properties": {
+          "aud": { "contains": { "const": "mcp://tier/internal" } }
+        }
+      },
+      "else": {
+        "properties": {
+          "aud": { "contains": { "const": "mcp://tier/external" } }
+        }
+      }
+    },
+    {
+      "description": "fhir_patient is forbidden outside the customer-IdP origin.",
+      "if": {
+        "not": { "properties": { "idp_origin": { "const": "auth0" } } }
+      },
+      "then": { "not": { "required": ["fhir_patient"] } }
+    },
+    {
+      "description": "Customer-origin tokens are external-tier only.",
+      "if": { "properties": { "idp_origin": { "const": "auth0" } } },
+      "then": { "properties": { "mcp_tier": { "const": "external" } } }
+    }
+  ]
+}

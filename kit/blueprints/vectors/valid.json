@@ -1,0 +1,107 @@
+[
+  {
+    "name": "workforce-bearer",
+    "description": "Baseline interactive workforce token (contract §6.1): internal tier, clinical group, MFA mark.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-wf-bearer-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "accept",
+    "controls": ["IDN-01", "IDN-06", "TIER-01"],
+    "schema_catches": true
+  },
+  {
+    "name": "workforce-dpop-bound",
+    "description": "Sender-constrained workforce token (contract §6.6): as baseline plus cnf.jkt key binding.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "workforce-dpop",
+      "jti": "vec-wf-dpop-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"],
+      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" }
+    },
+    "expect": "accept",
+    "controls": ["SC-02", "TIER-01"],
+    "schema_catches": true
+  },
+  {
+    "name": "m2m-cert-bound",
+    "description": "Workload client-credentials token (contract §6.3): sub = azp = service identity, certificate binding mandatory.",
+    "header": { "alg": "ES256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "mcp-agents.loop-agent",
+      "aud": ["mcp://tier/internal", "mcp://srv/scheduling"],
+      "azp": "mcp-agents.loop-agent",
+      "jti": "vec-m2m-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "athenz",
+      "mcp_contract": "1.0",
+      "scope": "mcp:scheduling:hold-slot:execute",
+      "cnf": { "x5t#S256": "bwcK0esc3ACC3DB2Y5_lESsXE8o9ltc05O89jdN-dg2" }
+    },
+    "expect": "accept",
+    "controls": ["SC-01", "IDN-02"],
+    "schema_catches": true
+  },
+  {
+    "name": "patient-compartmented",
+    "description": "Customer-path token (contract §6.5): external tier, SMART scopes only, mandatory patient compartment.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "cust-maria-0042",
+      "aud": ["mcp://tier/external", "mcp://srv/fhir-clinical"],
+      "azp": "patient-agent",
+      "jti": "vec-patient-0001",
+      "mcp_tier": "external",
+      "idp_origin": "auth0",
+      "mcp_contract": "1.0",
+      "scope": "patient/Observation.read patient/MedicationRequest.read",
+      "fhir_patient": "pat-5678"
+    },
+    "expect": "accept",
+    "controls": ["AZ-04", "TIER-01"],
+    "schema_catches": true
+  },
+  {
+    "name": "delegated-on-behalf-of",
+    "description": "Delegation (contract §7): effective principal in sub, acting workload in act.sub, one level deep.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/scheduling"],
+      "azp": "prior-auth-agent",
+      "jti": "vec-obo-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:scheduling:find-slots:read",
+      "groups": ["mcp-scheduling-tools"],
+      "amr": ["mfa"],
+      "act": { "sub": "mcp-agents.prior-auth-agent" }
+    },
+    "expect": "accept",
+    "controls": ["IDN-09"],
+    "schema_catches": true
+  }
+]

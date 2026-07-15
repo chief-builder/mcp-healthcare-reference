@@ -1,0 +1,289 @@
+[
+  {
+    "name": "two-tier-audiences",
+    "description": "aud carries both tier audiences — the tier wall property collapses if a token is valid at both tiers.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://tier/external", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-twotier-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "Exactly one tier audience required (TIER-01).",
+    "controls": ["TIER-01"],
+    "schema_catches": true
+  },
+  {
+    "name": "missing-server-audience",
+    "description": "aud is the tier audience alone — a token not minted for any server must be useless at every server.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal"],
+      "azp": "claude-code",
+      "jti": "vec-bad-nosrv-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "aud must contain at least one server resource URI (TIER-01/03).",
+    "controls": ["TIER-01", "TIER-03"],
+    "schema_catches": true
+  },
+  {
+    "name": "missing-contract-pin",
+    "description": "mcp_contract absent — consumers cannot know which schema version they are validating.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-nopin-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "Contract version pin is mandatory (IDN-06).",
+    "controls": ["IDN-06"],
+    "schema_catches": true
+  },
+  {
+    "name": "upstream-issuer",
+    "description": "iss is an upstream IdP, not the hub — upstream tokens must never be accepted on the plane.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "https://upstream-idp.example.com",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-iss-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "Single-issuer invariant: iss must exactly equal HUB_ISSUER (IDN-01).",
+    "controls": ["IDN-01"],
+    "schema_catches": false
+  },
+  {
+    "name": "rs256-signed",
+    "description": "Structurally perfect claims signed RS256 — algorithm pinning must reject at the header, before claims.",
+    "header": { "alg": "RS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-rs256-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "Only PS256/ES256 are accepted (IDN-02).",
+    "controls": ["IDN-02"],
+    "schema_catches": false
+  },
+  {
+    "name": "pii-in-token",
+    "description": "Directory PII (email, name) present — access tokens must stay out of PII scope when they land in logs.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-pii-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"],
+      "email": "sam@example.com",
+      "name": "Sam Example"
+    },
+    "expect": "reject",
+    "reason": "PII claims are forbidden in access tokens (IDN-04).",
+    "controls": ["IDN-04"],
+    "schema_catches": true
+  },
+  {
+    "name": "email-as-sub",
+    "description": "sub is an email — emails rotate; principals must be stable identifiers.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "sam@example.com",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-emailsub-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "sub must be a stable non-email identifier (IDN-07).",
+    "controls": ["IDN-07"],
+    "schema_catches": true
+  },
+  {
+    "name": "fhir-patient-on-workforce",
+    "description": "Workforce-origin token carrying fhir_patient — the compartment claim is forbidden outside the customer path.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-wfpatient-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"],
+      "fhir_patient": "pat-5678"
+    },
+    "expect": "reject",
+    "reason": "fhir_patient forbidden outside the customer path — forbidden direction of AZ-04.",
+    "controls": ["AZ-04"],
+    "schema_catches": true
+  },
+  {
+    "name": "patient-missing-compartment",
+    "description": "Customer-origin token without fhir_patient — an unresolvable patient linkage must mean no token, never a token without the claim.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "cust-maria-0042",
+      "aud": ["mcp://tier/external", "mcp://srv/fhir-clinical"],
+      "azp": "patient-agent",
+      "jti": "vec-bad-nocompart-0001",
+      "mcp_tier": "external",
+      "idp_origin": "auth0",
+      "mcp_contract": "1.0",
+      "scope": "patient/Observation.read"
+    },
+    "expect": "reject",
+    "reason": "fhir_patient mandatory on the customer path — required direction of AZ-04. Needs issuance context; component validators enforce it.",
+    "controls": ["AZ-04"],
+    "schema_catches": false
+  },
+  {
+    "name": "tier-claim-mismatch",
+    "description": "mcp_tier says external but aud carries the internal tier audience — the redundant claim must agree with the cryptographic one.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-tiermix-0001",
+      "mcp_tier": "external",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "mcp_tier and the tier audience must agree (TIER-01).",
+    "controls": ["TIER-01"],
+    "schema_catches": true
+  },
+  {
+    "name": "cnf-both-bindings",
+    "description": "cnf carries both x5t#S256 and jkt — a token must have exactly one binding a validator can satisfy.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "mcp-agents.loop-agent",
+      "aud": ["mcp://tier/internal", "mcp://srv/scheduling"],
+      "azp": "mcp-agents.loop-agent",
+      "jti": "vec-bad-dualcnf-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "athenz",
+      "mcp_contract": "1.0",
+      "scope": "mcp:scheduling:hold-slot:execute",
+      "cnf": {
+        "x5t#S256": "bwcK0esc3ACC3DB2Y5_lESsXE8o9ltc05O89jdN-dg2",
+        "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+      }
+    },
+    "expect": "reject",
+    "reason": "Exactly one sender-constraint binding (SC-01/SC-02).",
+    "controls": ["SC-01", "SC-02"],
+    "schema_catches": true
+  },
+  {
+    "name": "raw-upstream-group",
+    "description": "groups carries a raw upstream name — consumers may only ever see the normalized vocabulary.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "wf-user-8842",
+      "aud": ["mcp://tier/internal", "mcp://srv/fhir-clinical"],
+      "azp": "claude-code",
+      "jti": "vec-bad-rawgroup-0001",
+      "mcp_tier": "internal",
+      "idp_origin": "ping",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:get-patient:read",
+      "groups": ["Domain Admins", "mcp-clinical-tools"],
+      "amr": ["mfa"]
+    },
+    "expect": "reject",
+    "reason": "Only normalized mcp-* group names may appear (IDN-05).",
+    "controls": ["IDN-05"],
+    "schema_catches": true
+  },
+  {
+    "name": "wildcard-scope-external",
+    "description": "External-tier token with a wildcard tool scope — wildcards are admin-approved and forbidden on the external tier.",
+    "header": { "alg": "PS256" },
+    "claims": {
+      "iss": "${HUB_ISSUER}",
+      "sub": "cust-partner-0099",
+      "aud": ["mcp://tier/external", "mcp://srv/fhir-clinical"],
+      "azp": "partner-client",
+      "jti": "vec-bad-wildcard-0001",
+      "mcp_tier": "external",
+      "idp_origin": "keycloak",
+      "mcp_contract": "1.0",
+      "scope": "mcp:fhir-clinical:*:read",
+      "groups": ["mcp-external-curated"]
+    },
+    "expect": "reject",
+    "reason": "Wildcard tool scopes forbidden on the external tier (AZ-05). Issuance policy plus validator check; not expressible in-schema.",
+    "controls": ["AZ-05"],
+    "schema_catches": false
+  }
+]
