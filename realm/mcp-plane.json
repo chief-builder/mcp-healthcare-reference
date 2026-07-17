@@ -645,7 +645,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": false,
-      "redirectUris": ["http://localhost:8765/*"],
+      "redirectUris": ["http://localhost:8765/callback"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "+"
@@ -678,7 +678,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": false,
-      "redirectUris": ["http://localhost:8765/*"],
+      "redirectUris": ["http://localhost:8765/callback"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "dpop.bound.access.tokens": "true",
@@ -712,7 +712,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": false,
-      "redirectUris": ["http://localhost:8766/*"],
+      "redirectUris": ["http://localhost:8766/callback"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "+"

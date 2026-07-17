@@ -78,11 +78,12 @@ path-inserted well-known URI + documented mcp:// deviation (#13); ops batch
 (#14: Kong rate-limits, broker compose healthcheck, multi-stage non-root
 Node images, .github/workflows/ci.yml, refreshed README/overview, authed
 broker admin GET). GitHub #1,#2,#4-#7,#9-#14 closed. Still open: #3 (Low,
-external-tier CIMD control — tracked gap), #8 (MCP 2026-07-28 wire
+external-tier CIMD control — tracked gap) and #8 (MCP 2026-07-28 wire
 migration to @modelcontextprotocol/server@2.0 — deferred off an unstable
-12h-old beta; statelessness already holds on SDK 1.29), #15 (realm wildcard
-redirect URIs vs RFC 9700 exact-match), and #16 (scheduling server missing
-the Origin/Host rebinding guard fhir-clinical has). Applying the
+12h-old beta; statelessness already holds on SDK 1.29). #15 and #16
+closed: exact-match redirect URIs (realm export + live kcadm client
+update, no re-import needed) and the scheduling Origin/Host rebinding
+guard; phase-3 gate and the phase-7 DPoP subset re-run green after both. Applying the
 gateway-side changes live needs setup-phase5.sh (vendor-token schema
 re-register + deck sync + internal DP restart); the realm scope additions
 need a realm re-import (not done live — avoids a destructive re-import of
