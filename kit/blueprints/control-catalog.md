@@ -106,6 +106,4 @@ Rules for IDs:
 - #3 external-tier CIMD control (EG-11 is partial)
 - #8 MCP 2026-07-28 wire migration (affects nothing above; the wire layer is legacy-stateless)
 - #13 `mcp://` opaque resource URIs vs RFC 9728 HTTPS identifiers (TIER-01/03 property preserved; interop deviation)
-- #15 wildcard redirect URIs (lab-only; production requires exact match)
-- #16 scheduling server lacks the Origin/Host rebinding guard fhir-clinical has
 - `claude-code` client remains bearer until the real client ships DPoP proofs (SC-02 proven via `workforce-dpop`)

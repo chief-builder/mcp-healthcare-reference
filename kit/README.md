@@ -29,6 +29,12 @@ kit/
     vectors/
       valid.json invalid.json     Claim-set test fixtures with expected verdicts.
                                   Unsigned by policy — see vectors/README.md.
+  adapters/                       Workstream B: hub AS requirements, per-IdP
+                                  guides (Entra ID, Okta, Ping) in brokered and
+                                  EMA/ID-JAG shapes, and the gateway capability
+                                  matrix. Desk-checked until a real second-IdP
+                                  leg runs the acceptance suite — see
+                                  adapters/README.md for the validation rule.
   acceptance/                     Workstream D: portable conformance probes a
                                   customer runs against their own deployment,
                                   parameterized on an environment descriptor.
@@ -41,7 +47,7 @@ kit/
 | Workstream (plan) | Status |
 |---|---|
 | A — Portable blueprints | `blueprints/` |
-| B — Adapter guides (IdPs, gateways) | Not started |
+| B — Adapter guides (IdPs, gateways) | `adapters/` (desk-checked; real-tenant validation pending) |
 | C — Compliance mapping (HIPAA / SOC 2 / HITRUST) | Not started |
 | D — Acceptance framework | `acceptance/` |
 | E — Pilot playbook | Not started |
