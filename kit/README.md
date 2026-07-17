@@ -35,6 +35,11 @@ kit/
                                   matrix. Desk-checked until a real second-IdP
                                   leg runs the acceptance suite — see
                                   adapters/README.md for the validation rule.
+  compliance/                     Workstream C: control catalog mapped to HIPAA /
+                                  SOC 2 / HITRUST assessment domains with evidence
+                                  pointers, plus the shared-responsibility matrix.
+                                  Evidence-not-certification framing; compliance
+                                  SME review pending — see compliance/README.md.
   acceptance/                     Workstream D: portable conformance probes a
                                   customer runs against their own deployment,
                                   parameterized on an environment descriptor.
@@ -48,7 +53,7 @@ kit/
 |---|---|
 | A — Portable blueprints | `blueprints/` |
 | B — Adapter guides (IdPs, gateways) | `adapters/` (desk-checked; real-tenant validation pending) |
-| C — Compliance mapping (HIPAA / SOC 2 / HITRUST) | Not started |
+| C — Compliance mapping (HIPAA / SOC 2 / HITRUST) | `compliance/` (desk-checked; SME review pending) |
 | D — Acceptance framework | `acceptance/` |
 | E — Pilot playbook | Not started |
 
