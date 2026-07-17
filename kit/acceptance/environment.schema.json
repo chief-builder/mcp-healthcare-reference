@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/kit/environment.schema.json",
+  "title": "Acceptance environment descriptor",
+  "description": "Describes a target deployment so the portable probes (kit/acceptance/probes/) can run against it. One descriptor per deployment; kit/acceptance/environments/lab.yaml is the reference lab's, and TEMPLATE.yaml is the annotated starting point for a customer. Sections that are absent disable the probes that need them (the conformance profile records this as partial coverage).",
+  "type": "object",
+  "required": ["name", "issuer", "audiences", "gateways", "identities"],
+  "properties": {
+    "name": { "type": "string", "description": "Human label for this deployment." },
+    "issuer": {
+      "type": "string",
+      "description": "The single hub issuer (HUB_ISSUER). Exact string the probes assert iss against (IDN-01)."
+    },
+    "jwks_uri": {
+      "type": "string",
+      "description": "Override for the JWKS endpoint; defaults to <issuer>/protocol/openid-connect/certs."
+    },
+    "audiences": {
+      "type": "object",
+      "required": ["tier_internal", "tier_external"],
+      "properties": {
+        "tier_internal": { "type": "string" },
+        "tier_external": { "type": "string" }
+      }
+    },
+    "gateways": {
+      "type": "object",
+      "required": ["internal", "external"],
+      "description": "Base URLs of the tier gateways. The external URL is where an internal token is replayed to prove the tier wall (TIER-02).",
+      "properties": {
+        "internal": { "type": "string" },
+        "external": { "type": "string" }
+      }
+    },
+    "probe_endpoints": {
+      "type": "object",
+      "description": "Paths (appended to a gateway base) the probes exercise.",
+      "properties": {
+        "acl_resource": {
+          "type": "string",
+          "description": "A resource behind the tier wall AND a group ACL — used for tier-replay and scope-vs-group probes (e.g. /fhir/Patient)."
+        },
+        "scheduling_mcp": {
+          "type": "string",
+          "description": "A stateless first-party MCP server path for statelessness + step-up probes (e.g. /scheduling/mcp)."
+        },
+        "fhir_clinical_mcp": {
+          "type": "string",
+          "description": "The compartmented FHIR MCP server path (e.g. /fhir-clinical/mcp)."
+        }
+      }
+    },
+    "egress": {
+      "type": "object",
+      "description": "Present enables the EG-* egress/DLP/broker probes.",
+      "required": ["route", "vendor", "tool", "dlp_patterns"],
+      "properties": {
+        "route": { "type": "string", "description": "Full URL of a governed egress route." },
+        "vendor": { "type": "string" },
+        "tool": { "type": "string", "description": "A vendor MCP tool to invoke (e.g. create_issue)." },
+        "clean_args": { "type": "object", "description": "Tool arguments with no sensitive identifiers (must pass DLP)." },
+        "dlp_patterns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "sample"],
+            "properties": {
+              "name": { "type": "string", "description": "Pattern name the audit record must carry." },
+              "sample": { "type": "string", "description": "A string matching the pattern, planted to prove the block. NEVER a real identifier." }
+            }
+          }
+        }
+      }
+    },
+    "broker": {
+      "type": "object",
+      "description": "Present enables the no-issuance and hub-validation broker probes (EG-04/05).",
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string" },
+        "issuance_paths_absent": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths that MUST 404 — proving the broker exposes no token/JWKS surface."
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "description": "Present with backend=loki enables the AU-* audit-join probes.",
+      "required": ["backend"],
+      "properties": {
+        "backend": { "enum": ["loki", "none"] },
+        "loki_url": { "type": "string" }
+      }
+    },
+    "identities": {
+      "type": "object",
+      "description": "Named principals the probes reference. A probe that needs an undeclared identity is skipped.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["acquire"],
+        "properties": {
+          "acquire": {
+            "enum": ["scripted", "command", "env"],
+            "description": "scripted = built-in auth-code+PKCE driver (dev IdPs with scriptable login). command = run a shell command that prints a fresh access token. env = read a token from an env var. For real customer IdPs, command/env is the norm."
+          },
+          "tier": { "enum": ["internal", "external"] },
+          "dpop": { "type": "boolean", "description": "scripted only: bind cnf.jkt via a DPoP proof at the token endpoint." },
+          "expects_compartment": { "type": "boolean", "description": "This identity's token must carry fhir_patient (customer path)." },
+          "command": { "type": "string", "description": "acquire=command: shell command printing an access token to stdout." },
+          "env": { "type": "string", "description": "acquire=env: environment variable holding an access token." },
+          "scripted": {
+            "type": "object",
+            "description": "acquire=scripted parameters.",
+            "required": ["client_id", "redirect_uri"],
+            "properties": {
+              "client_id": { "type": "string" },
+              "redirect_uri": { "type": "string" },
+              "grant": { "enum": ["authorization_code", "client_credentials"], "default": "authorization_code" },
+              "username": { "type": "string" },
+              "username_env": { "type": "string", "description": "Env var holding the username, when it is itself sensitive (e.g. an email)." },
+              "password_env": { "type": "string", "description": "Env var holding the password (never inline the secret)." },
+              "client_secret_env": { "type": "string" },
+              "idp_hint": { "type": "string" },
+              "scope": { "type": "string", "default": "openid" }
+            }
+          }
+        }
+      }
+    },
+    "claim_vectors": {
+      "type": "object",
+      "description": "Optional: run the claim-shape unit layer, signing kit/blueprints/vectors/ with an ephemeral key against the deployment's schema.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "vectors_dir": { "type": "string", "description": "Defaults to ../blueprints/vectors relative to the framework." }
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+# Acceptance framework dependencies. Mirrors the reference lab's test deps
+# (requests + PyJWT[crypto]) plus PyYAML for descriptors and jsonschema for
+# descriptor + claim-vector validation.
+requests>=2.31
+PyJWT[crypto]>=2.8
+PyYAML>=6.0
+jsonschema>=4.21
+pytest>=8.0

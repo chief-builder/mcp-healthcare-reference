@@ -1,0 +1,99 @@
+# Acceptance descriptor for the reference lab (compose/phase5 + phase6 spine).
+# This is the acceptance framework's own fixture: running the probes against
+# this descriptor is how the framework is regression-tested. It mirrors the
+# endpoints and identities the tests/phaseN suites use.
+#
+# Secrets are never inline — password_env / client_secret_env name the env vars
+# (populate from compose/phase5/.env before a run; see README).
+name: mcp-reference-lab
+issuer: http://localhost:8080/realms/mcp-plane
+
+audiences:
+  tier_internal: mcp://tier/internal
+  tier_external: mcp://tier/external
+
+gateways:
+  internal: http://localhost:8100
+  external: http://localhost:8200
+
+probe_endpoints:
+  acl_resource: /fhir/Patient            # tier wall + mcp-clinical-tools ACL
+  scheduling_mcp: /scheduling/mcp        # stateless first-party server
+  fhir_clinical_mcp: /fhir-clinical/mcp  # compartmented FHIR server
+
+egress:
+  route: http://localhost:8100/egress/mockhub
+  vendor: mockhub
+  tool: create_issue
+  clean_args:
+    title: clean
+    body: no identifiers here
+  dlp_patterns:
+    - name: mrn
+      sample: MRN-1234567
+    - name: ssn
+      sample: 123-45-6789
+
+broker:
+  url: http://localhost:8300
+  issuance_paths_absent:
+    - /oauth/token
+    - /token
+    - /keys
+    - /v1/tokens/issue
+    - /.well-known/jwks.json
+    - /.well-known/openid-configuration
+
+audit:
+  backend: loki
+  loki_url: http://localhost:3100
+
+identities:
+  workforce_clinical:
+    acquire: scripted
+    tier: internal
+    scripted:
+      client_id: claude-code
+      redirect_uri: http://localhost:8765/callback
+      username: dr-alice
+      password_env: FAKE_PING_PASSWORD
+      idp_hint: ping
+      scope: openid egress-github egress-mockhub
+
+  workforce_nonclinical:
+    acquire: scripted
+    tier: internal
+    scripted:
+      client_id: claude-code
+      redirect_uri: http://localhost:8765/callback
+      username: bob-analyst
+      password_env: FAKE_PING_PASSWORD
+      idp_hint: ping
+      scope: openid
+
+  workforce_dpop:
+    acquire: scripted
+    tier: internal
+    dpop: true
+    scripted:
+      client_id: workforce-dpop
+      redirect_uri: http://localhost:8765/callback
+      username: dr-alice
+      password_env: FAKE_PING_PASSWORD
+      idp_hint: ping
+      scope: openid
+
+  patient:
+    acquire: scripted
+    tier: external
+    expects_compartment: true
+    scripted:
+      client_id: patient-agent
+      redirect_uri: http://localhost:8766/callback
+      username_env: AUTH0_TEST_USER_EMAIL
+      password_env: AUTH0_TEST_USER_PASSWORD
+      idp_hint: auth0
+      scope: openid patient/Patient.read
+
+claim_vectors:
+  enabled: true

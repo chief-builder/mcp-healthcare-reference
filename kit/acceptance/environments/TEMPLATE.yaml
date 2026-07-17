@@ -1,0 +1,88 @@
+# Acceptance environment descriptor — customer template.
+#
+# Copy to <your-deployment>.yaml, fill in, and run:
+#   pytest --environment environments/<your-deployment>.yaml
+#
+# Validated against ../environment.schema.json at load time. Any section you
+# omit disables its probes; the conformance report records the reduced coverage
+# (see ../conformance-profile.md). Fill in as much as your deployment supports.
+#
+# NEVER inline a secret. Tokens and passwords come from env vars or commands.
+
+name: CHANGE-ME
+
+# The single hub issuer. Probes assert `iss` against this exact string (IDN-01).
+issuer: https://auth.mcp.example.com/realms/mcp-plane
+
+# Optional; defaults to <issuer>/protocol/openid-connect/certs.
+# jwks_uri: https://auth.mcp.example.com/realms/mcp-plane/protocol/openid-connect/certs
+
+audiences:
+  tier_internal: mcp://tier/internal      # or your HTTPS resource identifiers
+  tier_external: mcp://tier/external
+
+gateways:
+  internal: https://mcp-internal.example.com
+  external: https://mcp-external.example.com
+
+probe_endpoints:
+  acl_resource: /fhir/Patient             # behind the tier wall + a group ACL
+  scheduling_mcp: /scheduling/mcp         # a stateless first-party MCP server
+  fhir_clinical_mcp: /fhir-clinical/mcp   # the compartmented FHIR server
+
+# ---- Optional sections: omit any your deployment does not run ----
+
+# egress:
+#   route: https://mcp-internal.example.com/egress/<vendor>
+#   vendor: <vendor>
+#   tool: create_issue
+#   clean_args: { title: clean, body: no identifiers }
+#   dlp_patterns:
+#     - { name: mrn, sample: MRN-1234567 }   # synthetic samples ONLY
+#     - { name: ssn, sample: 123-45-6789 }
+
+# broker:
+#   url: https://broker.internal.example.com
+#   issuance_paths_absent: [/oauth/token, /token, /keys, /.well-known/jwks.json]
+
+# audit:
+#   backend: loki                          # loki | none
+#   loki_url: https://loki.internal.example.com
+
+# ---- Identities ----
+# The probes reference these names. Undeclared identities skip their probes.
+# For a real IdP whose login page cannot be scripted, use acquire: command or
+# acquire: env and mint the token out-of-band (SSO/MFA in a real browser once,
+# or a service-account/CI token). acquire: scripted only suits dev IdPs with a
+# scriptable login form.
+identities:
+
+  workforce_clinical:                      # IDN-*, TIER-*, AZ-03/06
+    acquire: command
+    tier: internal
+    command: "your-cli mint-token --user clinician --scope 'openid ...'"
+
+  workforce_nonclinical:                   # AZ-01, TIER-02 (scope-not-authorization)
+    acquire: command
+    tier: internal
+    command: "your-cli mint-token --user analyst --scope openid"
+
+  # workforce_dpop:                        # SC-02/03/04 (DPoP). scripted only —
+  #   acquire: scripted                    # the driver mints the proof at login.
+  #   tier: internal
+  #   dpop: true
+  #   scripted:
+  #     client_id: workforce-dpop
+  #     redirect_uri: http://localhost:8765/callback
+  #     username: <dev-user>
+  #     password_env: DEV_USER_PASSWORD
+  #     scope: openid
+
+  # patient:                               # AZ-04 (compartment)
+  #   acquire: env
+  #   tier: external
+  #   expects_compartment: true
+  #   env: PATIENT_ACCESS_TOKEN
+
+claim_vectors:
+  enabled: true

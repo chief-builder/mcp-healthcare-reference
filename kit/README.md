@@ -27,18 +27,23 @@ kit/
       canonical-jwt.schema.json   Machine-readable claim shape (JSON Schema).
       vendor-registry.schema.json Machine-readable vendor registry shape.
     vectors/
-      valid/ invalid/             Claim-set test fixtures with expected verdicts.
+      valid.json invalid.json     Claim-set test fixtures with expected verdicts.
                                   Unsigned by policy — see vectors/README.md.
+  acceptance/                     Workstream D: portable conformance probes a
+                                  customer runs against their own deployment,
+                                  parameterized on an environment descriptor.
+                                  Reuses the blueprints' vectors as its unit
+                                  layer. See acceptance/README.md.
 ```
 
 ## Status
 
 | Workstream (plan) | Status |
 |---|---|
-| A — Portable blueprints | This directory |
+| A — Portable blueprints | `blueprints/` |
 | B — Adapter guides (IdPs, gateways) | Not started |
 | C — Compliance mapping (HIPAA / SOC 2 / HITRUST) | Not started |
-| D — Acceptance framework | Not started (fixtures here are its input) |
+| D — Acceptance framework | `acceptance/` |
 | E — Pilot playbook | Not started |
 
 ## Provenance
