@@ -45,6 +45,11 @@ kit/
                                   parameterized on an environment descriptor.
                                   Reuses the blueprints' vectors as its unit
                                   layer. See acceptance/README.md.
+  playbook/                       Workstream E: the pilot rollout sequence
+                                  (stages 0–7, exit criteria = acceptance
+                                  gates), the production-choices worksheet,
+                                  and the dry-run protocol. Draft until the
+                                  E18 dry run executes — see playbook/README.md.
 ```
 
 ## Status
@@ -55,7 +60,7 @@ kit/
 | B — Adapter guides (IdPs, gateways) | `adapters/` (desk-checked; real-tenant validation pending) |
 | C — Compliance mapping (HIPAA / SOC 2 / HITRUST) | `compliance/` (desk-checked; SME review pending) |
 | D — Acceptance framework | `acceptance/` |
-| E — Pilot playbook | Not started |
+| E — Pilot playbook | `playbook/` (draft; E18 dry run pending) |
 
 ## Provenance
 
