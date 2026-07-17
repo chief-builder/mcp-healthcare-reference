@@ -35,6 +35,8 @@ const RESOURCE_CONFIG: ResourceServerConfig = {
   jwksUri: process.env.MCP_JWKS_URI || '',
   issuer: process.env.MCP_ISSUER || undefined,
 };
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 
 // Per-tool required scope (missing -> 403 insufficient_scope, step-up).
 const TOOL_SCOPE: Record<string, string | undefined> = {
@@ -208,9 +210,33 @@ function buildMcpServer(auth?: AuthInfo): McpServer {
   return server;
 }
 
+function isLoopbackHost(hostHeader?: string): boolean {
+  if (!hostHeader) return false;
+  const name = hostHeader.split(':')[0];
+  return name === 'localhost' || name === '127.0.0.1' || name === '[::1]' || name === '::1';
+}
+
+function securityGuard(req: Request, res: Response, next: NextFunction): void {
+  // DNS-rebinding defense: on a loopback bind, reject unexpected Host headers.
+  if (HOST === '127.0.0.1' && !isLoopbackHost(req.headers.host) && !ALLOWED_ORIGINS.length) {
+    res.status(421).json({ error: 'misdirected_request', message: 'unexpected Host header' });
+    return;
+  }
+  const origin = req.headers.origin;
+  if (origin) {
+    // Any browser Origin must be explicitly allowlisted (default: none).
+    if (!ALLOWED_ORIGINS.includes(origin)) {
+      res.status(403).json({ error: 'forbidden_origin' });
+      return;
+    }
+  }
+  next();
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
+  app.use(securityGuard);
 
   // RFC 9728 path-insertion (endpoint /mcp); root kept as a back-compat alias.
   const resourceMetadataUrl = `${PUBLIC_BASE_URL}/.well-known/oauth-protected-resource/mcp`;
