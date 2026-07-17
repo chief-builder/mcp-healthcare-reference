@@ -204,8 +204,8 @@
 
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-14",
-  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "generated": "2026-07-16",
+  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
   "phase": 7,
   "sections": {
     "invariants": "docs/prototype-plan.md, docs/mcp-e2e-reference-architecture.md",
@@ -214,7 +214,7 @@
     "token": "docs/mcp-token-claims-contract.md, servers/, plugins/",
     "phases": "tests/, docs/prototype-plan.md",
     "review": "docs/, servers/, broker/, realm/",
-    "docs": "docs/",
+    "docs": "docs/, kit/",
     "glossary": "docs/"
   }
 }
@@ -246,7 +246,7 @@
     <div class="status-strip">
       <div class="item"><span class="dot"></span>Phases 0–7 green</div>
       <div class="item"><span class="dot"></span>Red-team suite: 32 passed, 0 xfail</div>
-      <div class="item"><span class="dot warn"></span>4 tracked gaps: CIMD (#3), wire migration (#8), redirect URIs (#15), Origin guard (#16)</div>
+      <div class="item"><span class="dot warn"></span>2 tracked gaps: CIMD (#3), wire migration (#8)</div>
       <div class="item"><span class="dot"></span>EMA (stable ext-auth spec) terminology aligned</div>
       <div class="item"><span class="dot"></span>DPoP sender-constraint (RFC 9449) proven end-to-end</div>
     </div>
@@ -385,8 +385,8 @@
           <tr><td>Broker doc self-conflict (§4.3 vs §10) and four production-vs-lab deltas undeclared</td><td>Doc reconciled; new broker design §16 "Lab implementation deltas" declares them in one place</td></tr>
           <tr><td>Stale <code>xfail</code> language in three test docs contradicted the green phase-7 suite</td><td>Corrected — all probes are plain asserts; issues #1/#2 recorded as closed</td></tr>
           <tr><td>Dangling <code>bin</code> entry pointed at a CLI that never existed</td><td>Removed from <code>fhir-clinical/package.json</code></td></tr>
-          <tr><td>Wildcard redirect URIs in the realm (RFC 9700 exact-match)</td><td>Filed as issue #15</td></tr>
-          <tr><td>Scheduling server lacks the Origin/Host rebinding guard fhir-clinical has</td><td>Filed as issue #16</td></tr>
+          <tr><td>Wildcard redirect URIs in the realm (RFC 9700 exact-match)</td><td>Fixed — exact <code>/callback</code> registrations, crafted paths refused at the auth endpoint (issue #15 closed 2026-07-16)</td></tr>
+          <tr><td>Scheduling server lacks the Origin/Host rebinding guard fhir-clinical has</td><td>Fixed — guard ported verbatim; both servers reject rebound Host / foreign Origin; phase-3 gate green (issue #16 closed 2026-07-16)</td></tr>
           <tr><td><code>sol-rec*.md</code> external-review scratch files, fully triaged</td><td>Removed; every open finding now lives in the issue tracker</td></tr>
         </tbody>
       </table>
@@ -394,7 +394,7 @@
 
   </section>
 
-  <section id="docs" data-sources="docs/">
+  <section id="docs" data-sources="docs/, kit/">
     <div class="eyebrow">The document set</div>
     <h2>Where the authority lives</h2>
     <p class="section-intro">
@@ -407,6 +407,16 @@
       <li><span class="path">docs/mcp-token-claims-contract.md</span> — <span class="why">the canonical JWT every component validates; grant-path profiles; audit vocabulary</span></li>
       <li><span class="path">docs/vendor-token-broker-design.md</span> — <span class="why">consent dance, refresh race, vault schema, sunset criteria (all sequence diagrams spec-role aligned)</span></li>
       <li><span class="path">docs/prototype-plan.md</span> — <span class="why">fidelity contract, substitution map, phases 0–7</span></li>
+    </ul>
+    <h3 style="margin-top:1.6rem;">Enterprise rollout kit — source repository</h3>
+    <p class="section-intro">
+      The lab is being packaged into a portable kit a delivery team can take into any enterprise —
+      the lab stays the reference implementation; the kit is what travels.
+    </p>
+    <ul class="doc-list">
+      <li><span class="path">kit/blueprints/</span> — <span class="why">the control catalog (42 controls with stable IDs, enforcing code, proving test), portable token-claims contract, vendor-neutral gateway policy spec, broker portability profile, JSON Schemas, and claim-shape test vectors</span></li>
+      <li><span class="path">kit/acceptance/</span> — <span class="why">58 portable conformance probes a customer runs against their own deployment, parameterized on an environment descriptor; the lab is the framework's own fixture</span></li>
+      <li><span class="path">kit/adapters/</span> — <span class="why">hub authorization-server requirements, per-IdP guides (Entra ID, Okta, Ping) in brokered and EMA/ID-JAG shapes, and a gateway capability matrix (Envoy/Istio, Apigee, Azure APIM, AWS API Gateway) — desk-checked until a real second-IdP leg runs the acceptance suite</span></li>
     </ul>
     <h3 style="margin-top:1.6rem;">Rendered tours — on this site</h3>
     <ul class="doc-list">
@@ -441,7 +451,7 @@
   <footer>
     Reference lab · design authority lives in the source repository's <code>docs/</code>, executable proof in its <code>tests/</code> suites.
     Conformance targets the draft MCP 2026-07-28 model; intentional substitutions are documented in the prototype plan.
-    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-14
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-16
   </footer>
 </main>
 

@@ -2,8 +2,8 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP Healthcare Reference — Overall Technical Walkthrough</title><link rel="icon" href="data:,">
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-14",
-  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "generated": "2026-07-16",
+  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
   "phase": 7,
   "sections": {
     "architecture": "compose/phase5/, deck/, docs/mcp-e2e-reference-architecture.md",
@@ -161,7 +161,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <tr><td>Resource indicators</td><td>server audience is checked</td><td>Replace <code>mcp://srv/*</code> PRM resource with HTTPS endpoint resource; retain tier audience separately if desired</td></tr>
 <tr><td>Authorization server discovery</td><td>Keycloak OIDC discovery; vendor RFC 8414 fetch</td><td>Validate metadata issuer and HTTPS endpoints; implement MCP-prescribed discovery behavior in clients</td></tr>
 <tr><td>Issuer identification</td><td>broker validates RFC 9207 issuer when advertised</td><td>Ensure every operated OAuth client validates issuer, including errors; production issuer must be HTTPS</td></tr>
-<tr><td>Redirect URIs</td><td>PKCE clients use localhost wildcard registrations</td><td>Register exact callbacks; only native loopback port may vary</td></tr>
+<tr><td>Redirect URIs</td><td>PKCE clients register exact localhost <code>/callback</code> URIs (RFC 9700 exact match; issue #15 closed)</td><td>Done in the lab; production keeps exact registration (native loopback port variance per RFC 8252 where a client requires it)</td></tr>
 <tr><td>Transport security</td><td>mTLS workload leg; otherwise HTTP lab</td><td>Production TLS everywhere with consistent public issuer/resource URLs</td></tr>
 <tr><td>Refresh protection</td><td>mock rotation/replay burn; broker CAS/single-flight</td><td>Distributed lock for multi-replica broker; sender constrain or rotate public-client refresh tokens at AS</td></tr>
 <tr><td>Sender-constrained tokens</td><td>DPoP enforced at the internal DP and re-checked at the servers for <code>workforce-dpop</code>; mTLS <code>cnf</code> binding for workloads</td><td>Extend to <code>claude-code</code> when the client ships proof support; production should enforce DPoP at the AS for all public interactive clients</td></tr>
@@ -183,9 +183,9 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <div class="grid">
 <article class="card"><h3>Current checks</h3><p>All eight phase gates were green on the last full run (2026-07-12, 154 tests). Two TypeScript builds are clean. Production npm trees reported zero known vulnerabilities on 2026-07-10. Six read-only Phase 3 clinical/tool integration tests passed during the latest assessment. The running stack’s PRM and Origin behavior were inspected directly.</p></article>
 <article class="card"><h3>CI boundary</h3><p>GitHub Actions performs offline build/compile/config parsing. npm audit is non-blocking. Live Docker/Konnect/Auth0/GitHub/k3d acceptance remains manual.</p></article>
-<article class="card"><h3>Reassessment prerequisites</h3><ol><li>Modern SDK/wire migration and conformance tests.</li><li>HTTPS canonical resource migration.</li><li>Central contract-exact token validation.</li><li>Scheduling Origin and booking-state fixes.</li><li>OAuth metadata/redirect/TLS hardening.</li></ol></article>
+<article class="card"><h3>Reassessment prerequisites</h3><ol><li>Modern SDK/wire migration and conformance tests.</li><li>HTTPS canonical resource migration.</li><li>Central contract-exact token validation.</li><li>Scheduling Origin and booking-state fixes. <em>Done — hold lifecycle (issue #12) and the Origin/Host guard (issue #16, 2026-07-16).</em></li><li>OAuth metadata/redirect/TLS hardening. <em>Redirect exact-match landed (issue #15); metadata and TLS items remain.</em></li></ol></article>
 <article class="card"><h3>Required evidence</h3><p>Run builds, dependency audits, new unit tests, modern MCP conformance, Origin negatives, OAuth discovery/PKCE/redirect tests, phases 0–7, race tests, and a fresh token-in-log scan. Record exact versions and the deployed configuration commit.</p></article>
 </div>
 <div class="callout danger"><strong>No current certification claim:</strong> the architecture is well developed and several controls are genuinely implemented, but the current repository cannot accurately claim MCP 2026-07-28, RFC 9728, or production OAuth 2.1 compliance until the listed deltas are closed and verified.</div></section>
-</main><footer><div class="shell">Technical system view verified from repository source and live read-only probes on 2026-07-10. This page intentionally preserves known gaps as reassessment criteria.<br>Documents the lab as of Phase 7 · 2026-07-14 <a href="../index.html">Back to the documentation index.</a></div></footer>
+</main><footer><div class="shell">Technical system view verified from repository source and live read-only probes on 2026-07-10. This page intentionally preserves known gaps as reassessment criteria.<br>Documents the lab as of Phase 7 · 2026-07-16 <a href="../index.html">Back to the documentation index.</a></div></footer>
 </body></html>

@@ -5,8 +5,8 @@
   <title>MCP Healthcare Reference — Module Technical Walkthrough</title><link rel="icon" href="data:,">
   <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-14",
-  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "generated": "2026-07-16",
+  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
   "phase": 7,
   "sections": {
     "baseline": "servers/, compose/phase5/",
@@ -19,7 +19,7 @@
     "tests": "tests/, .github/workflows/"
   }
 }
-  </script>
+</script>
   <style>
     :root{--bg:#1b140d;--p:#241b12;--p2:#2e2318;--ink:#efe5d6;--m:#b5a08a;--c:#d29a5b;--g:#a3be78;--a:#e0a45c;--v:#c9a98c;--r:#e8938c;--line:#3b2d1f}
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#241a0f,#1b140d 28%);color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}a{color:var(--c)}code,pre{font-family:"SFMono-Regular",Consolas,monospace}.shell{width:min(1240px,calc(100% - 30px));margin:auto}.bar{position:sticky;top:0;z-index:9;background:#1b140dee;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}.bar .shell{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 0}.brand{font-weight:800}.nav{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}.nav a{text-decoration:none;color:var(--m)}
@@ -74,7 +74,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
           <tr><td><code>patient-agent</code></td><td>authorization code</td><td>customer/patient client</td><td>public; PKCE S256; external tier; patient scopes and patient mapper</td></tr>
           <tr><td><code>legacy-exchange</code></td><td>token exchange</td><td>legacy migration</td><td>confidential exchange requester</td></tr>
           <tr><td><code>mcp-agents.loop-agent</code></td><td>client credentials over mTLS</td><td>workload</td><td><code>client-x509</code>; certificate-bound tokens; scheduling scopes</td></tr>
-        </tbody></table></div><p class="bad">The public client redirect registrations use wildcard paths and the realm is HTTP-first; both are lab-only.</p></article>
+        </tbody></table></div><p class="bad">The realm is HTTP-first — lab-only.</p><p>Public clients register exact <code>/callback</code> redirect URIs (RFC 9700 exact match; the earlier wildcard registrations were closed as issue #15).</p></article>
         <article class="card"><div class="file"><code>realm/fake-ping.json</code><span class="pill">test IdP</span></div><p>Creates a separate OIDC issuer and workforce user with raw upstream group names. The hub brokers it and maps the identity into the canonical <code>mcp-*</code> group vocabulary.</p></article>
         <article class="card"><div class="file"><code>compose/phase1/homegrown-issuer/main.py</code><span class="pill">legacy issuer</span></div><p>Creates an in-memory RSA key at startup, publishes OIDC-shaped discovery/JWKS, issues five-minute RS256 client-credentials tokens, and exposes userinfo. MCP components never accept these tokens directly; Keycloak exchanges them.</p></article>
         <article class="card"><div class="file"><code>compose/phase1/setup-phase1.sh</code><span class="pill">idempotent setup</span></div><p>Adds external-to-internal token-exchange permission, allows the patient linkage attribute through the Keycloak user profile, and restores account-console client scopes omitted by the explicit import.</p></article>
@@ -113,7 +113,7 @@ GET/DELETE /mcp: authenticated 405</pre></div></details>
 
     <section id="scheduling" data-sources="servers/scheduling/"><h2>Scheduling MCP server</h2><div class="grid">
       <article class="card"><div class="file"><code>src/index.ts</code><span class="pill">entry point</span></div><p>Awaits schema initialization before listening, ensuring the table/index exist before requests are accepted.</p></article>
-      <article class="card"><div class="file"><code>src/server.ts</code><span class="pill">tools + SQL</span></div><p>Defines the synthetic slot catalog, Postgres migration, handlers, scope map, PRM, bearer middleware, and stateless POST endpoint.</p></article>
+      <article class="card"><div class="file"><code>src/server.ts</code><span class="pill">tools + SQL</span></div><p>Defines the synthetic slot catalog, Postgres migration, handlers, scope map, PRM, bearer middleware, Origin/Host guard (same DNS-rebinding defense as fhir-clinical; issue #16 closed), and stateless POST endpoint.</p></article>
       <article class="card"><div class="file"><code>src/oauth-resource-server.ts</code><span class="pill warn">duplicated</span></div><p>Functional copy of FHIR OAuth logic. Security fixes must currently be synchronized manually.</p></article>
       <article class="card"><div class="file"><code>src/audit.ts</code><span class="pill">audit</span></div><p>Uses the same tuple shape as FHIR.</p></article>
     </div>
@@ -182,5 +182,5 @@ GET/DELETE /mcp: authenticated 405</pre></div></details>
     <h3>Coverage required before reassessment</h3><ul><li><code>server/discover</code> and version negotiation.</li><li>Required per-request <code>_meta</code> and HTTP header/body binding.</li><li>Unsupported-version and modern error codes.</li><li>Malformed but correctly signed contract-token fixtures.</li><li>Origin-negative coverage for every MCP server.</li><li>Scheduling availability and confirm/release race tests.</li></ul>
     <p class="muted">The full reassessment gate — prerequisites and required evidence — is defined in the <a href="overall-technical.html#verification">Overall Technical walkthrough</a>.</p></section>
   </main>
-  <footer><div class="shell">Verified against repository source/configuration on 2026-07-10. Exact current-state limitations are intentionally retained for the next assessment.<br>Documents the lab as of Phase 7 · 2026-07-14 <a href="../index.html">Back to the documentation index.</a></div></footer>
+  <footer><div class="shell">Verified against repository source/configuration on 2026-07-10. Exact current-state limitations are intentionally retained for the next assessment.<br>Documents the lab as of Phase 7 · 2026-07-16 <a href="../index.html">Back to the documentation index.</a></div></footer>
 </body></html>
