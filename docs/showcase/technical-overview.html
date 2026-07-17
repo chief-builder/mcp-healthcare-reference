@@ -205,7 +205,7 @@
 <script type="application/json" id="canvas-manifest">
 {
   "generated": "2026-07-16",
-  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
+  "commit": "3d4eaa079ff24a5eb42362f62b70fcd33703a875",
   "phase": 7,
   "sections": {
     "invariants": "docs/prototype-plan.md, docs/mcp-e2e-reference-architecture.md",
@@ -417,6 +417,8 @@
       <li><span class="path">kit/blueprints/</span> — <span class="why">the control catalog (42 controls with stable IDs, enforcing code, proving test), portable token-claims contract, vendor-neutral gateway policy spec, broker portability profile, JSON Schemas, and claim-shape test vectors</span></li>
       <li><span class="path">kit/acceptance/</span> — <span class="why">58 portable conformance probes a customer runs against their own deployment, parameterized on an environment descriptor; the lab is the framework's own fixture</span></li>
       <li><span class="path">kit/adapters/</span> — <span class="why">hub authorization-server requirements, per-IdP guides (Entra ID, Okta, Ping) in brokered and EMA/ID-JAG shapes, and a gateway capability matrix (Envoy/Istio, Apigee, Azure APIM, AWS API Gateway) — desk-checked until a real second-IdP leg runs the acceptance suite</span></li>
+      <li><span class="path">kit/compliance/</span> — <span class="why">the 42 controls mapped to HIPAA Security Rule citations, SOC 2 TSC criteria, and HITRUST assessment domains (public 19-domain level — the CSF license bars requirement-level reproduction), plus a shared-responsibility matrix; evidence-not-certification framing, compliance-SME review pending</span></li>
+      <li><span class="path">kit/playbook/</span> — <span class="why">the pilot rollout sequence (stages 0–7, exit criteria = acceptance probe families), a production-choices worksheet derived from the substitution map, and the dry-run protocol — draft until the kit-artifacts-only dry run executes</span></li>
     </ul>
     <h3 style="margin-top:1.6rem;">Rendered tours — on this site</h3>
     <ul class="doc-list">

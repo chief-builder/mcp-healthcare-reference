@@ -7,7 +7,7 @@
 <script type="application/json" id="canvas-manifest">
 {
   "generated": "2026-07-16",
-  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
+  "commit": "3d4eaa079ff24a5eb42362f62b70fcd33703a875",
   "phase": 7,
   "sections": {
     "why": "docs/prototype-plan.md",
@@ -531,11 +531,15 @@
     <p class="section-intro">
       The lab is being packaged into a portable rollout kit: the controls it enforces written as
       vendor-neutral blueprints, a conformance suite of 58 probes an organization runs against its
-      <em>own</em> deployment to prove the same guarantees hold there, and adapter guides for the
+      <em>own</em> deployment to prove the same guarantees hold there, adapter guides for the
       identity providers and gateways enterprises already run (Entra ID, Okta, Ping; Envoy, Apigee,
-      Azure APIM, AWS). The lab stays the reference implementation — the kit is what a delivery team
-      takes into an engagement. Adapter guidance is desk-checked today and is promoted only after a
-      real deployment passes the conformance suite through it.
+      Azure APIM, AWS), a compliance mapping that ties each of the 42 controls to HIPAA, SOC 2, and
+      HITRUST evidence with a shared-responsibility split, and a stage-by-stage pilot playbook whose
+      exit gates are the conformance probes themselves. The lab stays the reference implementation —
+      the kit is what a delivery team takes into an engagement. It ships with its caveats attached:
+      adapter guidance is desk-checked until a real deployment passes the suite through it, the
+      compliance mapping awaits SME review, and the playbook stays draft until a from-scratch dry
+      run proves a fresh team needs nothing beyond the kit.
     </p>
   </section>
 
