@@ -56,6 +56,6 @@ Pinned in the compose files and checked against upstream releases on
 2026-09-30: Keycloak 26.7.5, Kong Gateway 3.16.0.0 (decK 1.68.0 in CI),
 OpenBao 2.7.0, HAPI FHIR v8.12.0-1, Postgres 18.6, Grafana 13.2.3, Loki 3.7.8,
 Tempo 3.1.0, OpenTelemetry Collector contrib 0.161.0, Alloy v1.20.1,
-nginx 1.30.5, SPIRE 1.15.3, spiffe-helper 0.12.1, k3s v1.37.0-k3s1,
+nginx 1.31.0, SPIRE 1.15.3, spiffe-helper 0.12.1, k3s v1.37.0-k3s1,
 Synthea v4.0.0. The MCP servers implement MCP 2026-07-28, the current
 specification revision. Dependabot proposes updates weekly.
