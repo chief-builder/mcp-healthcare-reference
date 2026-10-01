@@ -166,12 +166,19 @@ dns_ok() {
   "${KCTL[@]}" run k3d-dns-check --rm -i --restart=Never --image=busybox:1.37 \
     --command -- nslookup host.k3d.internal >/dev/null 2>&1
 }
-if ! dns_ok; then
-  echo "==> host.k3d.internal not resolvable in-cluster; restarting CoreDNS..."
-  "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
-  "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
-  dns_ok || { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
-fi
+# A ConfigMap change reaches the CoreDNS pod's mounted file only on the next
+# kubelet sync, so poll (~2 min) and restart CoreDNS once if it stays stale.
+echo "==> Checking host.k3d.internal resolves in-cluster..."
+for i in $(seq 1 24); do
+  dns_ok && break
+  if [ "$i" -eq 6 ]; then
+    echo "==> still unresolvable; restarting CoreDNS..."
+    "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
+    "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
+  fi
+  [ "$i" -eq 24 ] && { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
+  sleep 5
+done
 
 echo "==> Deploying SPIRE..."
 "${KCTL[@]}" create namespace spire --dry-run=client -o yaml | "${KCTL[@]}" apply -f - > /dev/null
