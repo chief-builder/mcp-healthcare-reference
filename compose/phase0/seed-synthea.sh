@@ -13,7 +13,8 @@ FHIR_BASE="${FHIR_BASE:-http://localhost:8081/fhir}"
 PATIENT_COUNT="${PATIENT_COUNT:-50}"
 SYNTHEA_VERSION="v4.0.0"
 SYNTHEA_DIR="$PWD/.synthea"
-JAR="$SYNTHEA_DIR/synthea-with-dependencies.jar"
+# Versioned cache name, so bumping SYNTHEA_VERSION never reuses an old jar.
+JAR="$SYNTHEA_DIR/synthea-${SYNTHEA_VERSION}-with-dependencies.jar"
 JAR_URL="https://github.com/synthetichealth/synthea/releases/download/${SYNTHEA_VERSION}/synthea-with-dependencies.jar"
 
 mkdir -p "$SYNTHEA_DIR"
@@ -27,7 +28,7 @@ rm -rf "$SYNTHEA_DIR/output"
 
 echo "==> Generating ${PATIENT_COUNT} synthetic patients (FHIR R4 transaction bundles)..."
 docker run --rm -v "$SYNTHEA_DIR:/synthea" -w /synthea eclipse-temurin:25-jre \
-  java -jar synthea-with-dependencies.jar \
+  java -jar "$(basename "$JAR")" \
   -p "$PATIENT_COUNT" \
   --exporter.fhir.transaction_bundle=true \
   --exporter.baseDirectory /synthea/output
