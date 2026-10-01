@@ -25,7 +25,7 @@ on the hardening branch (MCP 2026-07-28, Kong 3.16, current images):
 158 passed + 1 skipped of 159 (the skip is the optional real-GitHub leg,
 which needs a one-time browser consent), plus phase 0's 4 checks.
 Phases 2–7 need a valid Konnect PAT in compose/phase{2..5}/.env and free
-host ports 8210/8300/8310 (stop the vtb-* containers). Offline: `make test` (servers vitest 88, broker pytest 96,
+host ports 8210/8300/8310 (stop the vtb-* containers). Offline: `make test` (servers vitest 89, broker pytest 97,
 DB-less Kong plugin suite 47, kit vectors 15+4 skipped) — no accounts.
 
 Hardening (2026-09-30): MCP 2026-07-28 via @modelcontextprotocol/server

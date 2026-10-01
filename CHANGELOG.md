@@ -40,8 +40,8 @@ protocol migration, current dependencies, offline tests, and hardened CI.
   `mcp:fhir-clinical:everything:read`) require `amr` to include `mfa`;
   otherwise 401 `insufficient_user_authentication` (RFC 9470). Previously
   documented but not enforced.
-- Offline test suites, one command (`make test`): MCP servers (vitest, 88
-  tests), broker (pytest, 96 tests), kit claim vectors, and the four Kong
+- Offline test suites, one command (`make test`): MCP servers (vitest, 89
+  tests), broker (pytest, 97 tests), kit claim vectors, and the four Kong
   plugins against a DB-less Kong 3.16 (47 tests). Live phase 3 probes for the
   2026-07-28 wire, legacy fallback, batch rejection, and the MFA mark; a live
   phase 5 probe for the escaped-MRN bypass.
