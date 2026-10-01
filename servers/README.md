@@ -5,10 +5,10 @@ Both are stateless (2026-07-28 model) and validate their own resource audience,
 per-tool scope, and (FHIR) patient compartment — the DP only enforces the tier
 wall (server is authoritative, DP is the cheap early rejection; arch doc §6).
 
-| Server | Resource URI | Endpoint (internal) | Built |
-|---|---|---|---|
+| Server          | Resource URI              | Endpoint (internal)                     | Built                                                                       |
+| --------------- | ------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
 | `fhir-clinical` | `mcp://srv/fhir-clinical` | http://localhost:8100/fhir-clinical/mcp | **generated** from `fhir-clinical/openapi.json` via `openapi-mcp-generator` |
-| `scheduling` | `mcp://srv/scheduling` | http://localhost:8100/scheduling/mcp | **hand-built** on the MCP SDK; Postgres-backed slot holds |
+| `scheduling`    | `mcp://srv/scheduling`    | http://localhost:8100/scheduling/mcp    | **hand-built** on the MCP SDK; Postgres-backed slot holds                   |
 
 ## Authorization model
 
