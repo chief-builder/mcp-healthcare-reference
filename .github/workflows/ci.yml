@@ -119,8 +119,9 @@ jobs:
           curl -fsSL -o deck.tgz \
             "https://github.com/Kong/deck/releases/download/v${DECK_VERSION}/deck_${DECK_VERSION}_linux_amd64.tar.gz"
           echo "${DECK_SHA256}  deck.tgz" | sha256sum -c -
-          tar -xzf deck.tgz deck
-          sudo install deck /usr/local/bin/deck
+          # Extract outside the checkout: the repo root already has a deck/ dir.
+          tar -xzf deck.tgz -C "$RUNNER_TEMP" deck
+          sudo install "$RUNNER_TEMP/deck" /usr/local/bin/deck
       - name: decK gateway state validates
         run: deck file validate deck/internal.yaml deck/external.yaml
       - name: Compose stacks resolve

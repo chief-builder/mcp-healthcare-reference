@@ -1,0 +1,9 @@
+# Analyze shipped code, not tests or test fixtures (test servers and stubs are
+# intentionally minimal and would only add noise).
+name: mcp-healthcare-reference CodeQL config
+paths-ignore:
+  - '**/test/**'
+  - '**/tests/**'
+  - 'tests/**'
+  - 'kit/acceptance/**'
+  - 'plugins/tests/**'
