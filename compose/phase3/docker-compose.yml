@@ -108,7 +108,7 @@ services:
         condition: service_healthy
 
   kong-internal:
-    image: kong/kong-gateway:3.9
+    image: kong/kong-gateway:3.16.0.0
     environment:
       KONG_ROLE: data_plane
       KONG_DATABASE: "off"
@@ -132,7 +132,7 @@ services:
       - cp-uplink
 
   kong-external:
-    image: kong/kong-gateway:3.9
+    image: kong/kong-gateway:3.16.0.0
     environment:
       KONG_ROLE: data_plane
       KONG_DATABASE: "off"
