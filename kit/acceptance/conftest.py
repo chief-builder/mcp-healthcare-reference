@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 import pytest
+import requests
 from harness import audit as audit_mod
 from harness import descriptor as descriptor_mod
 from harness import identities as id_mod
@@ -26,6 +27,34 @@ def pytest_addoption(parser):
         default=str(HERE / "environments" / "lab.yaml"),
         help="Path to the environment descriptor (YAML or JSON).",
     )
+
+
+def _unreachable(exc: requests.RequestException) -> str:
+    request = getattr(exc, "request", None)
+    url = getattr(request, "url", None) or "endpoint"
+    return f"unreachable: {url} ({type(exc).__name__})"
+
+
+# Conformance contract: a FAIL means a control failed, never that an endpoint
+# was down. A connection error or timeout anywhere in a probe's setup (identity
+# acquisition, descriptor fixtures) or body becomes a skip naming the endpoint.
+_UNREACHABLE = (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item):
+    try:
+        return (yield)
+    except _UNREACHABLE as exc:
+        pytest.skip(_unreachable(exc))
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item):
+    try:
+        return (yield)
+    except _UNREACHABLE as exc:
+        pytest.skip(_unreachable(exc))
 
 
 @pytest.fixture(scope="session")
