@@ -1,0 +1,36 @@
+{
+  "name": "mcp-lab-servers",
+  "private": true,
+  "type": "module",
+  "description": "First-party MCP servers (npm workspace): shared resource-server core + fhir-clinical + scheduling",
+  "workspaces": [
+    "shared",
+    "fhir-clinical",
+    "scheduling"
+  ],
+  "scripts": {
+    "build": "tsc -b fhir-clinical scheduling",
+    "typecheck": "tsc -b fhir-clinical scheduling && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@eslint/js": "^10.0.1",
+    "@modelcontextprotocol/client": "^2.2.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}

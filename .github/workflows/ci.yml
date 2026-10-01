@@ -1,64 +1,196 @@
 name: ci
 
-# Offline checks only: TypeScript builds, Python compile, dependency audit, and
-# config/schema validation. The live-stack acceptance gates (tests/phaseN.sh)
-# need Konnect/Auth0/GitHub/Docker and stay manual integration gates.
+# Offline checks for every component. The live-stack acceptance gates
+# (tests/phaseN.sh) need Keycloak/Kong Konnect/Docker stacks and stay manual.
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-ts:
+  servers:
+    name: servers (lint, types, tests, build, audit)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        server: [fhir-clinical, scheduling]
+    timeout-minutes: 15
     defaults:
       run:
-        working-directory: servers/${{ matrix.server }}
+        working-directory: servers
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: '22'
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: servers/${{ matrix.server }}/package-lock.json
+          cache-dependency-path: servers/package-lock.json
       - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - name: Coverage summary
+        run: |
+          {
+            echo "### MCP servers coverage"
+            echo "| metric | % |"
+            echo "|---|---|"
+            jq -r '.total | to_entries[] | "| \(.key) | \(.value.pct) |"' coverage/coverage-summary.json
+          } >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
-      - run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
+      - run: npm audit --audit-level=high
 
   python:
+    name: python (ruff, mypy, broker + kit tests, pip-audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: '3.12'
-      - name: Compile broker, agent, and mock vendor
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            broker/requirements.txt
+            kit/acceptance/requirements.txt
+      - run: pip install -r requirements-dev.txt pip-audit==2.10.1
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: mypy (broker)
+        working-directory: broker
+        run: mypy app
+      - name: Broker tests
+        working-directory: broker
         run: |
-          python -m py_compile \
-            broker/app/*.py \
-            agents/loop-agent/*.py \
-            compose/phase5/mock-vendor/*.py
-      - name: Import broker with its dependencies
+          python -m pytest --cov=app --cov-report=term-missing \
+            --cov-report=markdown-append:"$GITHUB_STEP_SUMMARY"
+      - name: Kit offline claim vectors
+        working-directory: kit/acceptance
+        run: python -m pytest probes/test_claim_vectors.py -q
+      - name: pip-audit
         run: |
-          pip install -r broker/requirements.txt
-          python -c "import ast; ast.parse(open('broker/app/main.py').read())"
+          pip-audit -r broker/requirements.txt
+          pip-audit -r tests/phase1/requirements.txt
+          pip-audit -r kit/acceptance/requirements.txt
 
-  validate-config:
+  gateway:
+    name: gateway plugins (DB-less Kong)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: '3.12'
-      - run: pip install pyyaml
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: make test-plugins
+
+  config:
+    name: config (realm, registry, deck, compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DECK_VERSION: 1.68.0
+      DECK_SHA256: 5715da1d9d5afd5b2e00a96f022edc618f412077299c772e621f85c99a96decc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Realm exports and vendor registry are valid JSON
         run: |
-          python -c "import json,glob; [json.load(open(f)) for f in glob.glob('realm/*.json')]"
-          python -c "import json; json.load(open('broker/registry.json'))"
-      - name: decK gateway state is valid YAML
+          for f in realm/*.json broker/registry.json; do
+            python3 -m json.tool "$f" > /dev/null
+          done
+      - name: Install decK
         run: |
-          python -c "import yaml,glob; [yaml.safe_load(open(f)) for f in glob.glob('deck/*.yaml')]"
+          curl -fsSL -o deck.tgz \
+            "https://github.com/Kong/deck/releases/download/v${DECK_VERSION}/deck_${DECK_VERSION}_linux_amd64.tar.gz"
+          echo "${DECK_SHA256}  deck.tgz" | sha256sum -c -
+          # Extract outside the checkout: the repo root already has a deck/ dir.
+          tar -xzf deck.tgz -C "$RUNNER_TEMP" deck
+          sudo install "$RUNNER_TEMP/deck" /usr/local/bin/deck
+      - name: decK gateway state validates
+        # One file per control plane: they share service names, and decK
+        # merges files passed together into a single state.
+        run: |
+          for f in deck/internal.yaml deck/external.yaml; do
+            deck file validate "$f"
+          done
+      - name: Compose stacks resolve
+        run: .github/scripts/compose-config.sh
+
+  lint-meta:
+    name: shellcheck + actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: |
+          shellcheck --version
+          shellcheck -S warning tests/*.sh compose/*/*.sh plugins/tests/*.sh .github/scripts/*.sh
+      - name: actionlint
+        run: |
+          curl -fsSL -o actionlint.tgz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tgz" | sha256sum -c -
+          tar -xzf actionlint.tgz actionlint
+          ./actionlint -color
+
+  links:
+    name: link check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          lycheeVersion: v0.24.2
+          args: >-
+            --config lychee.toml
+            --no-progress
+            --root-dir ${{ github.workspace }}
+            README.md overview.html '*.md'
+            'docs/**/*.md' 'docs/**/*.html' 'kit/**/*.md'
+            '*/README.md' '*/*/README.md' '*/*/*/README.md'
+          fail: true
+          jobSummary: true
+
+  images:
+    name: docker images build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build MCP server images (workspace context)
+        run: |
+          docker build -q -t ci/fhir-clinical -f servers/fhir-clinical/Dockerfile servers
+          docker build -q -t ci/scheduling -f servers/scheduling/Dockerfile servers
+      - name: Build Python service images
+        run: |
+          docker build -q -t ci/broker broker
+          docker build -q -t ci/loop-agent agents/loop-agent
+          docker build -q -t ci/homegrown-issuer compose/phase1/homegrown-issuer
+          docker build -q -t ci/mock-vendor compose/phase5/mock-vendor

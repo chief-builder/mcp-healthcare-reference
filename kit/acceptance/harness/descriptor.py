@@ -5,6 +5,7 @@ environment.schema.json runs when jsonschema is installed (it is in
 requirements.txt) — a descriptor that fails validation stops the run early
 with a clear message rather than surfacing as confusing probe errors.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,8 +43,7 @@ def _validate(doc: dict[str, Any], path: Path) -> None:
     if errors:
         loc = "/".join(str(p) for p in errors[0].path) or "(root)"
         raise SystemExit(
-            f"{path} is not a valid environment descriptor:\n"
-            f"  at {loc}: {errors[0].message}"
+            f"{path} is not a valid environment descriptor:\n  at {loc}: {errors[0].message}"
         )
 
 
@@ -62,9 +62,7 @@ class Descriptor:
 
     @property
     def jwks_uri(self) -> str:
-        return self.doc.get(
-            "jwks_uri", f"{self.issuer}/protocol/openid-connect/certs"
-        )
+        return self.doc.get("jwks_uri", f"{self.issuer}/protocol/openid-connect/certs")
 
     def audience(self, tier: str) -> str:
         return self.doc["audiences"][f"tier_{tier}"]

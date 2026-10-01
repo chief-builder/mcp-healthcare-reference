@@ -7,8 +7,8 @@ that needs orchestration control the descriptor does not model, so this probe
 asserts the observable property — stateless per-request operation — that the
 replica-kill test relies on.)
 """
-import pytest
 
+import pytest
 from harness import mcp as mcp_lib
 
 pytestmark = pytest.mark.statelessness
@@ -23,7 +23,7 @@ def sched(descriptor):
 
 
 def test_tools_list_needs_no_session(sched, identity):
-    """ST-01: a bare POST returns the tool list with no prior initialize/session."""
+    """ST-01: a single 2026-07-28 POST returns the tool list — no initialize, no session."""
     tools = mcp_lib.list_tools(sched, identity("workforce_clinical").token)
     assert tools, "no tools returned"
 

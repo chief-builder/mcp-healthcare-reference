@@ -43,6 +43,10 @@ cp environments/TEMPLATE.yaml environments/mine.yaml   # then edit
 pytest --environment environments/mine.yaml -ra --junitxml=report.xml
 ```
 
+Run from `kit/acceptance/` (pytest finds `conftest.py`, which defines
+`--environment`, from the working directory). The descriptor itself may live
+anywhere: `pytest --environment=/abs/path/mine.yaml -ra`.
+
 ## How it degrades
 
 - A descriptor section you omit **skips** its probes (no egress section → EG
@@ -50,7 +54,8 @@ pytest --environment environments/mine.yaml -ra --junitxml=report.xml
 - An identity you don't declare — or one whose `command`/`env`/`scripted`
   acquisition fails — **skips** the probes that need it, with the reason shown.
 - An unreachable endpoint **skips** (it's an environment problem), it does not
-  fail.
+  fail: `conftest.py` turns any connection error or timeout during a probe's
+  setup or body into a skip that names the URL.
 - A **fail** therefore always means a control genuinely did not hold. That is
   the only outcome that blocks a conformance claim.
 

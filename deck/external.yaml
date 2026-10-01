@@ -48,6 +48,9 @@ services:
         paths:
           - /fhir
         strip_path: true
+        # Explicit since Kong 3.14 defaults routes to https only; the DPs
+        # serve the bearer paths on plain :8000 (and the m2m path on :8443).
+        protocols: [http, https]
     plugins:
       - name: openid-connect
         config:
@@ -81,6 +84,7 @@ services:
         paths:
           - /fhir-clinical
         strip_path: true
+        protocols: [http, https]
     plugins:
       # Public tier: a tighter abuse ceiling than the internal DP.
       - name: rate-limiting

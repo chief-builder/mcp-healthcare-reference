@@ -3,6 +3,7 @@
 The fake-ping realm deliberately uses `hospital-*` group names; Keycloak's
 broker mappers must translate them so no consumer ever sees upstream strings.
 """
+
 import json
 
 

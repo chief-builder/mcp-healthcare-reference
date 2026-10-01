@@ -4,8 +4,8 @@ Portable equivalents of phase-6 audit probes. Require an 'audit' section with
 a reachable backend. AU-01 walks a first-party tool call back to its audit
 record by jti; AU-03 proves no token material lands on the spine.
 """
-import pytest
 
+import pytest
 from harness import mcp as mcp_lib
 
 pytestmark = pytest.mark.audit
@@ -31,8 +31,9 @@ def test_tool_call_joins_on_jti(descriptor, spine, identity, claims):
     c = claims(ident.token)
     lines = spine.query_by_jti(c["jti"])
     assert lines, f"AU-01: no audit record joined on jti {c['jti']}"
-    assert any(c["sub"] in line for line in lines), \
+    assert any(c["sub"] in line for line in lines), (
         "AU-01: audit records for this jti do not carry the principal (sub)"
+    )
 
 
 def test_no_token_material_on_the_spine(descriptor, spine, identity):

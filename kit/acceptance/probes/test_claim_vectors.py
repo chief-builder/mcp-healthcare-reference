@@ -10,6 +10,7 @@ deferrals, not failures.
 
 No network and no running deployment required — this module runs anywhere.
 """
+
 import json
 from pathlib import Path
 

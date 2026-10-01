@@ -7,15 +7,15 @@
 plus contract §6.3 claim validation for the m2m path and the positive
 end-to-end path through the cnf-check plugin.
 """
+
 import json
 import subprocess
 import time
 
 import pytest
-
 from conftest import (
-    SCHED_MCP_HTTP,
     EXPECTED_ISS,
+    SCHED_MCP_HTTP,
     agent_pod,
     call_find_slots,
     decode,
@@ -30,13 +30,12 @@ from conftest import (
 def sse_json(text: str) -> dict:
     for line in text.splitlines():
         if line.startswith("data:"):
-            return json.loads(line[len("data:"):].strip())
+            return json.loads(line[len("data:") :].strip())
     return json.loads(text)
 
 
 def agent_log_events(tail: int = 50) -> list[dict]:
-    out = kubectl("-n", "mcp-agents", "logs", "deploy/loop-agent", "-c", "agent",
-                  f"--tail={tail}")
+    out = kubectl("-n", "mcp-agents", "logs", "deploy/loop-agent", "-c", "agent", f"--tail={tail}")
     events = []
     for line in out.splitlines():
         try:
@@ -72,6 +71,7 @@ def test_agent_is_obtaining_tokens_and_calling_tools():
     def looped_ok():
         events = [e for e in agent_log_events() if e.get("event") == "loop"]
         return events and events[-1]["ok"]
+
     wait_for(looped_ok, timeout=60, what="a successful agent loop iteration")
 
 
@@ -112,8 +112,11 @@ def test_token_replayed_without_client_cert_is_401_and_audited(svid):
     assert r.status_code == 401
     assert 'error="invalid_token"' in r.headers.get("WWW-Authenticate", "")
 
-    events = [e for e in kong_audit_events()
-              if e.get("token_id") == jti and e.get("reason") == "no_client_certificate"]
+    events = [
+        e
+        for e in kong_audit_events()
+        if e.get("token_id") == jti and e.get("reason") == "no_client_certificate"
+    ]
     assert events, "expected a cnf-check audit record for the rejected replay"
     assert events[0]["decision"] == "deny"
     assert events[0]["client"] == "mcp-agents.loop-agent"
@@ -133,15 +136,34 @@ def test_token_replayed_with_different_cert_is_401_and_audited(svid, tmp_path):
 
     crt, key = str(tmp_path / "intruder.crt"), str(tmp_path / "intruder.key")
     subprocess.run(
-        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
-         "-subj", "/CN=intruder", "-keyout", key, "-out", crt],
-        check=True, capture_output=True)
+        [
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-nodes",
+            "-days",
+            "1",
+            "-subj",
+            "/CN=intruder",
+            "-keyout",
+            key,
+            "-out",
+            crt,
+        ],
+        check=True,
+        capture_output=True,
+    )
 
     r = call_find_slots(token, cert=(crt, key))
     assert r.status_code == 401
 
-    events = [e for e in kong_audit_events()
-              if e.get("token_id") == jti and e.get("reason") == "thumbprint_mismatch"]
+    events = [
+        e
+        for e in kong_audit_events()
+        if e.get("token_id") == jti and e.get("reason") == "thumbprint_mismatch"
+    ]
     assert events, "expected a cnf-check audit record for the mismatched cert"
 
 
@@ -160,14 +182,19 @@ def test_cert_rotation_happens_without_pod_restart(svid):
     no container restarts across the rotation window — and the loop keeps
     succeeding with the new cert."""
     pod_before = agent_pod()
-    restarts_before = {s["name"]: s["restartCount"]
-                       for s in pod_before["status"]["containerStatuses"]}
+    restarts_before = {
+        s["name"]: s["restartCount"] for s in pod_before["status"]["containerStatuses"]
+    }
     old_x5t = x5t_s256(svid[0])
 
     def rotated():
-        import base64 as b64, hashlib
+        import base64 as b64
+        import hashlib
+
         pem = pod_file("/svid/svid.pem")
-        body = pem.split("-----BEGIN CERTIFICATE-----", 1)[1].split("-----END CERTIFICATE-----", 1)[0]
+        body = pem.split("-----BEGIN CERTIFICATE-----", 1)[1].split("-----END CERTIFICATE-----", 1)[
+            0
+        ]
         der = b64.b64decode("".join(body.split()))
         new = b64.urlsafe_b64encode(hashlib.sha256(der).digest()).rstrip(b"=").decode()
         return new if new != old_x5t else None
@@ -177,11 +204,14 @@ def test_cert_rotation_happens_without_pod_restart(svid):
     pod_after = agent_pod()
     assert pod_after["metadata"]["name"] == pod_before["metadata"]["name"]
     for status in pod_after["status"]["containerStatuses"]:
-        assert status["restartCount"] == restarts_before[status["name"]], \
+        assert status["restartCount"] == restarts_before[status["name"]], (
             f"{status['name']} restarted during rotation"
+        )
 
     def loop_ok_with_new_cert():
         events = [e for e in agent_log_events() if e.get("event") == "loop" and e.get("ok")]
         return any(e.get("x5t") == new_x5t for e in events)
-    wait_for(loop_ok_with_new_cert, timeout=90,
-             what="a successful loop iteration with the rotated cert")
+
+    wait_for(
+        loop_ok_with_new_cert, timeout=90, what="a successful loop iteration with the rotated cert"
+    )

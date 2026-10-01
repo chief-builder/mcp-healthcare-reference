@@ -1,0 +1,21 @@
+# Link checking for the docs (CI "links" job; locally: make linkcheck).
+# Relative links and #fragments are checked. Lab-internal hosts and the
+# placeholder domains used in examples only resolve inside the compose stack,
+# so they are excluded.
+include_fragments = "anchor-only"
+max_retries = 3
+timeout = 20
+accept = ["200..=299", "429"]
+
+exclude = [
+  '^https?://localhost',
+  '^https?://127\.0\.0\.1',
+  '^https?://(keycloak|hapi|broker|mock-vendor|homegrown-issuer|otel-collector|kong-internal|kong-external|vault|scheduling|fhir-clinical|stub|tempo|loki|grafana|postgres)(:\d+)?(/|$)',
+  '^https?://[^/]*\.example(:\d+)?(/|$)',
+  '^https?://[^/]*\.invalid(:\d+)?(/|$)',
+  '^https?://www\.w3\.org/2000/svg',
+  '^https://us\.api\.konghq\.com',
+  '^mcp://',
+]
+
+exclude_path = ["node_modules", ".venv", ".claude"]

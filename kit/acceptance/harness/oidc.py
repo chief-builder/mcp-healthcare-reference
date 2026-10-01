@@ -8,6 +8,7 @@ Validates the RFC 9207 `iss` on the authorization response (contract §8).
 For production IdPs whose login cannot be scripted (real MFA, WebAuthn), use
 acquire: command or acquire: env instead — see harness/identities.py.
 """
+
 from __future__ import annotations
 
 import base64
@@ -53,8 +54,7 @@ def _form_fields(form_block: str) -> dict[str, str]:
 def _pkce() -> tuple[str, str]:
     verifier = secrets.token_urlsafe(48)
     challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
-        .rstrip(b"=").decode()
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     )
     return verifier, challenge
 
@@ -107,8 +107,11 @@ def _answer_page(session, page, username, password):
 def client_credentials(issuer, client_id, client_secret) -> str:
     r = requests.post(
         f"{issuer}/protocol/openid-connect/token",
-        data={"grant_type": "client_credentials",
-              "client_id": client_id, "client_secret": client_secret},
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
         timeout=30,
     )
     assert r.status_code == 200, r.text
@@ -133,15 +136,18 @@ def authorization_code(
     expected_iss = issuer
 
     params = {
-        "client_id": client_id, "redirect_uri": redirect_uri,
-        "response_type": "code", "scope": scope, "state": state,
-        "code_challenge": challenge, "code_challenge_method": "S256",
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": scope,
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
     }
     if idp_hint:
         params["kc_idp_hint"] = idp_hint
 
-    response = _request(session, "GET",
-                        f"{issuer}/protocol/openid-connect/auth", params=params)
+    response = _request(session, "GET", f"{issuer}/protocol/openid-connect/auth", params=params)
     page, callback = _follow(session, response, stop_prefix=redirect_uri)
 
     for _ in range(5):
@@ -163,12 +169,19 @@ def authorization_code(
     headers = {}
     if dpop_key is not None:
         from . import dpop as _dpop
+
         headers["DPoP"] = _dpop.proof(dpop_key, "POST", token_url)
     token_response = requests.post(
         token_url,
-        data={"grant_type": "authorization_code", "client_id": client_id,
-              "code": code, "redirect_uri": redirect_uri, "code_verifier": verifier},
-        headers=headers, timeout=30,
+        data={
+            "grant_type": "authorization_code",
+            "client_id": client_id,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "code_verifier": verifier,
+        },
+        headers=headers,
+        timeout=30,
     )
     assert token_response.status_code == 200, token_response.text
     return token_response.json()["access_token"]

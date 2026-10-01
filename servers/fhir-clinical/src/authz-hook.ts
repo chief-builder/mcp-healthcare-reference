@@ -1,8 +1,7 @@
 /**
  * FHIR patient-compartment enforcement (claims contract §6.5).
  *
- * Hand-written hook consumed by the generated MCP server before every tool
- * call. When the caller's token carries `fhir_patient` (the Auth0 end-customer
+ * Hand-written hook the MCP server runs before every tool call. When the caller's token carries `fhir_patient` (the Auth0 end-customer
  * path), every FHIR interaction is HARD-filtered to that patient's compartment:
  *   - search tools: the `patient` parameter is forced to the token's patient,
  *     overriding anything the client supplied;
@@ -10,9 +9,10 @@
  *     token's patient, else 403.
  *
  * Workforce tokens (no `fhir_patient`) pass through unchanged — their access is
- * governed by group + scope, enforced by the generated server.
+ * governed by group + scope, enforced by the server's tool policy.
  */
-import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+import type { AuthInfo } from '@modelcontextprotocol/server';
+import { claimsOf } from '@mcp-lab/shared';
 
 interface ToolLike {
   name: string;
@@ -23,7 +23,7 @@ interface ToolLike {
 interface AuthzContext {
   auth?: AuthInfo;
   tool: ToolLike;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
 }
 
 class CompartmentError extends Error {
@@ -34,8 +34,8 @@ class CompartmentError extends Error {
   }
 }
 
-export async function authorize(ctx: AuthzContext): Promise<Record<string, any>> {
-  const patient = (ctx.auth?.extra as any)?.fhir_patient as string | undefined;
+export async function authorize(ctx: AuthzContext): Promise<Record<string, unknown>> {
+  const patient = claimsOf(ctx.auth).fhir_patient as string | undefined;
   if (!patient) {
     return ctx.args; // workforce / non-patient token: no compartment restriction
   }
@@ -45,9 +45,7 @@ export async function authorize(ctx: AuthzContext): Promise<Record<string, any>>
   // by-id reads must target exactly the token's patient
   if (ctx.tool.pathParams.includes('id')) {
     if (String(args.id) !== String(patient)) {
-      throw new CompartmentError(
-        `patient-scoped token may only access Patient/${patient}, not ${args.id}`,
-      );
+      throw new CompartmentError(`patient-scoped token may only access Patient/${patient}, not ${args.id}`);
     }
   }
 

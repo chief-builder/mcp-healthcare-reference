@@ -5,16 +5,19 @@ Deferred by phase (explicit xfail, not silence):
   - mcp: scope grammar on workforce/m2m paths    → Phase 3 (first-party MCP)
   - cnf on the m2m path                          → Phase 4 (cert-bound m2m)
 """
-import jwt
-import pytest
-import requests
 
+import jwt
+import requests
 from conftest import FHIR_BASE, INTERACTIVE_LEGS, KC_BASE, REALM
 
 ISSUER = f"{KC_BASE}/realms/{REALM}"
 GROUP_VOCABULARY = {
-    "mcp-platform-admin", "mcp-clinical-tools", "mcp-scheduling-tools",
-    "mcp-analytics-readonly", "mcp-external-curated", "mcp-agent-operators",
+    "mcp-platform-admin",
+    "mcp-clinical-tools",
+    "mcp-scheduling-tools",
+    "mcp-analytics-readonly",
+    "mcp-external-curated",
+    "mcp-agent-operators",
 }
 EXPECTED = {
     "workforce": {"tier": "internal", "idp_origin": "ping"},
@@ -22,8 +25,16 @@ EXPECTED = {
     "customer": {"tier": "external", "idp_origin": "auth0"},
     "smoke": {"tier": "internal", "idp_origin": "keycloak"},
 }
-PII_CLAIMS = ("email", "name", "given_name", "family_name", "preferred_username",
-              "phone_number", "birthdate", "address")
+PII_CLAIMS = (
+    "email",
+    "name",
+    "given_name",
+    "family_name",
+    "preferred_username",
+    "phone_number",
+    "birthdate",
+    "address",
+)
 
 
 def _aud_list(claims) -> list[str]:
@@ -86,7 +97,8 @@ def test_tier_and_tier_audience(leg_bundle):
     assert tier == EXPECTED[leg]["tier"], f"{leg}: mcp_tier {tier}"
     tier_audiences = [a for a in _aud_list(claims) if a.startswith("mcp://tier/")]
     assert tier_audiences == [f"mcp://tier/{tier}"], (
-        f"{leg}: aud must carry exactly one tier audience matching mcp_tier (§4), got {tier_audiences}"
+        f"{leg}: aud must carry exactly one tier audience matching mcp_tier (§4), "
+        f"got {tier_audiences}"
     )
 
 
@@ -144,7 +156,9 @@ def test_fhir_patient_compartment(leg_bundle):
         response = requests.get(f"{FHIR_BASE}/Patient/{patient_id}")
         assert response.status_code == 200, f"fhir_patient {patient_id} not resolvable in HAPI"
     else:
-        assert "fhir_patient" not in claims, f"{leg}: fhir_patient forbidden off the Auth0 path (§3)"
+        assert "fhir_patient" not in claims, (
+            f"{leg}: fhir_patient forbidden off the Auth0 path (§3)"
+        )
 
 
 def test_act_absent_without_delegation(leg_bundle):

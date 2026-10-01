@@ -1,4 +1,5 @@
 """Phase 2 acceptance fixtures: tokens per population + gateway endpoints."""
+
 import re
 import sys
 from pathlib import Path
@@ -39,8 +40,13 @@ def env() -> dict[str, str]:
 def alice_token(env) -> str:
     """Workforce, internal tier, mcp-clinical-tools group."""
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        "dr-alice", env["FAKE_PING_PASSWORD"], idp_hint="ping",
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        "dr-alice",
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
     )["access_token"]
 
 
@@ -48,8 +54,13 @@ def alice_token(env) -> str:
 def bob_token(env) -> str:
     """Workforce, internal tier, analytics group (not clinical)."""
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        "bob-analyst", env["FAKE_PING_PASSWORD"], idp_hint="ping",
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        "bob-analyst",
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
     )["access_token"]
 
 
@@ -57,7 +68,10 @@ def bob_token(env) -> str:
 def smoke_token(env) -> str:
     """m2m, internal tier, no groups."""
     return oidc_flows.client_credentials_token(
-        KC_BASE, REALM, "phase0-smoke", env["PHASE0_CLIENT_SECRET"],
+        KC_BASE,
+        REALM,
+        "phase0-smoke",
+        env["PHASE0_CLIENT_SECRET"],
     )["access_token"]
 
 
@@ -67,7 +81,12 @@ def customer_token(env) -> str:
     if not env.get("AUTH0_DOMAIN"):
         pytest.skip("Auth0 leg not configured (AUTH0_* unset)")
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "patient-agent", "http://localhost:8766/callback",
-        env["AUTH0_TEST_USER_EMAIL"], env["AUTH0_TEST_USER_PASSWORD"],
-        idp_hint="auth0", scope="openid patient/Patient.read",
+        KC_BASE,
+        REALM,
+        "patient-agent",
+        "http://localhost:8766/callback",
+        env["AUTH0_TEST_USER_EMAIL"],
+        env["AUTH0_TEST_USER_PASSWORD"],
+        idp_hint="auth0",
+        scope="openid patient/Patient.read",
     )["access_token"]

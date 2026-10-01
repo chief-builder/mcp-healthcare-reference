@@ -6,6 +6,7 @@ htm/htu/iat/ath/jti/typ/jwk independently. The RFC 7638 `jkt` computed here is
 the same shape as tests/phase4/conftest.py's x5t#S256 (canonical JSON → SHA-256
 → base64url no padding).
 """
+
 from __future__ import annotations
 
 import base64

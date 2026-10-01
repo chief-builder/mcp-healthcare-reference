@@ -14,12 +14,12 @@ name: mcp-phase5
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
       - ../phase0/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -28,7 +28,7 @@ services:
       retries: 12
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3
+    image: quay.io/keycloak/keycloak:26.7.5
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
@@ -77,7 +77,7 @@ services:
       - "7001:7000"
 
   hapi:
-    image: hapiproject/hapi:v8.0.0
+    image: hapiproject/hapi:v8.12.0-1
     # Uncapped, the JVM sizes its heap off the whole Docker VM and the kernel
     # OOM-kills it (exit 137) under stack-wide pressure. Bound the container
     # and let the JVM size to it; restart if the kernel kills it anyway.
@@ -100,7 +100,9 @@ services:
         condition: service_healthy
 
   fhir-clinical:
-    build: ../../servers/fhir-clinical
+    build:
+      context: ../../servers
+      dockerfile: fhir-clinical/Dockerfile
     environment:
       HOST: 0.0.0.0
       PORT: "3000"
@@ -113,7 +115,9 @@ services:
       - keycloak
 
   scheduling:
-    build: ../../servers/scheduling
+    build:
+      context: ../../servers
+      dockerfile: scheduling/Dockerfile
     environment:
       HOST: 0.0.0.0
       PORT: "3000"
@@ -130,7 +134,7 @@ services:
         condition: service_healthy
 
   kong-internal:
-    image: kong/kong-gateway:3.9
+    image: kong/kong-gateway:3.16.0.0
     environment:
       KONG_ROLE: data_plane
       KONG_DATABASE: "off"
@@ -174,7 +178,7 @@ services:
       - cp-uplink
 
   kong-external:
-    image: kong/kong-gateway:3.9
+    image: kong/kong-gateway:3.16.0.0
     environment:
       KONG_ROLE: data_plane
       KONG_DATABASE: "off"
@@ -201,7 +205,7 @@ services:
       - cp-uplink
 
   vault:
-    image: openbao/openbao:2
+    image: openbao/openbao:2.7.0
     environment:
       BAO_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN}
       BAO_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
@@ -219,7 +223,6 @@ services:
       HUB_ISSUER: http://localhost:8080/realms/mcp-plane
       HUB_JWKS_URI: http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      MCP_ADMIN_ISSUER: http://localhost:8080/realms/mcp-plane
     ports:
       - "8300:8300"
     healthcheck:
@@ -241,11 +244,12 @@ services:
       MOCK_CLIENT_ID: mcp-lab-broker
       MOCK_CLIENT_SECRET: ${MOCK_CLIENT_SECRET}
       MOCK_AT_TTL: "60"
+      MOCK_REDIRECT_URIS: http://localhost:8300/v1/callback/mockhub
     ports:
       - "8310:8310"
 
   cp-uplink:
-    image: nginx:1.27-alpine
+    image: nginx:1.30.5-alpine
     volumes:
       - ../phase2/uplink.conf:/etc/nginx/nginx.conf:ro
     networks:
@@ -257,7 +261,7 @@ services:
           - ${EXT_TELEMETRY_HOST:-ext-telemetry.unset.invalid}
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.115.1
+    image: otel/opentelemetry-collector-contrib:0.161.0
     command: ["--config=/etc/otel/otel-collector.yaml"]
     volumes:
       - ../phase0/otel/otel-collector.yaml:/etc/otel/otel-collector.yaml:ro
@@ -269,7 +273,7 @@ services:
       - tempo
 
   loki:
-    image: grafana/loki:3.3.2
+    image: grafana/loki:3.7.8
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
       - ../phase0/loki/loki.yaml:/etc/loki/loki.yaml:ro
@@ -278,7 +282,7 @@ services:
       - "3100:3100"
 
   tempo:
-    image: grafana/tempo:2.6.1
+    image: grafana/tempo:3.1.0
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ../phase0/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
@@ -292,7 +296,7 @@ services:
   # is how they reach the SIEM substitute. Kong's own audit records travel
   # OTLP instead (opentelemetry plugin in deck/), unwrapped from the error log.
   alloy:
-    image: grafana/alloy:v1.5.1
+    image: grafana/alloy:v1.20.1
     command: ["run", "/etc/alloy/config.alloy"]
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
@@ -301,7 +305,7 @@ services:
       - loki
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:13.2.3
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}

@@ -14,11 +14,11 @@ One JSON log line per iteration carries the presented-cert thumbprint and
 token jti, which the phase 4 acceptance suite (and later the audit spine)
 joins on.
 """
+
 import base64
 import hashlib
 import json
 import os
-import sys
 import time
 
 import requests
@@ -36,6 +36,7 @@ PROVIDER = os.environ.get("SCHED_PROVIDER", "loop-agent")
 
 CERT = (f"{SVID_DIR}/svid.pem", f"{SVID_DIR}/svid_key.pem")
 ACCEPT = "application/json, text/event-stream"
+PROTOCOL_VERSION = "2026-07-28"
 
 
 def log(**fields):
@@ -59,7 +60,7 @@ def jwt_payload(token: str) -> dict:
 def sse_json(text: str) -> dict:
     for line in text.splitlines():
         if line.startswith("data:"):
-            return json.loads(line[len("data:"):].strip())
+            return json.loads(line[len("data:") :].strip())
     return json.loads(text)
 
 
@@ -76,11 +77,32 @@ def get_token() -> str:
 
 
 def call_tool(token: str, name: str, arguments: dict) -> dict:
+    # MCP 2026-07-28: no initialize/session; the request carries its own
+    # protocol-version envelope and the routing headers that mirror it.
+    body = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": name,
+            "arguments": arguments,
+            "_meta": {
+                "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+                "io.modelcontextprotocol/clientInfo": {"name": CLIENT_ID, "version": "2.0"},
+                "io.modelcontextprotocol/clientCapabilities": {},
+            },
+        },
+    }
     r = requests.post(
         MCP_URL,
-        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
-        json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-              "params": {"name": name, "arguments": arguments}},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": ACCEPT,
+            "MCP-Protocol-Version": PROTOCOL_VERSION,
+            "Mcp-Method": "tools/call",
+            "Mcp-Name": name,
+        },
+        json=body,
         cert=CERT,
         verify=CA_BUNDLE,
         timeout=10,
@@ -104,9 +126,15 @@ def iteration() -> None:
     hold = call_tool(token, "hold-slot", {"slot_id": slots[0]["slot_id"]})
     call_tool(token, "release-hold", {"slot_hold_id": hold["slot_hold_id"]})
 
-    log(event="loop", ok=True, x5t=x5t, jti=claims.get("jti"),
-        azp=claims.get("azp"), idp_origin=claims.get("idp_origin"),
-        slot_hold_id=hold["slot_hold_id"])
+    log(
+        event="loop",
+        ok=True,
+        x5t=x5t,
+        jti=claims.get("jti"),
+        azp=claims.get("azp"),
+        idp_origin=claims.get("idp_origin"),
+        slot_hold_id=hold["slot_hold_id"],
+    )
 
 
 def main() -> None:
@@ -117,7 +145,7 @@ def main() -> None:
     while True:
         try:
             iteration()
-        except Exception as exc:  # keep looping; the gate reads the log stream
+        except Exception as exc:  # noqa: BLE001 — keep looping; the gate reads the log stream
             log(event="loop", ok=False, error=str(exc))
         time.sleep(INTERVAL)
 

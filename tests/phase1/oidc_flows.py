@@ -11,6 +11,7 @@ default policy on every request, so a custom CookiePolicy can't help. Instead
 we follow every redirect manually and clear the Secure flag between hops —
 harmless for real-HTTPS hops (Auth0), where cookies are sent either way.
 """
+
 import base64
 import hashlib
 import html
@@ -33,8 +34,10 @@ def _primary_form(text: str) -> str:
     forms = FORM_BLOCK_RE.findall(text)
     assert forms, f"no form found: {text[:400]}"
     for form in forms:
-        if 'data-form-primary="true"' in form or NAME_ATTR_RE.search(form) and any(
-            f'name="{marker}"' in form for marker in ("password", "username", "firstName")
+        if (
+            'data-form-primary="true"' in form
+            or NAME_ATTR_RE.search(form)
+            and any(f'name="{marker}"' in form for marker in ("password", "username", "firstName"))
         ):
             return form
     return forms[0]
@@ -55,9 +58,7 @@ def _form_fields(form_block: str) -> dict[str, str]:
 def _pkce() -> tuple[str, str]:
     verifier = secrets.token_urlsafe(48)
     challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
-        .rstrip(b"=")
-        .decode()
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     )
     return verifier, challenge
 
@@ -69,8 +70,9 @@ def _request(session: requests.Session, method: str, url: str, **kwargs) -> requ
     return response
 
 
-def _follow(session: requests.Session, response: requests.Response,
-            stop_prefix: str) -> tuple[requests.Response, str | None]:
+def _follow(
+    session: requests.Session, response: requests.Response, stop_prefix: str
+) -> tuple[requests.Response, str | None]:
     """Follow redirects one hop at a time; stop early if one targets stop_prefix."""
     for _ in range(10):
         if response.status_code not in REDIRECT_CODES:
@@ -82,8 +84,9 @@ def _follow(session: requests.Session, response: requests.Response,
     raise AssertionError("redirect loop")
 
 
-def _submit_form(session: requests.Session, page: requests.Response,
-                 overrides: dict[str, str]) -> requests.Response:
+def _submit_form(
+    session: requests.Session, page: requests.Response, overrides: dict[str, str]
+) -> requests.Response:
     """Submit the page's primary form with its existing fields plus `overrides`."""
     form = _primary_form(page.text)
     match = FORM_ACTION_RE.search(form)
@@ -94,8 +97,9 @@ def _submit_form(session: requests.Session, page: requests.Response,
     return _request(session, "POST", action, data=fields)
 
 
-def _answer_page(session: requests.Session, page: requests.Response,
-                 username: str, password: str) -> requests.Response:
+def _answer_page(
+    session: requests.Session, page: requests.Response, username: str, password: str
+) -> requests.Response:
     """Answer whichever form the IdP presented: credentials or profile review."""
     fields = _form_fields(_primary_form(page.text))
     if "password" in fields:
@@ -176,6 +180,7 @@ def authorization_code_login(
     headers = {}
     if dpop_key is not None:
         import dpop as _dpop  # phase1 is on sys.path in the phase3/7 harness
+
         headers["DPoP"] = _dpop.proof(dpop_key, "POST", token_url)
     token_response = requests.post(
         token_url,

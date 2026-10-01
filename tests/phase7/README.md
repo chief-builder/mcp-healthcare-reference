@@ -5,7 +5,7 @@ The arch-doc §13 acceptance list plus the named probes: cross-tier replay,
 scope-ceiling, broker `state` replay, RFC 9207 `iss` tampering/omission,
 STALE-storm, token-in-log grep, the CIMD external-tier experiment, and the
 P8 DPoP sender-constraint section (RFC 9449) on the `workforce-dpop` client.
-`tests/phase7.sh` is green at 32 passed, 0 xfail.
+32 probes, 0 xfail — green in the 2026-09-30 full run.
 
 Run against the same target as `tests/phase6.sh` (phase-5 stack up):
 

@@ -5,7 +5,7 @@ description: "Bring the stakeholder HTML pages (docs/showcase/, docs/walkthrough
 
 # docs-sync — keep the stakeholder HTML honest
 
-The repo ships seven single-file HTML pages for readers who never open the
+The repo ships seven HTML pages for readers who never open the
 code: `docs/showcase/{product,technical-overview,token-lifecycle}.html` and
 `docs/walkthrough/{overall,modules}-{functional,technical}.html`. They go
 stale silently — this skill makes staleness detectable and updates mechanical.
@@ -20,8 +20,9 @@ stale silently — this skill makes staleness detectable and updates mechanical.
   `<section id="kebab-id" data-sources="plugins/dpop-check/, deck/">` —
   repo paths the content derives from; directory prefixes end with `/`.
 - **Footer stamp**, visible: `Documents the lab as of Phase N · YYYY-MM-DD`.
-- **Self-contained**: inline CSS/JS/SVG only; no CDN, fonts, remote images,
-  or fetch. Plain `<a href>` links out are fine.
+- **Self-contained**: inline CSS/JS/SVG, plus local images under
+  `docs/walkthrough/assets/`; no CDN, fonts, remote images, or fetch. Plain
+  `<a href>` links out are fine.
 
 ## Modes
 
@@ -76,14 +77,15 @@ North star and phases: `docs/prototype-plan.md`. Architecture:
 ## Publish (automated)
 
 The pages are served publicly by GitHub Pages from the separate public repo
-`chief-builder/mcp-healthcare-reference-docs` (this repo is private; Pages
-can't serve it). `.github/workflows/mirror-docs.yml` mirrors the published
+`chief-builder/mcp-healthcare-reference-docs` (the site predates this repo
+becoming public, and keeps the published set separate). `.github/workflows/mirror-docs.yml` mirrors the published
 set — `docs/index.html`, `docs/.nojekyll`, `docs/showcase/`,
 `docs/walkthrough/` — automatically on every push to main touching
 `docs/**`. After a sync lands, confirm the workflow ran (`gh run list
 --workflow=mirror-docs`) and spot-check the live URL:
 https://chief-builder.github.io/mcp-healthcare-reference-docs/.
-The design .md docs are private — never widen what the workflow mirrors.
+The design .md docs are read in this repo, not on the site — never widen
+what the workflow mirrors without deciding to.
 Remember the site is PUBLIC: the no-secrets self-check below is what
 stands between a sync and public exposure.
 

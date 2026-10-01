@@ -1,14 +1,14 @@
+# Secrets and local environment (only *.env.example files are committed)
 .env
+.env.*
+!.env.example
 *.pem
 *.key
 *.p12
 vault-data/
 *.tfstate*
-node_modules/
-__pycache__/
-.synthea/
-.venv/
-.DS_Store
+
+# Generated per-phase credentials and DP config
 compose/phase2/certs/
 compose/phase2/generated/
 compose/phase3/certs/
@@ -17,5 +17,30 @@ compose/phase4/certs/
 compose/phase4/generated/
 compose/phase5/certs/
 compose/phase5/generated/
-servers/*/node_modules/
+
+# Dependencies and build output
+node_modules/
 servers/*/dist/
+*.tsbuildinfo
+__pycache__/
+.venv/
+.synthea/
+
+# Test, coverage, and tool caches
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.log
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local agent worktrees
+.claude/worktrees/

@@ -1,15 +1,20 @@
 """Phase 4 fixtures: the loop agent's SVID (read out of the pod), cert-bound
 tokens minted host-side with it, and helpers for Kong mTLS calls + audit log
 inspection."""
+
 import base64
 import hashlib
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import pytest
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase3"))
+import mcp_http  # noqa: E402
 
 KC_TOKEN_URL_TLS = "https://localhost:8443/realms/mcp-plane/protocol/openid-connect/token"
 EXPECTED_ISS = "http://localhost:8080/realms/mcp-plane"
@@ -37,7 +42,9 @@ def pod_file(path: str) -> str:
 
 
 def agent_pod() -> dict:
-    pods = json.loads(kubectl("-n", NS, "get", "pods", "-l", "app=loop-agent", "-o", "json"))["items"]
+    pods = json.loads(kubectl("-n", NS, "get", "pods", "-l", "app=loop-agent", "-o", "json"))[
+        "items"
+    ]
     assert len(pods) == 1
     return pods[0]
 
@@ -76,12 +83,14 @@ def mint_token(cert: tuple[str, str] | None, scope: str = SCOPE) -> requests.Res
     )
 
 
-def call_find_slots(token: str, cert: tuple[str, str] | None, url: str = SCHED_MCP_TLS) -> requests.Response:
+def call_find_slots(
+    token: str, cert: tuple[str, str] | None, url: str = SCHED_MCP_TLS
+) -> requests.Response:
+    body = mcp_http.envelope("tools/call", {"name": "find-slots", "arguments": {}})
     return requests.post(
         url,
-        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
-        json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-              "params": {"name": "find-slots", "arguments": {}}},
+        headers={**mcp_http.headers_for(body), "Authorization": f"Bearer {token}"},
+        json=body,
         cert=cert,
         verify=CA if url.startswith("https") else None,
         timeout=10,
@@ -93,7 +102,10 @@ def _kong_internal_container() -> str:
     up (stack-agnostic, like the phase 2/3 tests)."""
     out = subprocess.run(
         ["docker", "ps", "--filter", "name=kong-internal", "--format", "{{.Names}}"],
-        check=True, capture_output=True, text=True).stdout.split()
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
     assert out, "no running kong-internal container found"
     return out[0]
 
@@ -104,7 +116,9 @@ def kong_audit_events(since: str = "3m") -> list[dict]:
     container log."""
     out = subprocess.run(
         ["docker", "logs", "--since", since, _kong_internal_container()],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     events = []
     marker = "[cnf-check] "
@@ -112,9 +126,9 @@ def kong_audit_events(since: str = "3m") -> list[dict]:
         idx = line.find(marker)
         if idx == -1:
             continue
-        payload = line[idx + len(marker):]
+        payload = line[idx + len(marker) :]
         try:  # nginx appends ", client: ..." after the JSON; no braces in it
-            events.append(json.loads(payload[payload.find("{"):payload.rfind("}") + 1]))
+            events.append(json.loads(payload[payload.find("{") : payload.rfind("}") + 1]))
         except json.JSONDecodeError:
             continue
     return events

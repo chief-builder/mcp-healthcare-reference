@@ -8,8 +8,9 @@ construction: they replay tokens across tiers, plant identifier-shaped samples
 in outbound payloads, drive OAuth consent flows, force concurrent refreshes,
 and sweep logs for secrets. Against a customer deployment that activity needs
 the same written authorization as a penetration test. This document is that
-authorization. Do not run the `redteam`-marked probes, or point any probe at
-production, until it is completed and signed.
+authorization. Do not run adversarial probes (the lab's `tests/phase7`, or
+any probe ported into this kit under the `redteam` marker — none ships today),
+or point any probe at production, until it is completed and signed.
 
 ---
 

@@ -37,3 +37,37 @@ mTLS ingress → hub-JWT re-validation + compose-network isolation; single
 replica → asyncio per-entry locks (multi-replica needs the distributed
 lock; the CAS already guards split-brain); KMS envelope encryption →
 OpenBao dev mode.
+
+## Configuration
+
+All settings are read once by `app/config.py` and validated at startup; a
+bad value stops the container with the variable name in the error.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `BROKER_PUBLIC_URL` | `http://localhost:8300` | Base URL for `authorize_uri` and the vendor `redirect_uri` |
+| `HUB_ISSUER` | `http://localhost:8080/realms/mcp-plane` | Required `iss` of hub JWTs |
+| `HUB_JWKS_URI` | `http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs` | Hub signing keys |
+| `HUB_TIER_AUDIENCE` | `mcp://tier/internal` | Required tier audience (must start `mcp://tier/`) |
+| `VAULT_ADDR` | `http://vault:8200` | OpenBao address |
+| `VAULT_TOKEN` | *(empty)* | Policy-scoped broker token (set by `compose/phase5/setup-phase5.sh`) |
+| `VAULT_TIMEOUT_S` | `3` | Vault call timeout; expiry fails closed (503) |
+| `REGISTRY_PATH` | `/app/registry.json` | Vendor registry; must exist and parse |
+| `REFRESH_BUFFER_S` | `300` | Resolve refreshes lazily inside this window (§8) |
+| `PROACTIVE_REFRESH_S` | `900` | Sweeper refreshes between the buffer and this (≥ buffer) |
+| `SWEEP_INTERVAL_S` | `60` | Background sweeper period; `0` disables it |
+| `MASS_STALE_THRESHOLD` | `3` | STALEs per vendor per minute that trigger a page (≥ 1) |
+| `GITHUB_CLIENT_ID` | *(unset)* | Enables the `github` registry entry when set |
+
+## Tests
+
+Offline, no stack needed: vault is an in-memory KV v2 fake with real CAS,
+vendor HTTP is mocked with respx, and hub keys are generated per run.
+
+```sh
+make test-broker          # from the repo root
+# or: cd broker && ../.venv/bin/python -m pytest --cov=app
+```
+
+The live behaviour (real OpenBao, mockhub, Kong) is still gated by
+`tests/phase5.sh`–`tests/phase7.sh`.

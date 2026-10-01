@@ -1,23 +1,28 @@
-# fhir-clinical — generated FHIR MCP server
+# fhir-clinical — FHIR MCP server
 
-Stateless (2026-07-28) OAuth 2.1 resource-server MCP server over HAPI FHIR,
-**generated** from `openapi.json` by `openapi-mcp-generator` — see
-`../README.md` for the exact generator flags, the authorization model, and
-the Claude Code walkthrough. There is no API-key auth: every request must
+Stateless MCP 2026-07-28 OAuth 2.1 resource server over HAPI FHIR. The tool
+catalogue (`src/tools.ts`) was generated from `openapi.json`; the runtime is
+built on `@mcp-lab/shared` — see `../README.md` for the authorization model,
+configuration table, tests, and the Claude Code walkthrough. Every request must
 carry a hub JWT, validated in-server (issuer, `aud mcp://srv/fhir-clinical`,
-per-tool scope with 403 `insufficient_scope` step-up, `groups` visibility).
-The hand-written `src/authz-hook.ts` (preserved across regeneration)
-hard-scopes queries to the token's `fhir_patient` compartment when present.
-DPoP-bound tokens (`cnf.jkt`) are authoritatively re-validated in-server by
-`requireDpop` (`src/dpop.ts`), with `dpopSchemeShim` normalizing the `DPoP`
-auth scheme first; bearer tokens are unaffected.
+contract claims, per-tool scope with 403 `insufficient_scope` step-up, MFA on
+the clinical step-up scope, `groups` visibility). The hand-written
+`src/authz-hook.ts` hard-scopes queries to the token's `fhir_patient`
+compartment when present.
 
-Tools (from `openapi.json`): `getPatient`, `patientEverything`,
-`searchObservation`, `searchCondition`, `searchMedicationRequest`.
-`patientEverything` is `mcp-clinical-tools`-only and requires the step-up
-scope `mcp:fhir-clinical:everything:read`.
+Tools: `getPatient`, `patientEverything`, `searchObservation`,
+`searchCondition`, `searchMedicationRequest`. `patientEverything` is
+`mcp-clinical-tools`-only and requires the step-up scope
+`mcp:fhir-clinical:everything:read` plus `amr` containing `mfa`.
 
-Run: `npm install && npm run build && npm start` (the phase 3+ compose
-stacks build it via the Dockerfile). Key env vars, with lab defaults:
-`PORT` (3000), `UPSTREAM_BASE_URL` (`http://hapi:8081/fhir`),
-`MCP_RESOURCE_URI`, `MCP_AUTHORIZATION_SERVERS`, `MCP_JWKS_URI`.
+| File                | Role                                                          |
+| ------------------- | ------------------------------------------------------------- |
+| `src/index.ts`      | Load and validate config, listen                              |
+| `src/config.ts`     | Every setting and its default                                 |
+| `src/mcp-server.ts` | Per-request McpServer: visibility, policy, audit, upstream    |
+| `src/tools.ts`      | Tool catalogue (generated from `openapi.json`)                |
+| `src/upstream.ts`   | FHIR call with `_count` clamp, timeout, and response-size cap |
+| `src/authz-hook.ts` | Patient compartment filter                                    |
+
+Run locally: from `servers/`, `npm ci && npm run build && node fhir-clinical/dist/index.js`.
+The phase 3+ compose stacks build the image with context `servers/`.

@@ -1,5 +1,5 @@
-FROM python:3.12-slim
-RUN pip install --no-cache-dir 'fastapi==0.115.*' 'uvicorn==0.32.*' 'python-multipart==0.0.*'
+FROM python:3.14.7-slim
+RUN pip install --no-cache-dir 'fastapi==0.142.*' 'uvicorn==0.54.*' 'python-multipart==0.0.*'
 WORKDIR /app
 COPY main.py .
 USER 65534

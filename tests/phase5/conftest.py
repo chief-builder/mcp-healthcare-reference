@@ -1,5 +1,6 @@
 """Phase 5 fixtures: egress-scoped workforce tokens, the mockhub consent
 dance, and audit-log helpers for the DP plugins and the broker."""
+
 import json
 import re
 import subprocess
@@ -43,8 +44,14 @@ def env() -> dict[str, str]:
 
 def _login(env, user, scope=EGRESS_SCOPES) -> str:
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        user, env["FAKE_PING_PASSWORD"], idp_hint="ping", scope=scope,
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        user,
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
+        scope=scope,
     )["access_token"]
 
 
@@ -62,25 +69,40 @@ def bob(env) -> str:
 
 def sub_of(token: str) -> str:
     import base64
+
     part = token.split(".")[1]
     return json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))["sub"]
 
 
 def mcp_call(url: str, token: str, tool: str, args: dict) -> requests.Response:
-    return requests.post(url, headers={"Authorization": f"Bearer {token}",
-                                       "Accept": ACCEPT},
-                         json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-                               "params": {"name": tool, "arguments": args}},
-                         timeout=15)
+    return requests.post(
+        url,
+        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool, "arguments": args},
+        },
+        timeout=15,
+    )
 
 
-def resolve(token: str, vendor: str, min_ttl_s: int = 30, sub: str | None = None,
-            ) -> requests.Response:
+def resolve(
+    token: str,
+    vendor: str,
+    min_ttl_s: int = 30,
+    sub: str | None = None,
+) -> requests.Response:
     body = {"vendor": vendor, "min_ttl_s": min_ttl_s}
     if sub is not None:
         body["sub"] = sub
-    return requests.post(f"{BROKER}/v1/tokens/resolve", json=body,
-                         headers={"Authorization": f"Bearer {token}"}, timeout=15)
+    return requests.post(
+        f"{BROKER}/v1/tokens/resolve",
+        json=body,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
 
 
 def mock_state() -> dict:
@@ -102,8 +124,9 @@ def do_consent(token: str) -> None:
 
 def container_audit_events(container: str, marker: str, since: str = "5m") -> list[dict]:
     """One-line JSON audit records off a container log (pre-phase-6 spine)."""
-    out = subprocess.run(["docker", "logs", "--since", since, container],
-                         capture_output=True, text=True, check=True)
+    out = subprocess.run(
+        ["docker", "logs", "--since", since, container], capture_output=True, text=True, check=True
+    )
     events = []
     for line in (out.stdout + out.stderr).splitlines():
         idx = line.find(marker)
@@ -114,7 +137,7 @@ def container_audit_events(container: str, marker: str, since: str = "5m") -> li
         if start == -1:
             continue
         try:
-            events.append(json.loads(payload[start:end + 1]))
+            events.append(json.loads(payload[start : end + 1]))
         except json.JSONDecodeError:
             continue
     return events
@@ -125,8 +148,9 @@ def kong_audit(marker: str) -> list[dict]:
 
 
 def broker_audit(event: str) -> list[dict]:
-    return [e for e in container_audit_events(BROKER_CONTAINER, '{"audit"')
-            if e.get("audit") == event]
+    return [
+        e for e in container_audit_events(BROKER_CONTAINER, '{"audit"') if e.get("audit") == event
+    ]
 
 
 def wait_for(predicate, timeout: float, interval: float = 2.0, what: str = "condition"):

@@ -4,6 +4,7 @@ One JSON line per event on stdout (the phase 6 audit spine ships container
 logs). Token material MUST never be passed to audit() — callers log ids,
 states, and generations only.
 """
+
 import json
 import time
 

@@ -20,6 +20,9 @@ done
 update_env() {
   if grep -q "^$1=" .env; then sed -i '' "s|^$1=.*|$1=$2|" .env
   else [ -z "$(tail -c1 .env)" ] || echo >> .env; printf '%s=%s\n' "$1" "$2" >> .env; fi
+  # Export too: the script sourced .env with `set -a`, and docker compose
+  # prefers the shell environment over .env, so a stale exported value would win.
+  export "$1=$2"
 }
 ensure_env_secret() {
   local name=$1
@@ -218,9 +221,24 @@ done
 # ---------- k3d + SPIRE + loop agent (unchanged from phase 4) ----------
 if ! k3d cluster list 2>/dev/null | grep -q '^mcp-lab '; then
   echo "==> Creating k3d cluster mcp-lab..."
-  k3d cluster create mcp-lab --servers 1 --wait
+  k3d cluster create mcp-lab --servers 1 --wait --image rancher/k3s:v1.37.0-k3s1
 fi
 KCTL=(kubectl --context k3d-mcp-lab)
+
+# k3d writes host.k3d.internal into CoreDNS's NodeHosts after the cluster is
+# up; with k3s newer than k3d's default the running CoreDNS can miss it, and
+# the loop agent then cannot reach Keycloak/Kong on the host. Verify the name
+# resolves in-cluster; restart CoreDNS once if it does not.
+dns_ok() {
+  "${KCTL[@]}" run k3d-dns-check --rm -i --restart=Never --image=busybox:1.37 \
+    --command -- nslookup host.k3d.internal >/dev/null 2>&1
+}
+if ! dns_ok; then
+  echo "==> host.k3d.internal not resolvable in-cluster; restarting CoreDNS..."
+  "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
+  "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
+  dns_ok || { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
+fi
 
 echo "==> Deploying SPIRE..."
 "${KCTL[@]}" create namespace spire --dry-run=client -o yaml | "${KCTL[@]}" apply -f - > /dev/null

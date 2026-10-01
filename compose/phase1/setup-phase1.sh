@@ -14,6 +14,14 @@ source .env
 
 KCADM="docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh"
 
+# Keycloak needs ~20-60s after `docker compose up -d` before the admin API answers.
+echo "==> Waiting for Keycloak..."
+for i in $(seq 1 60); do
+  curl -sf http://localhost:8080/realms/mcp-plane/.well-known/openid-configuration -o /dev/null && break
+  [ "$i" -eq 60 ] && { echo "Keycloak not ready after 5 minutes" >&2; exit 1; }
+  sleep 5
+done
+
 $KCADM config credentials --server http://localhost:8080 --realm master \
   --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" > /dev/null
 

@@ -264,7 +264,7 @@
     <div class="path" role="img" aria-label="Request path: Claude Code, VPN, internal gateway, MCP server, audit record">
       <div class="hop"><b>Claude Code</b><span>attaches <code>Bearer</code> access token to each <code>tools/call</code></span></div>
       <div class="arrow">→</div>
-      <div class="hop"><b>Private ingress</b><span>VPN / tailnet — the internal tier is unreachable from the public internet</span></div>
+      <div class="hop"><b>Private ingress</b><span>VPN in production — the internal tier is unreachable from the public internet (the lab binds it to a local port)</span></div>
       <div class="arrow">→</div>
       <div class="hop"><b>Internal gateway</b><span>tier wall: exactly one tier audience, and it must be <code>internal</code> — a replayed external token dies here</span></div>
       <div class="arrow">→</div>
@@ -318,7 +318,7 @@
       <code>403 insufficient_scope</code> naming the complete required set; Claude Code re-runs the
       authorization flow requesting exactly those scopes — usually a blink, since the SSO session
       exists. The elevated token is scoped to what was asked, the escalation is consented and audited,
-      and clinical scopes additionally require the <code>mfa</code> mark the IdP stamped at login.
+      and clinical scopes additionally require the <code>mfa</code> mark the IdP stamped at login — the FHIR server checks <code>amr</code> for the scopes in <code>MCP_MFA_SCOPES</code> and answers <code>401 insufficient_user_authentication</code> (RFC 9470) without it.
       This is the platform's minimum-necessary mechanism, not a UX accident.
     </p>
   </section>

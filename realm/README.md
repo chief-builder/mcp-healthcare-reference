@@ -8,7 +8,7 @@ secrets in git).
   brokered IdPs (fake-ping, Auth0), clients, and the protocol mappers that
   stamp the claims-contract vocabulary (`mcp_contract`, `mcp_tier`,
   `idp_origin`, …).
-- `fake-ping.json` — the fake workforce IdP realm (stands in for PingID).
+- `fake-ping.json` — the fake workforce IdP realm (stands in for an enterprise workforce IdP such as Ping).
 
 State a realm import can't express (token-exchange policy, x509 client
 auth, live IdP credential updates) lives in the phase setup scripts,

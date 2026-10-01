@@ -1,0 +1,24 @@
+# Shared Python tooling config for broker/, agents/, compose/*/ services,
+# tests/ and kit/. Each component keeps its own runtime requirements file.
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = [".venv", "**/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE"]
+ignore = [
+  "S101",    # assert is how pytest tests are written
+  "UP031",   # %-formatting is clearer than escaped braces for LogQL/JSON templates
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "BLE"]
+"kit/acceptance/**" = ["S", "BLE"]
+"**/tests/**" = ["S", "BLE"]
+
+[tool.mypy]
+python_version = "3.14"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true

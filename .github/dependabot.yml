@@ -1,0 +1,75 @@
+# Weekly dependency updates, minor/patch grouped per ecosystem so each week
+# lands as a few reviewable PRs. Major bumps arrive as individual PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /servers
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(deps)
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directories:
+      - /
+      - /broker
+      - /kit/acceptance
+      - /tests/phase1
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(deps)
+    groups:
+      pip-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories:
+      - /servers/fhir-clinical
+      - /servers/scheduling
+      - /broker
+      - /agents/loop-agent
+      - /compose/phase1/homegrown-issuer
+      - /compose/phase5/mock-vendor
+      - /compose/phase4/k8s
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(deps)
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /compose/phase0
+      - /compose/phase1
+      - /compose/phase2
+      - /compose/phase3
+      - /compose/phase4
+      - /compose/phase5
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(deps)
+    groups:
+      compose-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]

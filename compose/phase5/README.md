@@ -17,7 +17,7 @@ upstream is the vendor allowlist; plugin order is openid-connect
 
 Bring-up: `./setup-phase5.sh` (idempotent; inherits the phase 4 lab CA so
 the running SPIRE side keeps chaining to the same root; provisions OpenBao
-mounts/policy/scoped token; registers the three custom plugin schemas).
+mounts/policy/scoped token; registers the four custom plugin schemas).
 Gate: `tests/phase5.sh` — fully headless against mockhub.
 
 GitHub leg (optional, real): create a GitHub App on your account —
@@ -30,7 +30,7 @@ for), Issues read/write permission, then install it on your account. Put
 
 Real GitHub MCP tool names differ from mockhub's — the broker/DLP/injection
 machinery is vendor-agnostic, but tool contracts are per-vendor. GitHub's
-remote MCP server (`api.githubcopilot.com/mcp`, 47 tools) uses:
+remote MCP server (`api.githubcopilot.com/mcp`; 47 tools when the lab's live run listed them) uses:
 
 | Intent | mockhub (lab) | real GitHub |
 |---|---|---|
@@ -41,7 +41,7 @@ remote MCP server (`api.githubcopilot.com/mcp`, 47 tools) uses:
 
 `issue_write`/`issue_read` require `method`, `owner`, `repo`; discover the
 full set with a `tools/list` call through `/egress/github`. Confirmed end to
-end: a real issue created and closed through resolve → DLP → vendor-token
+end in the lab's July 2026 live run: a real issue created and closed through resolve → DLP → vendor-token
 injection → GitHub, with one hub `jti` joining every hop (contract §9).
 
 Vault note: OpenBao runs in dev mode (in-memory, per plan §2 — file

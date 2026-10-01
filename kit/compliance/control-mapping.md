@@ -23,7 +23,7 @@ one replaces.
 | IDN-05 normalized group vocabulary | §164.308(a)(4) | CC6.3 | 11 Access Control | phase1 `test_groups_normalized`, `test_no_upstream_vocabulary_anywhere` |
 | IDN-06 contract version pin | §164.312(c)(1) | CC6.1, CC8.1 | 06 Configuration Management | phase1 `test_mcp_contract_version`; probes: `test_identity.py`, `test_claim_vectors.py` |
 | IDN-07 unique `jti`, stable non-email `sub` | §164.312(a)(2)(i) *(unique user identification)*, (b) | CC6.1, CC7.2 | 11 / 12 Audit Logging | phase1 `test_jti_present`, `test_sub_stable_non_email`; probes: `test_identity.py` |
-| IDN-08 `amr` + MFA for clinical scopes | §164.312(d) *(2024/2025 NPRM proposes explicit MFA)* | CC6.1 | 11 Access Control | phase1 `test_amr_on_interactive_paths` |
+| IDN-08 `amr` + MFA for clinical scopes | §164.312(d) *(2024/2025 NPRM proposes explicit MFA)* | CC6.1 | 11 Access Control | phase1 `test_amr_on_interactive_paths`; phase3 `test_clinical_step_up_token_carries_the_mfa_mark`; offline `servers/fhir-clinical/test/server.test.ts` |
 | IDN-09 `act` delegation discipline | §164.312(a)(1), (b) | CC6.1, CC6.3 | 11 Access Control | phase1 `test_act_absent_without_delegation` |
 
 ## TIER — Audience discipline and tier isolation
@@ -49,10 +49,10 @@ one replaces.
 
 | Control | HIPAA | SOC 2 | HITRUST domain | Evidence |
 |---|---|---|---|---|
-| AZ-01 server-authoritative scope check | §164.312(a)(1), §164.308(a)(4) | CC6.1, CC6.3 | 11 Access Control | phase3 `test_hold_requires_step_up_scope`; phase7 `test_scope_string_alone_is_not_authorization`; probes: `test_authorization.py` |
+| AZ-01 server-authoritative scope check | §164.312(a)(1), §164.308(a)(4) | CC6.1, CC6.3 | 11 Access Control | phase3 `test_hold_requires_step_up_scope`, `test_batch_cannot_smuggle_a_tool_call_past_step_up`; phase7 `test_scope_string_alone_is_not_authorization`; probes: `test_authorization.py` |
 | AZ-02 single-shot step-up 403 | §164.312(a)(1) | CC6.1 | 11 Access Control | phase3 under-scoped-challenge + step-up tests; probes: `test_authorization.py` |
 | AZ-03 role-shaped tool visibility | §164.308(a)(4) | CC6.3 | 11 Access Control | phase3 tool-visibility tests |
-| AZ-04 patient compartment hard filter | §164.312(a)(1); §164.502(b) *(minimum necessary)* | CC6.1, C1.1 | 11 / 19 | phase3 compartment tests; phase7 cross-patient-read / search-scope tests; probes: `test_authorization.py` |
+| AZ-04 patient compartment hard filter | §164.312(a)(1); §164.502(b) *(minimum necessary)* | CC6.1, C1.1 | 11 / 19 | phase1 `test_fhir_patient_compartment`; phase3 cross-patient-read / search-scope tests; probes: `test_authorization.py` |
 | AZ-05 no wildcard scopes for ordinary clients | §164.308(a)(4) | CC6.1, CC6.3 | 11 Access Control | phase7 `test_wildcard_tool_scope_is_not_grantable`; probes: `test_authorization.py` |
 | AZ-06 challenge semantics, no token echo | §164.312(a)(1) | CC6.1, CC6.7 | 11 Access Control | phase2 anonymous/garbage-token tests; probes: `test_authorization.py` |
 
@@ -66,14 +66,14 @@ one replaces.
 
 | Control | HIPAA | SOC 2 | HITRUST domain | Evidence |
 |---|---|---|---|---|
-| EG-01 fail-closed egress DLP | §164.312(e)(1); §164.502(b) *(minimum necessary)* | CC6.7 | 19 / 09 | phase5 planted-MRN / SSN / clean-pass tests; probes: `test_egress.py` |
+| EG-01 fail-closed egress DLP | §164.312(e)(1); §164.502(b) *(minimum necessary)* | CC6.7 | 19 / 09 | phase5 planted-MRN / JSON-escaped-MRN / SSN / clean-pass tests; offline gateway suite (`plugins/tests`); probes: `test_egress.py` |
 | EG-02 hub token never reaches vendor | §164.312(e)(1) | CC6.7 | 09 / 14 Third-Party Assurance | phase5 consent-dance test (token isolation asserted); probes: `test_egress.py` |
 | EG-03 egress is not an open proxy | §164.312(e)(1) | CC6.6 | 08 Network Protection | deck drift check; route audit |
-| EG-04 broker no-issuance rule | §164.312(d) | CC6.1 | 11 Access Control | phase7 no-issuance tests; probes: `test_egress.py` |
-| EG-05 broker re-validation; sub-bound single-use consent | §164.312(d), (a)(1) | CC6.1 | 11 / 14 | phase7 resolve/sub-mismatch/consent tests; phase5 state-replay test; probes: `test_egress.py` |
+| EG-04 broker no-issuance rule | §164.312(d) | CC6.1 | 11 Access Control | phase5 route audit + phase7 no-issuance tests; probes: `test_egress.py` |
+| EG-05 broker re-validation; sub-bound single-use consent | §164.312(d), (a)(1) | CC6.1 | 11 / 14 | phase7 resolve test; phase5 sub-mismatch / consent / state-replay tests; probes: `test_egress.py` |
 | EG-06 single-flight refresh + generation CAS | §164.312(c)(1) | CC6.1, CC7.1 | 11 Access Control | phase5 twenty-parallel-resolves + generation tests |
 | EG-07 vault loss fails closed | §164.312(a)(1) | CC6.1, CC7.1 | 11 Access Control | phase5 `test_vault_loss_fails_closed` |
-| EG-08 RFC 9207 `iss` validation | §164.312(d) | CC6.1 | 11 Access Control | phase7 iss-tampering/omission tests; probes: `test_egress.py` |
+| EG-08 RFC 9207 `iss` validation | §164.312(d) | CC6.1 | 11 Access Control | phase5 + phase7 iss-tampering tests, phase7 omission test; probes: `test_egress.py` |
 | EG-09 registry scope ceilings; re-consent on escalation | §164.308(a)(4) | CC6.3 | 11 / 14 | phase7 `test_broker_never_requests_beyond_registry_ceiling` |
 | EG-10 owner-controlled grant lifecycle; STALE paging | §164.308(a)(3)(ii)(C) *(termination — analogue)*, (a)(4) | CC6.2, CC6.3 | 11 / 14 | phase5 revoke/self-service tests; phase7 stale-storm tests |
 | EG-11 CIMD URL-form client refusal | §164.312(d) | CC6.1 | 11 Access Control | phase7 CIMD test *(partial — tracked gap #3)* |

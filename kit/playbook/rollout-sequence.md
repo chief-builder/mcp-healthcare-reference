@@ -75,9 +75,12 @@ compliance. The customer names people against these at kickoff.
   `tls_client_auth` + cert-bound tokens at the hub; cnf enforcement at the
   gateway (P2); rotation without restart.
 - **Owners:** PLT leads; SEC owns the trust-root ceremony.
-- **Exit:** **SC-01/03/05 probes green** (`test_sender_constraint.py` mTLS
-  subset): bound-token replay without/with wrong cert refused, zero secrets
-  in workload manifests. (SC-02/04 DPoP lands with its client population —
+- **Exit:** **SC-01/05 evidence and SC-03 green**: bound-token replay
+  without/with the wrong cert refused and zero secrets in workload manifests
+  (SC-01/05 are not portable probes — evidence comes from the lab's
+  `tests/phase4` suite or a deployment review, see
+  `acceptance/conformance-profile.md`); plain-bearer clients unaffected
+  (`test_sender_constraint.py::test_plain_bearer_identity_unaffected`). (SC-02/04 DPoP lands with its client population —
   stage 3 if in pilot scope, else deferred and recorded.)
 
 ## Stage 5 — Governed egress + broker

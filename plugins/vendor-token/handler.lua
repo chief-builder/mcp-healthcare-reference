@@ -42,6 +42,18 @@ end
 function VendorToken:access(conf)
   local auth = kong.request.get_header("authorization") or ""
   local token = auth:match("^[Bb]earer%s+(.+)$")
+  -- Egress routes are bearer-only (openid-connect auth_methods: bearer) and
+  -- the broker re-validates bearer hub JWTs without checking DPoP proofs, so
+  -- a DPoP-bound token is refused explicitly rather than forwarded — passing
+  -- it on would silently downgrade a sender-constrained token to bearer use.
+  local dpop_token = not token and auth:match("^[Dd][Pp][Oo][Pp]%s+(.+)$")
+  if dpop_token then
+    audit("deny", conf, claims_of(dpop_token), { reason = "dpop_scheme_on_egress" })
+    return kong.response.exit(401, {
+      error = "invalid_request",
+      error_description = "egress routes accept Bearer tokens only; DPoP-bound tokens are not brokered",
+    }, { ["WWW-Authenticate"] = 'Bearer realm="mcp-egress", error="invalid_request"' })
+  end
   if not token then
     return kong.response.exit(401, { error = "unauthorized" },
       { ["WWW-Authenticate"] = 'Bearer realm="mcp-egress"' })
@@ -71,6 +83,10 @@ function VendorToken:access(conf)
 
   local body = cjson.decode(res.body) or {}
   if res.status == 200 then
+    if type(body.access_token) ~= "string" or body.access_token == "" then
+      audit("deny", conf, claims, { reason = "broker_malformed_response" })
+      return kong.response.exit(502, { error = "broker_malformed_response" })
+    end
     -- Vendor token upstream; the hub JWT is stripped by replacement.
     kong.service.request.set_header("Authorization", "Bearer " .. body.access_token)
     audit("allow", conf, claims, {})

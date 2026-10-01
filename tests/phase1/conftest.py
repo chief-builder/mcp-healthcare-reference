@@ -6,15 +6,15 @@ Legs (claims contract §6):
   customer  — real Auth0 brokered login (skips w/o creds)  → §6.5
   smoke     — Keycloak-native client credentials           → §6.4-ish (phase 0)
 """
+
 import base64
 import json
 import re
 from pathlib import Path
 
+import oidc_flows
 import pytest
 import requests
-
-import oidc_flows
 
 KC_BASE = "http://localhost:8080"
 REALM = "mcp-plane"
@@ -113,24 +113,36 @@ def _ensure_patient_linkage(env: dict[str, str]) -> str:
 @pytest.fixture(scope="session")
 def workforce_token(env) -> dict:
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        "dr-alice", env["FAKE_PING_PASSWORD"], idp_hint="ping",
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        "dr-alice",
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
     )
 
 
 @pytest.fixture(scope="session")
 def legacy_token(env) -> dict:
     return oidc_flows.homegrown_exchange_token(
-        KC_BASE, REALM, HOMEGROWN_BASE,
-        "svc-legacy-batch", env["HOMEGROWN_CLIENT_SECRET"],
-        "legacy-exchange", env["LEGACY_EXCHANGE_SECRET"],
+        KC_BASE,
+        REALM,
+        HOMEGROWN_BASE,
+        "svc-legacy-batch",
+        env["HOMEGROWN_CLIENT_SECRET"],
+        "legacy-exchange",
+        env["LEGACY_EXCHANGE_SECRET"],
     )
 
 
 @pytest.fixture(scope="session")
 def smoke_token(env) -> dict:
     return oidc_flows.client_credentials_token(
-        KC_BASE, REALM, "phase0-smoke", env["PHASE0_CLIENT_SECRET"],
+        KC_BASE,
+        REALM,
+        "phase0-smoke",
+        env["PHASE0_CLIENT_SECRET"],
     )
 
 
@@ -141,9 +153,14 @@ def customer_token(env) -> dict:
 
     def login():
         return oidc_flows.authorization_code_login(
-            KC_BASE, REALM, "patient-agent", "http://localhost:8766/callback",
-            env["AUTH0_TEST_USER_EMAIL"], env["AUTH0_TEST_USER_PASSWORD"],
-            idp_hint="auth0", scope="openid patient/Patient.read",
+            KC_BASE,
+            REALM,
+            "patient-agent",
+            "http://localhost:8766/callback",
+            env["AUTH0_TEST_USER_EMAIL"],
+            env["AUTH0_TEST_USER_PASSWORD"],
+            idp_hint="auth0",
+            scope="openid patient/Patient.read",
         )
 
     login()  # first login materializes the federated user

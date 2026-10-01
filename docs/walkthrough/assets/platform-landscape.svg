@@ -49,7 +49,7 @@
   <text x="580" y="272" fill="#EFE5D6" font-size="26" font-weight="700">Kong internal DP</text>
   <text x="580" y="304" fill="#B5A08A" font-size="18">tier wall (internal) · cnf-check · dpop-check</text>
   <text x="580" y="332" fill="#B5A08A" font-size="18">rate limits · egress: dlp-egress + vendor-token</text>
-  <text x="580" y="364" fill="#E0A45C" font-size="17">VPN-only ingress</text>
+  <text x="580" y="364" fill="#E0A45C" font-size="17">VPN ingress (target)</text>
 
   <!-- broker + vendor row -->
   <rect x="560" y="440" width="300" height="120" rx="14" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>

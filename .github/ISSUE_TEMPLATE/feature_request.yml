@@ -1,0 +1,20 @@
+name: Feature or gap
+description: A control, probe, or architecture element the lab should cover.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What gap does this close?
+      description: Reference the architecture doc, claims contract, or broker design section if one applies.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+  - type: textarea
+    id: verify
+    attributes:
+      label: How would we verify it?
+      description: The test or acceptance gate that would prove it.

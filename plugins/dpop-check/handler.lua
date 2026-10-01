@@ -118,8 +118,9 @@ function DpopCheck:access(conf)
     return deny("wrong_auth_scheme", claims)
   end
 
-  -- Exactly one DPoP proof header.
-  local proof = kong.request.get_header("dpop")
+  -- Exactly one DPoP proof header. get_header() would return only the first
+  -- of repeated headers; get_headers() keeps them all (a table when repeated).
+  local proof = kong.request.get_headers()["dpop"]
   if not proof then return deny("missing_proof", claims) end
   if type(proof) == "table" then return deny("multiple_proofs", claims) end
 
@@ -151,15 +152,15 @@ function DpopCheck:access(conf)
   -- query and fragment ignored per RFC 9449 §4.3. The authority comes from the
   -- Host header (the client-facing host:port the client actually signed), not
   -- kong.request.get_port() which is the DP's internal listen port.
-  local scheme = kong.request.get_scheme()
+  local url_scheme = kong.request.get_scheme()
   local authority = kong.request.get_header("host") or kong.request.get_host()
   local path = kong.request.get_path()
-  local expected_htu = scheme .. "://" .. authority .. path
+  local expected_htu = url_scheme .. "://" .. authority .. path
   local got_htu = type(payload.htu) == "string" and payload.htu:match("^[^?#]*") or ""
   -- Also accept the form with the scheme-default port dropped/added.
-  local default_port = (scheme == "https") and ":443" or ":80"
+  local default_port = (url_scheme == "https") and ":443" or ":80"
   local authority_no_default = authority:gsub(default_port .. "$", "")
-  local alt_htu = scheme .. "://" .. authority_no_default .. path
+  local alt_htu = url_scheme .. "://" .. authority_no_default .. path
   if got_htu ~= expected_htu and got_htu ~= alt_htu then
     return deny("htu_mismatch", claims)
   end

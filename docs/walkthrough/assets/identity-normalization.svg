@@ -12,7 +12,7 @@
   <text x="56" y="60" fill="#B5A08A" font-size="19" letter-spacing="2" font-weight="700">FIVE FRONT DOORS</text>
   <g>
     <rect x="56" y="84" width="360" height="88" rx="12" fill="#241B12" stroke="#4A3826" stroke-width="1.5"/>
-    <text x="76" y="120" fill="#EFE5D6" font-size="23" font-weight="650">PingID (fake-ping realm)</text>
+    <text x="76" y="120" fill="#EFE5D6" font-size="23" font-weight="650">Workforce IdP (fake-ping realm)</text>
     <text x="76" y="150" fill="#B5A08A" font-size="17">workforce SSO + MFA · raw upstream groups</text>
   </g>
   <g>

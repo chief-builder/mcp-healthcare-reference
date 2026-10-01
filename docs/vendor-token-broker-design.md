@@ -1,6 +1,6 @@
 # Vendor Token Broker — Design Document
 
-**Version:** 1.0-draft &nbsp;|&nbsp; **Status:** For architecture review &nbsp;|&nbsp; **Owner:** API Gateway Platform (proposed: homegrown-AS team)
+**Version:** 1.0-draft &nbsp;|&nbsp; **Status:** For architecture review &nbsp;|&nbsp; **Owner:** API Gateway Platform
 **Related:** MCP Platform Token Claims Contract v1.0 · SaaS Connector Onboarding Standard (TBD) · ADR-xxx "Broker as standalone service"
 
 ---
@@ -32,7 +32,7 @@ The custodial pattern itself ("store foreign-domain tokens keyed by local identi
 
 ## 3. Architecture and trust boundaries
 
-Deployment: EKS, inside the PHI-boundary AWS accounts, egress-restricted to registered vendor AS/API hostnames. Workload identity: Athenz SVID via SIA (Copper Argos), used for (a) mTLS on every inbound API call and (b) `tls_client_auth` if the broker ever needs hub tokens of its own. All crypto on FIPS 140-3 validated modules.
+Deployment: Kubernetes (EKS in this reference), inside the PHI-boundary cloud accounts, egress-restricted to registered vendor AS/API hostnames. Workload identity: an attested SVID from the workload identity system (e.g., Athenz), used for (a) mTLS on every inbound API call and (b) `tls_client_auth` if the broker ever needs hub tokens of its own. All crypto on FIPS 140-3 validated modules.
 
 Callers and trust:
 
@@ -201,7 +201,7 @@ Rules: the lock is per `{vendor, sub}`, held only for the refresh round-trip, wi
 
 ## 11. Security requirements
 
-No issuance: the broker holds no signing keys and exposes no token or JWKS endpoint (checked in CI by dependency and route audit). Token material never logged, never in errors, never in traces; resolve responses are excluded from any body-capturing middleware. Per-user entries only — no shared vendor service accounts through this path. Registry scope ceilings enforced at authorize time. Callback host on the private tier only. Annual pen test includes the consent dance (CSRF, mix-up, code injection per RFC 9700 §4) explicitly. The broker is in HIPAA risk-analysis scope as a system adjacent to PHI paths, though it stores no PHI — vendor tokens are credentials, and DLP at the Kong egress tier (not the broker) is the control preventing PHI reaching vendors.
+No issuance: the broker holds no signing keys and exposes no token or JWKS endpoint (lab: checked by the phase 5 route audit `test_no_issuance_rule_route_audit` and phase 7 `test_broker_exposes_no_issuance_endpoint` against the live stack). Token material never logged, never in errors, never in traces; resolve responses are excluded from any body-capturing middleware. Per-user entries only — no shared vendor service accounts through this path. Registry scope ceilings enforced at authorize time. Callback host on the private tier only. Annual pen test includes the consent dance (CSRF, mix-up, code injection per RFC 9700 §4) explicitly. The broker is in HIPAA risk-analysis scope as a system adjacent to PHI paths, though it stores no PHI — vendor tokens are credentials, and DLP at the Kong egress tier (not the broker) is the control preventing PHI reaching vendors.
 
 ## 12. Audit events
 
@@ -213,7 +213,7 @@ resolve p99 ≤ 25 ms (cache hit) / 400 ms (inline refresh); availability 99.9% 
 
 ## 14. Delivery
 
-Owner: the homegrown-AS team, as a new service — the AS itself continues its sunset per Claims Contract §6.2. Stack: their choice; the mandatory ingredients are a certified OAuth client library, vault SDK, distributed lock, and the Athenz SIA sidecar. Pre-build spike (2 days): evaluate Keycloak identity brokering's stored-external-token retrieval against the vendor list; record findings in the ADR even if (as expected) it falls short on refresh rotation and non-login-brokered vendors.
+Owner: a platform team with OAuth-client experience, as a new service — the legacy in-house AS continues its sunset per Claims Contract §6.2. Stack: the owner's choice; the mandatory ingredients are a certified OAuth client library, vault SDK, distributed lock, and the workload-identity agent/sidecar. Pre-build spike (2 days): evaluate Keycloak identity brokering's stored-external-token retrieval against the vendor list; record findings in the ADR even if (as expected) it falls short on refresh rotation and non-login-brokered vendors.
 
 ## 15. Sunset criteria (per vendor)
 

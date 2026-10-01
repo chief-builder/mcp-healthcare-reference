@@ -1,7 +1,8 @@
 -- dlp-egress: outbound DLP at the egress route (plan §3 phase 5; arch §5.3).
 --
--- Screens the raw request body (MCP tool arguments) against PCRE patterns
--- before anything leaves for the vendor. A match blocks the request and
+-- Screens the request body (MCP tool arguments) against PCRE patterns
+-- before anything leaves for the vendor — the raw bytes, and for JSON every
+-- decoded string (so escapes like - cannot hide a match). A match blocks the request and
 -- emits an audit record carrying the PATTERN NAME and token ids — never the
 -- matched text (the audit trail must not become the leak).
 --
@@ -55,6 +56,48 @@ local function deny(reason, pattern_name)
   })
 end
 
+-- Max JSON nesting walked; anything deeper is refused rather than skipped.
+local MAX_DEPTH = 64
+
+-- First pattern (by config order) matching `text`, or nil. A regex error is
+-- reported as its own outcome so the caller can fail closed on it.
+local function first_match(conf, text)
+  for _, p in ipairs(conf.patterns or {}) do
+    local from, _, err = ngx.re.find(text, p.regex, "jo")
+    if err then return "pattern_error", p.name end
+    if from then return "pattern_match", p.name end
+  end
+end
+
+-- Walk a decoded JSON value and screen every string, keys included. JSON
+-- escapes (e.g. "MRN\u002d1234567") are already resolved by the decoder, so
+-- this sees the text the vendor will see — the raw-body scan alone does not.
+local function scan_value(conf, value, depth)
+  if depth > MAX_DEPTH then return "too_deep", nil end
+  local t = type(value)
+  if t == "string" then
+    return first_match(conf, value)
+  end
+  if t == "table" then
+    for k, v in pairs(value) do
+      if type(k) == "string" then
+        local reason, name = first_match(conf, k)
+        if reason then return reason, name end
+      end
+      local reason, name = scan_value(conf, v, depth + 1)
+      if reason then return reason, name end
+    end
+  end
+end
+
+local function is_json_content_type()
+  local ct = kong.request.get_header("content-type")
+  if type(ct) == "table" then ct = ct[1] end
+  if type(ct) ~= "string" then return false end
+  ct = ct:lower()
+  return ct:find("application/json", 1, true) ~= nil or ct:find("+json", 1, true) ~= nil
+end
+
 function Dlp:access(conf)
   local body = kong.request.get_raw_body()
   if body == nil then
@@ -62,15 +105,26 @@ function Dlp:access(conf)
     if method == "GET" or method == "HEAD" then return end
     return deny("unscannable_body", nil)
   end
-  for _, p in ipairs(conf.patterns or {}) do
-    local from, _, err = ngx.re.find(body, p.regex, "jo")
-    if err then
-      return deny("pattern_error", p.name)
-    end
-    if from then
-      return deny("pattern_match", p.name)
+
+  -- 1. Raw scan: catches plain-text bodies and anything outside JSON strings.
+  local reason, name = first_match(conf, body)
+  if reason then return deny(reason, name) end
+
+  -- 2. Decoded scan: a JSON body (by content type, or by shape) is decoded
+  -- and every string screened. A declared-JSON body that does not decode is
+  -- refused — the vendor might still parse what we could not (fail closed).
+  local declared_json = is_json_content_type()
+  if declared_json or body:find("^%s*[%[{]") then
+    local decoded = cjson.decode(body)
+    if decoded == nil then
+      if declared_json then return deny("unparseable_body", nil) end
+    else
+      reason, name = scan_value(conf, decoded, 1)
+      if reason == "too_deep" then return deny("body_too_deep", nil) end
+      if reason then return deny(reason, name) end
     end
   end
+
   -- Clean pass gets a verdict too: the phase 6 tuple must show that outbound
   -- content WAS screened, not merely that nothing blocked it.
   audit("notice", "allow", "screened", nil)

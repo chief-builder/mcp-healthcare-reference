@@ -1,16 +1,18 @@
 """Phase 2 acceptance: DPs survive CP severance; git is the config truth."""
+
 import subprocess
 import time
 
 import requests
-
 from conftest import COMPOSE_DIR, DECK_DIR, INTERNAL_GW
 
 
 def _compose(*args) -> None:
     subprocess.run(
         ["docker", "compose", *args],
-        cwd=COMPOSE_DIR, check=True, capture_output=True,
+        cwd=COMPOSE_DIR,
+        check=True,
+        capture_output=True,
     )
 
 
@@ -18,7 +20,9 @@ def _running_cp_uplink() -> str:
     """Find the live cp-uplink container by name, whichever phase stack is up."""
     out = subprocess.run(
         ["docker", "ps", "--filter", "name=cp-uplink", "--format", "{{.Names}}"],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.split()
     assert out, "no running cp-uplink container found"
     return out[0]
@@ -47,16 +51,24 @@ def test_deck_state_matches_live_config(env):
     """deck diff must be empty for both control planes: any drift means
     someone changed the gateway outside git."""
     import os
+
     deck_env = {**os.environ, "DECK_KONNECT_TOKEN": env["KONNECT_TOKEN"]}
     for tier in ("internal", "external"):
         # token passed via env on purpose: argv would leak it into error traces
         result = subprocess.run(
             [
-                "deck", "gateway", "diff", str(DECK_DIR / f"{tier}.yaml"),
-                "--konnect-addr", f"https://{env['KONNECT_REGION']}.api.konghq.com",
-                "--konnect-control-plane-name", f"mcp-{tier}",
+                "deck",
+                "gateway",
+                "diff",
+                str(DECK_DIR / f"{tier}.yaml"),
+                "--konnect-addr",
+                f"https://{env['KONNECT_REGION']}.api.konghq.com",
+                "--konnect-control-plane-name",
+                f"mcp-{tier}",
             ],
-            capture_output=True, text=True, env=deck_env,
+            capture_output=True,
+            text=True,
+            env=deck_env,
         )
         assert result.returncode == 0, f"deck diff failed for {tier}: {result.stderr[:400]}"
         for line in ("Created: 0", "Updated: 0", "Deleted: 0"):

@@ -8,6 +8,7 @@ A passing test here means the defense held. The two former xfail(strict)
 gaps (GitHub #1 iss-omission, #2 mass-STALE) are now fixed and asserted as
 real defenses; no strict-xfail probes remain.
 """
+
 import base64
 import json
 import re
@@ -21,8 +22,8 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase1"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase3"))
-import oidc_flows  # noqa: E402
 import dpop as dpop_lib  # noqa: E402
+import oidc_flows  # noqa: E402
 
 KC_BASE = "http://localhost:8080"
 REALM = "mcp-plane"
@@ -58,8 +59,14 @@ def env() -> dict[str, str]:
 
 def login(env, user, scope=EGRESS_SCOPES) -> str:
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        user, env["FAKE_PING_PASSWORD"], idp_hint="ping", scope=scope,
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        user,
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
+        scope=scope,
     )["access_token"]
 
 
@@ -82,9 +89,15 @@ def alice_dpop(env):
     (key, token)."""
     key = dpop_lib.make_key()
     token = oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "workforce-dpop", "http://localhost:8765/callback",
-        "dr-alice", env["FAKE_PING_PASSWORD"], idp_hint="ping",
-        scope="openid", dpop_key=key,
+        KC_BASE,
+        REALM,
+        "workforce-dpop",
+        "http://localhost:8765/callback",
+        "dr-alice",
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
+        scope="openid",
+        dpop_key=key,
     )["access_token"]
     return key, token
 
@@ -95,17 +108,23 @@ def claims_of(token: str) -> dict:
 
 
 def resolve(token: str, vendor: str = "mockhub", min_ttl_s: int = 30) -> requests.Response:
-    return requests.post(f"{BROKER}/v1/tokens/resolve",
-                         json={"vendor": vendor, "min_ttl_s": min_ttl_s},
-                         headers={"Authorization": f"Bearer {token}"}, timeout=15)
+    return requests.post(
+        f"{BROKER}/v1/tokens/resolve",
+        json={"vendor": vendor, "min_ttl_s": min_ttl_s},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
 
 
 def revoke_grant(token: str, vendor: str = "mockhub") -> None:
     """Self-service revoke so a probe starts from a clean needs-consent state
     regardless of grants left by earlier runs (broker vault persists)."""
     sub = claims_of(token)["sub"]
-    requests.delete(f"{BROKER}/v1/grants/{vendor}/{sub}",
-                    headers={"Authorization": f"Bearer {token}"}, timeout=15)
+    requests.delete(
+        f"{BROKER}/v1/grants/{vendor}/{sub}",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
 
 
 def new_consent_state(token: str) -> str:
@@ -142,8 +161,12 @@ def mock_state() -> dict:
 
 def broker_audit(since: str = "3m") -> list[dict]:
     """Every one-line JSON audit record off the broker container log."""
-    out = subprocess.run(["docker", "logs", "--since", since, BROKER_CONTAINER],
-                         capture_output=True, text=True, check=True)
+    out = subprocess.run(
+        ["docker", "logs", "--since", since, BROKER_CONTAINER],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     events = []
     for line in (out.stdout + out.stderr).splitlines():
         for m in re.finditer(r'\{"audit".*?\}', line):
@@ -157,7 +180,10 @@ def broker_audit(since: str = "3m") -> list[dict]:
 def running_containers() -> list[str]:
     out = subprocess.run(
         ["docker", "ps", "--filter", f"name={PROJECT}", "--format", "{{.Names}}"],
-        capture_output=True, text=True, check=True)
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return [n for n in out.stdout.splitlines() if n.strip()]
 
 
@@ -165,8 +191,9 @@ def grep_container_logs(needle: str, since: str = "30m") -> dict[str, int]:
     """Count occurrences of `needle` in each project container's logs."""
     hits = {}
     for name in running_containers():
-        out = subprocess.run(["docker", "logs", "--since", since, name],
-                             capture_output=True, text=True)
+        out = subprocess.run(
+            ["docker", "logs", "--since", since, name], capture_output=True, text=True
+        )
         n = (out.stdout + out.stderr).count(needle)
         if n:
             hits[name] = n
@@ -175,9 +202,15 @@ def grep_container_logs(needle: str, since: str = "30m") -> dict[str, int]:
 
 def grep_loki(needle: str, since: str = "30m") -> int:
     """Count Loki log lines across all services containing `needle`."""
-    r = requests.get(f"{LOKI}/loki/api/v1/query_range",
-                     params={"query": '{service_name=~".+"} |= "' + needle + '"',
-                             "since": since, "limit": "1000"}, timeout=20)
+    r = requests.get(
+        f"{LOKI}/loki/api/v1/query_range",
+        params={
+            "query": '{service_name=~".+"} |= "' + needle + '"',
+            "since": since,
+            "limit": "1000",
+        },
+        timeout=20,
+    )
     if r.status_code != 200:
         return -1
     return sum(len(s["values"]) for s in r.json()["data"]["result"])
