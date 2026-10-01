@@ -4,7 +4,7 @@
 #      claims mcp_contract / mcp_tier / idp_origin (claims contract §3).
 #   2. HAPI serves Patient/$everything for a seeded synthetic patient.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 KC_BASE="${KC_BASE:-http://localhost:8080}"
 FHIR_BASE="${FHIR_BASE:-http://localhost:8081/fhir}"
