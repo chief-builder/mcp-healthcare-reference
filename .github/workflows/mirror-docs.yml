@@ -1,13 +1,20 @@
 # Mirrors the stakeholder pages to chief-builder/mcp-healthcare-reference-docs,
 # the repo GitHub Pages serves the docs site from. Only the published set
-# crosses over: index.html, .nojekyll, showcase/, walkthrough/. By policy the
-# design .md documents in docs/ stay in this repo and are not mirrored.
+# crosses over: index.html, .nojekyll, showcase/, walkthrough/, plus the docs
+# repo's README (.github/docs-mirror/README.md). By policy the design .md
+# documents in docs/ stay in this repo and are not mirrored.
+#
+# Credential: DOCS_MIRROR_DEPLOY_KEY is the private half of a write-enabled
+# deploy key on the docs repo only (deploy keys are per-repository). The job
+# runs in the `docs-mirror` environment so the secret can live there, limited
+# to the main branch, instead of being readable by every workflow.
 name: mirror-docs
 
 on:
   push:
     branches: [main]
-    paths: ['docs/**']
+    paths: ['docs/**', '.github/docs-mirror/**', '.github/workflows/mirror-docs.yml']
+  workflow_dispatch: # manual re-sync if the docs repo ever drifts
 
 permissions:
   contents: read
@@ -21,6 +28,9 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: docs-mirror
+      url: https://chief-builder.github.io/mcp-healthcare-reference-docs/
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,11 +56,12 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s' "$GITHUB_HOST_KEYS" > ~/.ssh/known_hosts
-          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o IdentitiesOnly=yes -i $HOME/.ssh/id_ed25519"
           git clone --depth 1 git@github.com:chief-builder/mcp-healthcare-reference-docs.git mirror
           rsync -a --delete docs/showcase/ mirror/showcase/
           rsync -a --delete docs/walkthrough/ mirror/walkthrough/
           cp docs/index.html docs/.nojekyll mirror/
+          cp .github/docs-mirror/README.md mirror/README.md
           cd mirror
           git config user.name "docs-mirror"
           git config user.email "docs-mirror@users.noreply.github.com"

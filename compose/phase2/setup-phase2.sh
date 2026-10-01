@@ -11,7 +11,11 @@
 # deck installed (brew install deck), openssl, jq.
 set -euo pipefail
 cd "$(dirname "$0")"
+[ -f .env ] || { echo "Missing .env: cp .env.example .env and fill it in" >&2; exit 1; }
 set -a; source .env; set +a
+case "${KONNECT_TOKEN:-}" in
+  ""|kpat_change-me) echo "Set KONNECT_TOKEN in .env (Konnect personal access token)" >&2; exit 1 ;;
+esac
 
 API="https://${KONNECT_REGION}.api.konghq.com/v2"
 AUTH=(-H "Authorization: Bearer ${KONNECT_TOKEN}")
@@ -122,6 +126,11 @@ cid=$($KCADM get clients -r mcp-plane -q clientId=patient-agent --fields id | jq
 sid=$($KCADM get client-scopes -r mcp-plane --fields id,name | jq -r '.[] | select(.name=="mcp-groups").id')
 $KCADM update "clients/${cid}/default-client-scopes/${sid}" -r mcp-plane -n -s realm=mcp-plane
 echo "==> patient-agent now emits groups"
+
+# Custom plugin schemas must exist on the CP before deck sync references them.
+# shellcheck source=../lib/konnect.sh
+source ../lib/konnect.sh
+register_custom_plugins
 
 # --- C: gateway config from git ------------------------------------------------
 # token via env, not argv — keeps it out of process lists and error traces

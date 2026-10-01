@@ -194,3 +194,68 @@ jobs:
           docker build -q -t ci/loop-agent agents/loop-agent
           docker build -q -t ci/homegrown-issuer compose/phase1/homegrown-issuer
           docker build -q -t ci/mock-vendor compose/phase5/mock-vendor
+
+  # Clean-clone smoke tests of the account-free phases, following each README's
+  # bring-up commands exactly (secrets filled in as the READMEs instruct).
+  # Phases 2-7 need a Kong Konnect account and stay manual (compose/README.md).
+  smoke-phase0:
+    name: smoke (phase 0 quickstart)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: compose/phase0/.synthea/*.jar
+          key: synthea-${{ hashFiles('compose/phase0/seed-synthea.sh') }}
+      - name: Bring up phase 0 (compose/phase0/README.md)
+        working-directory: compose/phase0
+        run: |
+          ../../.github/scripts/fill-env.sh .
+          docker compose up -d
+      - name: Seed synthetic patients
+        working-directory: compose/phase0
+        run: PATIENT_COUNT=5 ./seed-synthea.sh
+      - name: Phase 0 gate
+        run: tests/phase0.sh
+      - name: Logs on failure
+        if: failure()
+        working-directory: compose/phase0
+        run: docker compose logs --tail 80
+
+  smoke-phase1:
+    name: smoke (phase 1 quickstart + gates 0-1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: compose/phase0/.synthea/*.jar
+          key: synthea-${{ hashFiles('compose/phase0/seed-synthea.sh') }}
+      - name: Bring up phase 1 (compose/phase1/README.md)
+        working-directory: compose/phase1
+        run: |
+          ../../.github/scripts/fill-env.sh .
+          docker compose up -d --build
+          ./setup-phase1.sh
+      - name: Seed synthetic patients
+        working-directory: compose/phase1
+        run: FHIR_BASE=http://localhost:8081/fhir PATIENT_COUNT=5 ../phase0/seed-synthea.sh
+      - name: Phase 1 gate
+        run: tests/phase1.sh
+      - name: Phase 0 gate (cumulative, against the phase 1 stack)
+        run: |
+          cp compose/phase1/.env compose/phase0/.env
+          tests/phase0.sh
+      - name: Logs on failure
+        if: failure()
+        working-directory: compose/phase1
+        run: docker compose logs --tail 80

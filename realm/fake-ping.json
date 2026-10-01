@@ -14,7 +14,7 @@
       "email": "alice@hospital.example",
       "emailVerified": true,
       "firstName": "Alice",
-      "lastName": "Nguyen",
+      "lastName": "Clinician",
       "groups": ["/hospital-clinical-tools"],
       "credentials": [
         { "type": "password", "value": "${FAKE_PING_PASSWORD}", "temporary": false }
@@ -26,7 +26,7 @@
       "email": "bob@hospital.example",
       "emailVerified": true,
       "firstName": "Bob",
-      "lastName": "Okafor",
+      "lastName": "Analyst",
       "groups": ["/hospital-analytics"],
       "credentials": [
         { "type": "password", "value": "${FAKE_PING_PASSWORD}", "temporary": false }

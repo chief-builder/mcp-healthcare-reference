@@ -28,6 +28,12 @@ Phases 2–7 need a valid Konnect PAT in compose/phase{2..5}/.env and free
 host ports 8210/8300/8310 (stop the vtb-* containers). Offline: `make test` (servers vitest 89, broker pytest 97,
 DB-less Kong plugin suite 47, kit vectors 15+4 skipped) — no accounts.
 
+Second pass (2026-10-01): every phase 0-5 verified from a clean clone with its
+own .env.example (phases 2-4 had been broken in isolation — their DPs lacked
+the custom plugins deck/internal.yaml references; all internal DPs now load
+all four and setups register them via compose/lib/konnect.sh). CI smoke-tests
+the phase 0/1 quickstarts. Resource table in compose/README.md.
+
 Hardening (2026-09-30): MCP 2026-07-28 via @modelcontextprotocol/server
 2.x + /express + /node, zod 4 (#8 resolved; createMcpHandler with the SDK's
 stateless 2025-11-25 fallback); shared resource-server core in

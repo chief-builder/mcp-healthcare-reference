@@ -149,7 +149,7 @@ def test_json_escaped_mrn_is_blocked(alice):
 
 
 def test_ssn_pattern_also_blocked(alice):
-    r = mcp_call(EGRESS_MOCKHUB, alice, "create_issue", {"title": "x", "body": "ssn 123-45-6789"})
+    r = mcp_call(EGRESS_MOCKHUB, alice, "create_issue", {"title": "x", "body": "ssn 000-12-3456"})
     assert r.status_code == 403 and r.json()["pattern"] == "ssn"
 
 

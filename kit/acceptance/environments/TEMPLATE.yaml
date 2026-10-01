@@ -39,7 +39,7 @@ probe_endpoints:
 #   clean_args: { title: clean, body: no identifiers }
 #   dlp_patterns:
 #     - { name: mrn, sample: MRN-1234567 }   # synthetic samples ONLY
-#     - { name: ssn, sample: 123-45-6789 }
+#     - { name: ssn, sample: 000-12-3456 }
 
 # broker:
 #   url: https://broker.internal.example.com

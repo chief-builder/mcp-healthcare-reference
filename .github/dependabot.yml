@@ -9,6 +9,13 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: build(deps)
+    ignore:
+      # @types/node tracks the runtime major (Node 24 LTS, .nvmrc).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 is blocked until typescript-eslint supports it (<6.1).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
@@ -42,6 +49,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: build(deps)
+    ignore:
+      # Stay on the Active LTS Node line; move majors deliberately (with .nvmrc,
+      # engines, and @types/node), not on odd/pre-LTS releases.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
     groups:
       docker-minor-patch:
         update-types: [minor, patch]

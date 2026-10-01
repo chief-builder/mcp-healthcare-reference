@@ -80,8 +80,9 @@ The pages are served publicly by GitHub Pages from the separate public repo
 `chief-builder/mcp-healthcare-reference-docs` (the site predates this repo
 becoming public, and keeps the published set separate). `.github/workflows/mirror-docs.yml` mirrors the published
 set — `docs/index.html`, `docs/.nojekyll`, `docs/showcase/`,
-`docs/walkthrough/` — automatically on every push to main touching
-`docs/**`. After a sync lands, confirm the workflow ran (`gh run list
+`docs/walkthrough/`, and the docs repo's README from
+`.github/docs-mirror/README.md` — automatically on every push to main
+touching those paths (or on demand via `workflow_dispatch`). After a sync lands, confirm the workflow ran (`gh run list
 --workflow=mirror-docs`) and spot-check the live URL:
 https://chief-builder.github.io/mcp-healthcare-reference-docs/.
 The design .md docs are read in this repo, not on the site — never widen

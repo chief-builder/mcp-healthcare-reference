@@ -306,7 +306,7 @@ def test_dlp_json_escaped_mrn_blocked():
 
 
 def test_dlp_ssn_blocked():
-    r = dlp_post(tool_call("ssn 123-45-6789"))
+    r = dlp_post(tool_call("ssn 000-12-3456"))
     assert r.status_code == 403
     assert r.json()["pattern"] == "ssn"
 
@@ -426,4 +426,4 @@ def test_no_token_material_in_gateway_logs():
     assert '"audit":"vendor-token"' in text
     leaked = [t for t in MINTED if t in text or t.split(".")[2] in text]
     assert not leaked, f"{len(leaked)} token(s) found in Kong logs"
-    assert "MRN-1234567" not in text and "123-45-6789" not in text
+    assert "MRN-1234567" not in text and "000-12-3456" not in text

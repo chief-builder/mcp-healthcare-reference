@@ -10,8 +10,20 @@
 # and user-token expiry enabled) — everything else works without it.
 set -euo pipefail
 cd "$(dirname "$0")"
-[ -f .env ] || { echo "==> Copying ../phase4/.env"; cp ../phase4/.env .env; }
+if [ ! -f .env ]; then
+  # Reuse the previous phase's credentials when that phase was set up first;
+  # otherwise start from this phase's own template.
+  if [ -f ../phase4/.env ]; then
+    echo "==> Copying ../phase4/.env"; cp ../phase4/.env .env
+  else
+    echo "Missing .env: cp .env.example .env and fill it in (KONNECT_TOKEN etc.)" >&2
+    exit 1
+  fi
+fi
 set -a; source .env; set +a
+case "${KONNECT_TOKEN:-}" in
+  ""|kpat_change-me) echo "Set KONNECT_TOKEN in .env (Konnect personal access token)" >&2; exit 1 ;;
+esac
 
 for tool in deck k3d kubectl openssl jq; do
   command -v "$tool" >/dev/null || { echo "$tool required" >&2; exit 1; }
@@ -127,30 +139,9 @@ server_cert keycloak "DNS:localhost,DNS:keycloak,DNS:host.k3d.internal"
 server_cert kong-internal "DNS:localhost,DNS:kong-internal,DNS:host.k3d.internal"
 
 # ---------- Custom plugin schemas on the internal CP ----------
-ensure_plugin_schema() {
-  local name=$1 code resp body
-  code=$(curl -s -o /dev/null -w '%{http_code}' "${AUTH[@]}" \
-    "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas/${name}")
-  body=$(jq -n --rawfile s "../../plugins/${name}/schema.lua" '{lua_schema: $s}')
-  if [ "$code" = "404" ]; then
-    echo "==> Registering ${name} plugin schema on mcp-internal..."
-    resp=$(curl -s -w '\n%{http_code}' "${AUTH[@]}" -H 'Content-Type: application/json' \
-      -d "$body" "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas")
-  else
-    echo "==> Updating ${name} plugin schema on mcp-internal..."
-    resp=$(curl -s -w '\n%{http_code}' "${AUTH[@]}" -H 'Content-Type: application/json' -X PUT \
-      -d "$body" "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas/${name}")
-  fi
-  code=$(echo "$resp" | tail -1)
-  case "$code" in
-    2*) ;;
-    *) echo "FAILED to register ${name} schema (HTTP $code): $(echo "$resp" | head -1)" >&2; exit 1 ;;
-  esac
-}
-ensure_plugin_schema cnf-check
-ensure_plugin_schema dlp-egress
-ensure_plugin_schema vendor-token
-ensure_plugin_schema dpop-check
+# shellcheck source=../lib/konnect.sh
+source ../lib/konnect.sh
+register_custom_plugins
 
 # ---------- compose stack ----------
 if docker ps --format '{{.Names}}' | grep -q '^mcp-phase4-'; then
@@ -230,15 +221,24 @@ KCTL=(kubectl --context k3d-mcp-lab)
 # the loop agent then cannot reach Keycloak/Kong on the host. Verify the name
 # resolves in-cluster; restart CoreDNS once if it does not.
 dns_ok() {
+  # Bounded: a probe pod that never starts must not hang setup.
+  "${KCTL[@]}" delete pod k3d-dns-check --ignore-not-found --wait=false >/dev/null 2>&1
   "${KCTL[@]}" run k3d-dns-check --rm -i --restart=Never --image=busybox:1.37 \
-    --command -- nslookup host.k3d.internal >/dev/null 2>&1
+    --pod-running-timeout=60s --command -- nslookup host.k3d.internal >/dev/null 2>&1
 }
-if ! dns_ok; then
-  echo "==> host.k3d.internal not resolvable in-cluster; restarting CoreDNS..."
-  "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
-  "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
-  dns_ok || { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
-fi
+# A ConfigMap change reaches the CoreDNS pod's mounted file only on the next
+# kubelet sync, so poll (~2 min) and restart CoreDNS once if it stays stale.
+echo "==> Checking host.k3d.internal resolves in-cluster..."
+for i in $(seq 1 24); do
+  dns_ok && break
+  if [ "$i" -eq 6 ]; then
+    echo "==> still unresolvable; restarting CoreDNS..."
+    "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
+    "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
+  fi
+  [ "$i" -eq 24 ] && { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
+  sleep 5
+done
 
 echo "==> Deploying SPIRE..."
 "${KCTL[@]}" create namespace spire --dry-run=client -o yaml | "${KCTL[@]}" apply -f - > /dev/null

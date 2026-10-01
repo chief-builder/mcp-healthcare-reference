@@ -32,7 +32,7 @@ in a ticket is not a signature.
 
 - The DLP probes plant **synthetic** samples from the descriptor's
   `egress.dlp_patterns[].sample`. These MUST be manufactured values
-  (`MRN-1234567`, `123-45-6789`), never a real patient's identifier. Planting a
+  (`MRN-1234567`, `000-12-3456`), never a real patient's identifier. Planting a
   real identifier to "make the test realistic" is itself a PHI disclosure —
   prohibited.
 - Test identities MUST be dedicated test principals (test patients, service

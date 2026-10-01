@@ -15,10 +15,21 @@ upstream is the vendor allowlist; plugin order is openid-connect
 (egress audience) → dlp-egress (nothing unscreened leaves) → vendor-token
 (broker resolve, vendor credential injected, hub JWT stripped).
 
-Bring-up: `./setup-phase5.sh` (idempotent; inherits the phase 4 lab CA so
-the running SPIRE side keeps chaining to the same root; provisions OpenBao
-mounts/policy/scoped token; registers the four custom plugin schemas).
-Gate: `tests/phase5.sh` — fully headless against mockhub.
+## Bring-up
+
+```sh
+cp .env.example .env     # or reuse ../phase4/.env; needs KONNECT_TOKEN
+brew install kong/deck/deck k3d kubectl
+./setup-phase5.sh        # Konnect CPs, certs, stack, OpenBao, deck sync, k3d/SPIRE
+FHIR_BASE=http://localhost:8081/fhir PATIENT_COUNT=10 ../phase0/seed-synthea.sh
+../../tests/phase5.sh    # acceptance gate; tests/phase6.sh and phase7.sh run on this stack too
+```
+
+`setup-phase5.sh` is idempotent. It inherits the phase 4 lab CA when one
+exists (so a running SPIRE side keeps chaining to the same root) and otherwise
+generates one; it provisions OpenBao mounts, policy, and the broker's scoped
+token, and registers the four custom plugin schemas. The gate runs fully
+headless against mockhub.
 
 GitHub leg (optional, real): create a GitHub App on your account —
 callback URL `http://localhost:8300/v1/callback/github`, "Expire user

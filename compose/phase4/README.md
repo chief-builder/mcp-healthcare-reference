@@ -26,9 +26,15 @@ script) binds token to channel. `KC_HOSTNAME` pins the issuer to
 `http://localhost:8080/realms/mcp-plane` so every existing validator keeps
 working; the phase 0–3 listeners and ports are unchanged.
 
-Bring-up: `./setup-phase4.sh` (idempotent; stops the phase 3 stack — same
-host ports; re-seed HAPI afterwards if you need the FHIR tests:
-`FHIR_BASE=http://localhost:8081/fhir ../phase0/seed-synthea.sh`).
+## Bring-up
+
+```sh
+cp .env.example .env     # or reuse ../phase3/.env (same creds); needs KONNECT_TOKEN
+brew install kong/deck/deck k3d kubectl
+./setup-phase4.sh        # idempotent; stops the phase 3 stack (same host ports)
+FHIR_BASE=http://localhost:8081/fhir PATIENT_COUNT=10 ../phase0/seed-synthea.sh
+../../tests/phase4.sh    # acceptance gate
+```
 Gate: `tests/phase4.sh`. Teardown of the workload side:
 `k3d cluster delete mcp-lab`.
 
