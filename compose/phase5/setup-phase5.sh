@@ -20,6 +20,9 @@ done
 update_env() {
   if grep -q "^$1=" .env; then sed -i '' "s|^$1=.*|$1=$2|" .env
   else [ -z "$(tail -c1 .env)" ] || echo >> .env; printf '%s=%s\n' "$1" "$2" >> .env; fi
+  # Export too: the script sourced .env with `set -a`, and docker compose
+  # prefers the shell environment over .env, so a stale exported value would win.
+  export "$1=$2"
 }
 ensure_env_secret() {
   local name=$1

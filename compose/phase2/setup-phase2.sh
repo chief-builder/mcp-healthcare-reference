@@ -96,6 +96,9 @@ update_env() { # key value
     [ -z "$(tail -c1 .env)" ] || echo >> .env  # guard: file may lack trailing newline
     printf '%s=%s\n' "$1" "$2" >> .env
   fi
+  # Export too: the script sourced .env with `set -a`, and docker compose
+  # prefers the shell environment over .env, so a stale exported value would win.
+  export "$1=$2"
 }
 update_env INT_CLUSTER_HOST "$INT_CLUSTER"
 update_env INT_TELEMETRY_HOST "$INT_TELEMETRY"
