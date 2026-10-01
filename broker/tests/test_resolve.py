@@ -152,9 +152,7 @@ def test_non_rotating_vendor_keeps_the_old_refresh_token(client, keys, kv, mockh
     assert kv.entry("mockhub", "alice-sub")["refresh_token"] == "vendor-rt-1"
 
 
-async def test_concurrent_resolves_single_flight_one_vendor_refresh(
-    kv, keys, mockhub, monkeypatch
-):
+async def test_concurrent_resolves_single_flight_one_vendor_refresh(kv, keys, mockhub, monkeypatch):
     """§9: N concurrent resolves inside the buffer → exactly one vendor refresh;
     waiters get the winner's token. The vendor call yields to the event loop
     (like a real network round trip) so the requests genuinely overlap."""
