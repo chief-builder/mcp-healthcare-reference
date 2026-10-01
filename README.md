@@ -139,7 +139,9 @@ access token (`KONNECT_TOKEN` in `compose/phaseN/.env`), plus `deck`. Phase 4
 adds SPIRE in a k3d cluster; phase 5 optionally uses a GitHub App for the real
 vendor leg (the mock vendor covers every gate). Each phase's bring-up is in
 `compose/phaseN/README.md`; `compose/phase5` runs everything, and the phase 6
-audit spine rides it.
+audit spine rides it. Every phase starts from its own `.env.example`; memory,
+disk, port, and timing needs per phase are measured in
+[`compose/README.md`](compose/README.md#resource-needs) (plan on 8 GB for Docker).
 
 ## Configuration
 
@@ -163,7 +165,7 @@ at startup. The authoritative lists:
 | Broker (pytest)               | `make test-broker`         | Python                    |
 | Kit claim vectors             | `make test-kit`            | Python                    |
 | Gateway plugins (DB-less Kong)| `make test-plugins`        | Docker                    |
-| Phase gates 0–1               | `tests/phase0.sh`, `tests/phase1.sh` | the phase 1 stack |
+| Phase gates 0–1               | `tests/phase0.sh`, `tests/phase1.sh` | the phase 1 stack (also run in CI from a clean checkout) |
 | Phase gates 2–7               | `tests/phase2.sh` … `tests/phase7.sh` | the phase 5 stack + Konnect |
 
 `tests/phase7.sh` is the red-team suite: cross-tier replay, scope ceilings,

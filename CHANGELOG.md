@@ -3,6 +3,44 @@
 Notable changes to this repository. Dates are UTC. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.1] — 2026-10-01 — hardening, second pass
+
+### Fixed
+
+- **Phases 2–4 could not start on their own.** `deck/internal.yaml`, shared by
+  every phase, references the four custom plugins added in phases 4–5; the
+  phase 2–4 data planes did not load them and rejected the whole config, so
+  every route returned 404 (the phase 2 gate failed 6 of 11 from a clean
+  clone). Every internal data plane now loads all four plugins and every setup
+  registers all four schemas (one shared helper, `compose/lib/konnect.sh`).
+- Phases 4 and 5 had no `.env.example` or bring-up command block; their setup
+  scripts silently copied the previous phase's `.env`. Setup scripts 2–5 now
+  fail fast with a clear message on a missing `.env` or placeholder token.
+- The k3d `host.k3d.internal` check could fail or hang from a clean clone; it
+  now polls with a bounded probe pod.
+
+### Added
+
+- CI smoke tests that run the phase 0 and phase 1 quickstarts from a clean
+  checkout and their gates.
+- Measured per-phase resource needs (memory, disk, ports, time) and pinned
+  versions in `compose/README.md`; all phases verified from a clean clone.
+
+### Changed
+
+- Synthetic data made unambiguous: the DLP sample SSN is now `000-12-3456`
+  (area 000 is never issued) and the fake-Ping personas are "Alice Clinician"
+  and "Bob Analyst".
+- `mirror-docs`: runs in a `docs-mirror` environment (so the deploy key can be
+  scoped to `main`), publishes the docs repo's README from
+  `.github/docs-mirror/README.md` (the old one said the source repo was
+  private), and can be re-run manually.
+- Dependabot holds Node, `@types/node`, and TypeScript majors (it had proposed
+  Node 26 before its LTS date).
+- Architecture §5.1 and issue #3: Keycloak has native but experimental CIMD
+  since 26.6; not enabled while PKCE is unenforced for CIMD clients
+  (keycloak#52795). #3 stays open with a trigger and an implementation plan.
+
 ## [2.0.0] — 2026-09-30 — hardening
 
 A repository-wide audit ([`AUDIT.md`](AUDIT.md)) followed by fixes, an MCP
