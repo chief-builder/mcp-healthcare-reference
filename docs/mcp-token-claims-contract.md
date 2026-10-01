@@ -7,7 +7,7 @@
 
 ## 1. Purpose and scope
 
-This contract defines the single canonical JWT shape that every component of the MCP plane validates against and codes to. Keycloak is the sole token authority for the plane: no token minted by PingID, the homegrown auth server, Athenz ZTS, or Auth0 is ever presented directly to a Kong data plane or an MCP server. Those systems authenticate their populations; Keycloak normalizes the result into the schema below.
+This contract defines the single canonical JWT shape that every component of the MCP plane validates against and codes to. Keycloak is the sole token authority for the plane: no token minted by the workforce IdP, the legacy in-house auth server, the workload identity system, or Auth0 is ever presented directly to a Kong data plane or an MCP server. Those systems authenticate their populations; Keycloak normalizes the result into the schema below.
 
 The contract exists so that Kong ACLs, MCP server permission logic, and SIEM audit parsing are written once against one claim vocabulary, regardless of which of the five grant paths produced the token. Any change to this schema is a versioned, reviewed change (Section 11), because every consumer of these tokens is coupled to it.
 
@@ -24,7 +24,7 @@ Out of scope: browser session cookies, Konnect admin authentication, and tokens 
 | Token type | JWT access tokens only. Opaque tokens are not used on the MCP plane (DPs validate locally; no introspection round trip on the request path) |
 | Clock skew | Validators allow ≤ 30 s |
 
-Rationale for short lifetimes: MCP tool calls are bursty and short-lived; a 5-minute token bounds the blast radius of any leak, and the Athenz path makes re-acquisition cheap (mTLS client auth, no human).
+Rationale for short lifetimes: MCP tool calls are bursty and short-lived; a 5-minute token bounds the blast radius of any leak, and the cert-bound workload path (§6.3) makes re-acquisition cheap (mTLS client auth, no human).
 
 ## 3. Canonical claim schema
 
@@ -35,22 +35,22 @@ Every MCP-plane access token carries the claims below. `M` = mandatory on all pa
 | `iss` | M | string | Exactly the issuer in Section 2. Any other value is rejected before all other checks. |
 | `sub` | M | string | Stable Keycloak subject of the *effective principal* — the human on interactive paths, the workload service identity on m2m paths. Never an email; emails rotate. |
 | `aud` | M | array | Tier audience **plus** per-server resource URIs (Section 4). Minimum two entries. |
-| `azp` | M | string | The Keycloak client that requested the token — i.e., which application/agent is acting. For the Athenz path this equals the Athenz service identity (Section 6.3). |
+| `azp` | M | string | The Keycloak client that requested the token — i.e., which application/agent is acting. For the workload-identity path (§6.3) this equals the workload's service identity (Section 6.3). |
 | `exp`, `iat` | M | number | Standard. `nbf` optional; if present, enforced. |
 | `jti` | M | string | Unique, opaque token identifier. Logged in every audit record; enables replay tracing across DP and MCP server logs. (Lab finding, Phase 1: Keycloak 26 emits a short type prefix plus UUID, e.g. `trrtcc:<uuid>` — consumers MUST treat `jti` as opaque, not parse it as a bare UUID.) |
 | `mcp_tier` | M | string | `internal` \| `external`. Redundant with `aud` by design — belt and suspenders for policy engines that match on simple claims. |
-| `idp_origin` | M | string | `ping` \| `athenz` \| `homegrown` \| `keycloak` \| `auth0`. Which upstream system authenticated the principal. Drives audit and anomaly detection (e.g., an `auth0` token at the internal tier is always an incident). |
+| `idp_origin` | M | string | `ping` \| `athenz` \| `homegrown` \| `keycloak` \| `auth0`. Which upstream system authenticated the principal: `ping` = the brokered workforce IdP (§6.1), `athenz` = the attested workload-identity path (§6.3; the lab's SPIRE-issued agent carries it), `homegrown` = the legacy in-house AS (§6.2). Drives audit and anomaly detection (e.g., an `auth0` token at the internal tier is always an incident). |
 | `scope` | M | string | Space-delimited, per the grammar in Section 5. |
 | `act` | C | object | Delegation chain per RFC 8693 §4.1. Mandatory whenever the requesting party is not the effective principal — all on-behalf-of flows (Section 7). |
-| `cnf` | C | object | Sender-constraint confirmation. `{"x5t#S256": "<thumbprint>"}` binds to an mTLS client cert (RFC 8705, Athenz path — mandatory there, forbidden absent mTLS). `{"jkt": "<thumbprint>"}` binds to a client-held DPoP key (RFC 9449, `workforce-dpop` path §6.6). A `cnf` the validator cannot satisfy is a rejection, not a no-op. |
+| `cnf` | C | object | Sender-constraint confirmation. `{"x5t#S256": "<thumbprint>"}` binds to an mTLS client cert (RFC 8705, workload-identity path §6.3 — mandatory there, forbidden absent mTLS). `{"jkt": "<thumbprint>"}` binds to a client-held DPoP key (RFC 9449, `workforce-dpop` path §6.6). A `cnf` the validator cannot satisfy is a rejection, not a no-op. |
 | `fhir_patient` | C | string | FHIR Patient resource id. Mandatory on the Auth0 end-customer path; forbidden on all others. MCP servers MUST compartment-filter every FHIR query by it when present. |
 | `groups` | C | array | Normalized role names (Section 3.1). Mandatory on workforce path; the *only* group vocabulary any consumer may reference. |
-| `amr` | C | array | Authentication methods from the upstream IdP (e.g., `["mfa","swk"]`). Mandatory on interactive paths; DP policy MAY require `mfa` for designated tool scopes. |
+| `amr` | C | array | Authentication methods from the upstream IdP (e.g., `["mfa","swk"]`). Mandatory on interactive paths; policy MAY require `mfa` for designated tool scopes (lab: the FHIR server requires it for the scopes in `MCP_MFA_SCOPES`, default `mcp:fhir-clinical:everything:read`, answering `401 insufficient_user_authentication` per RFC 9470 when absent). |
 | `email`, `name`, PII claims | F | — | Access tokens carry no directory PII. Consumers needing display data resolve `sub` out of band. Keeps tokens out of PHI/PII scope when they land in logs. |
 
 ### 3.1 Normalized group vocabulary
 
-Upstream group formats (Ping `memberOf` DNs, Auth0 permissions, Athenz roles) are mapped by Keycloak protocol mappers into flat names with the prefix `mcp-`:
+Upstream group formats (e.g., the workforce IdP's `memberOf` DNs, Auth0 permissions, workload-identity roles) are mapped by Keycloak protocol mappers into flat names with the prefix `mcp-`:
 
 ```
 mcp-platform-admin      mcp-clinical-tools      mcp-scheduling-tools
@@ -89,7 +89,8 @@ Clients request server URIs via the `resource` parameter at the token endpoint; 
 > parameter (and the ID-JAG `resource` claim) to be the RFC 9728 Resource
 > Identifier of the MCP Server, so the EMA upgrade path (§6.1) presumes the
 > endpoint-URL migration. Migrating to endpoint-URL resources is a major
-> contract version (Section 11) and is tracked in issue #13.
+> contract version (Section 11); issue #13 records this as a documented
+> deviation (closed as documented).
 
 ## 5. Scope grammar
 
@@ -106,22 +107,22 @@ Verbs are `read` | `write` | `execute`. Wildcards on `<tool>` require platform-a
 
 Five paths produce contract-conformant tokens. Each profile lists the front-leg mechanics and the claim deltas; everything not mentioned follows Section 3.
 
-### 6.1 Workforce — PingID broker (Claude Code, Codex CLI, VS Code)
+### 6.1 Workforce — brokered workforce IdP, e.g. Ping (Claude Code, Codex CLI, VS Code)
 
-Front leg: OIDC authorization code + PKCE at Keycloak, with Keycloak brokering PingID for authentication. When Ping ships Identity Assertion JWT Authorization Grant (ID-JAG) issuance, the front leg becomes the MCP Enterprise-Managed Authorization flow: the client exchanges its Ping identity assertion for an ID-JAG at the IdP (RFC 8693 token exchange, EMA §4), then presents the ID-JAG at Keycloak — the Resource Authorization Server — as a JWT authorization grant (RFC 7523, EMA §5); **no claim in this contract changes** — that is the point of the hub.
+Front leg: OIDC authorization code + PKCE at Keycloak, with Keycloak brokering the workforce IdP for authentication (the lab stands in a second Keycloak realm, `fake-ping`). When the IdP ships Identity Assertion JWT Authorization Grant (ID-JAG) issuance, the front leg becomes the MCP Enterprise-Managed Authorization flow: the client exchanges its IdP identity assertion for an ID-JAG at the IdP (RFC 8693 token exchange, EMA §4), then presents the ID-JAG at Keycloak — the Resource Authorization Server — as a JWT authorization grant (RFC 7523, EMA §5); **no claim in this contract changes** — that is the point of the hub.
 
 | Claim | Value on this path |
 |---|---|
-| `sub` | Workforce user (brokered Ping subject, stabilized by Keycloak) |
+| `sub` | Workforce user (brokered IdP subject, stabilized by Keycloak) |
 | `azp` | `claude-code` \| `codex-cli` \| `vscode-copilot` (pre-registered clients) |
 | `idp_origin` | `ping` |
 | `mcp_tier` / `aud` | `internal` + requested server URIs |
-| `amr` | Propagated from Ping; `mfa` required for `mcp-clinical-tools` scopes |
+| `amr` | Propagated from the IdP; `mfa` required for clinical step-up scopes (lab: `MCP_MFA_SCOPES`, enforced by the FHIR server) |
 | `act`, `cnf`, `fhir_patient` | Absent |
 
-### 6.2 Homegrown AS — token exchange (transitional, sunset target)
+### 6.2 Legacy in-house AS (`homegrown`) — token exchange (transitional, sunset target)
 
-Front leg: RFC 8693 exchange at Keycloak; the homegrown AS is registered as a trusted external issuer. `subject_token` = homegrown service token.
+Front leg: RFC 8693 exchange at Keycloak; the legacy AS is registered as a trusted external issuer. `subject_token` = a service token from the legacy AS.
 
 | Claim | Value on this path |
 |---|---|
@@ -133,13 +134,13 @@ Front leg: RFC 8693 exchange at Keycloak; the homegrown AS is registered as a tr
 
 This path is frozen: no new services onboard to it. Each service migrating to 6.3 removes its issuer-trust mapping; the profile is deleted from this contract when the last mapping is removed.
 
-### 6.3 Athenz — mTLS client credentials (target state for all m2m)
+### 6.3 Workload identity (e.g., Athenz; SPIRE in the lab) — mTLS client credentials (target state for all m2m)
 
-Front leg: workload holds a short-lived X.509 from ZTS (Copper Argos attestation, SIA rotation). Client credentials grant at Keycloak with `tls_client_auth`; Keycloak matches the SAN/SPIFFE URI to the client registration. Tokens are certificate-bound.
+Front leg: workload holds a short-lived X.509 SVID from the workload identity system (attested issuance, automatic rotation). Client credentials grant at Keycloak with `tls_client_auth`; Keycloak matches the SAN/SPIFFE URI to the client registration. Tokens are certificate-bound.
 
 | Claim | Value on this path |
 |---|---|
-| `sub` | Athenz service identity, e.g. `mcp-agents.prior-auth-agent` |
+| `sub` | Workload service identity, e.g. `mcp-agents.prior-auth-agent` |
 | `azp` | Same as `sub` (the workload is the client) |
 | `idp_origin` | `athenz` |
 | `cnf` | `{"x5t#S256": <thumbprint of the presenting cert>}` — mandatory |
@@ -205,9 +206,9 @@ Rules: chains are at most two levels deep (`act.act` requires platform-admin app
 
 **DPoP sender-constraint (RFC 9449), when `cnf.jkt` present:** the token MUST be presented as `Authorization: DPoP <token>` with exactly one `DPoP` proof header; the proof is a `dpop+jwt`/`ES256` JWS whose embedded public key's RFC 7638 thumbprint equals `cnf.jkt`, with `htm`/`htu` matching the request, `iat` within ±60 s, `ath` = `base64url(SHA-256(token))`, and a single-use `jti`. Gateway-first: the `dpop-check` DP plugin is early rejection (structure + binding + request match + `jti` replay via a shared dict, the DP being the single entry point); the MCP servers' `requireDpop` is the authoritative re-check and additionally verifies the proof signature (jose `EmbeddedJWK`). Consistent with §8's "servers re-validate, never trust the gateway," and mirroring the cnf/mTLS split, a `cnf.jkt` token without a valid matching proof is a rejection, not a no-op. Server-side `jti` dedup is absent by design (stateless replicas); the DP is authoritative for replay (arch doc gap register).
 
-**MCP servers, on every tool call:** re-verify signature and `iss` (do not trust the DP blindly — defense in depth); `aud` contains this server's URI; scope authorizes this specific tool + verb; when `fhir_patient` present, compartment-filter; when absent on a path that requires it, reject.
+**MCP servers, on every tool call:** re-verify signature and `iss` (do not trust the DP blindly — defense in depth); `aud` contains this server's URI; scope authorizes this specific tool + verb; when `fhir_patient` present, compartment-filter; when absent on a path that requires it, reject. (Lab: the per-tool check runs at the HTTP layer for the challenge and again inside every tool handler, and JSON-RPC batch requests are refused, so no request shape reaches a tool unchecked.)
 
-**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events. 401 challenges include `resource_metadata` and, when the attempted operation requires one, the operation's `scope` (floor tools advertise none); insufficient-permission cases return 403 `error="insufficient_scope"` with the complete required scope set in one challenge (single-shot, never incremental), enabling the draft spec's step-up flow. PRM `scopes_supported` lists the minimal baseline only; `offline_access` never appears in PRM or challenges.
+**Both:** rejections return RFC 6750 `WWW-Authenticate` errors without echoing token contents; all rejections are audit events. 401 challenges include `resource_metadata` and, when the attempted operation requires one, the operation's `scope` (floor tools advertise none); insufficient-permission cases return 403 `error="insufficient_scope"` with the complete required scope set in one challenge (single-shot, never incremental), enabling the spec's step-up flow. PRM `scopes_supported` lists the minimal baseline only; `offline_access` never appears in PRM or challenges.
 
 **All OAuth clients on the plane (interactive clients, broker):** validate RFC 9207 `iss` on authorization responses — including error responses — against the issuer recorded from validated AS metadata, using strict string comparison without URI normalization, before any use of the authorization code. Keycloak advertises `authorization_response_iss_parameter_supported: true`.
 
@@ -228,11 +229,11 @@ Every DP and MCP-server audit record carries, at minimum:
 
 This tuple answers the HIPAA questions directly: which human (or on whose behalf), through which agent, touched which tool, in which patient compartment, when, and with what outcome. Records never contain the token itself or request/response bodies.
 
-Lab note: the first-party servers' audit records (`servers/*/src/audit.ts`) emit `tool` but no separate `verb` field — the verb is recoverable as the suffix of the tool's required scope (`mcp:<server>:<tool>:<verb>`). A production implementation should emit it explicitly.
+Lab note: the first-party servers' audit records (`servers/shared/src/audit.ts`) emit `tool` but no separate `verb` field — the verb is recoverable as the suffix of the tool's required scope (`mcp:<server>:<tool>:<verb>`). A production implementation should emit it explicitly.
 
 ## 10. Keys, rotation, FIPS
 
-Keycloak realm keys rotate every 90 days with a 7-day overlap (old key remains in JWKS for verification only). Athenz service certs: ≤ 30 day lifetime, SIA-rotated. All signing and TLS on the plane runs on FIPS 140-3 validated modules; the DP fleet runs FIPS-mode builds. Key ceremonies and rotations are change-managed and logged to the same SIEM pipeline as config changes.
+Keycloak realm keys rotate every 90 days with a 7-day overlap (old key remains in JWKS for verification only). Workload certs: ≤ 30 day lifetime, rotated by the workload identity system. All signing and TLS on the plane runs on FIPS 140-3 validated modules; the DP fleet runs FIPS-mode builds. Key ceremonies and rotations are change-managed and logged to the same SIEM pipeline as config changes.
 
 ## 11. Contract versioning
 
@@ -242,7 +243,7 @@ Tokens carry `mcp_contract: "1.0"`. Additive optional claims = minor version; an
 
 ## Appendix A — Pilot agent, end to end
 
-Registering one internal agent (`prior-auth-agent`) on the 6.3 path.
+Registering one internal agent (`prior-auth-agent`) on the 6.3 path — a worked example using Athenz as the workload identity system (the lab's equivalent uses SPIRE; see `compose/phase4/`).
 
 **A.1 Athenz domain and service (ZMS):**
 

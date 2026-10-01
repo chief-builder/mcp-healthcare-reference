@@ -6,7 +6,7 @@ The lab stays the reference implementation; the kit is what travels.
 
 **Packaging decision (make first):** create a separate `kit/` tree (or sibling repo, following
 the docs-site mirror precedent) so kit artifacts are cleanly separable from lab internals and can
-be shared with customers without exposing the private repo.
+be shared with customers on their own. (Status: `kit/` was created in this repo, which is public.)
 
 ---
 
@@ -97,10 +97,12 @@ Everything else references these, so extract them before writing adapters or map
 ## Prerequisites and sequencing
 
 **Gaps to disposition before the kit ships** (decide: fix vs document-as-delta): #8 MCP
-2026-07-28 wire migration (biggest — the acceptance suite currently verifies legacy wire
-behavior), #13 HTTPS resource identifiers, #15 exact redirect URIs, #16 scheduling Origin guard.
-Recommendation: fix #15/#16 (small), schedule #8/#13 in parallel with Workstream A, and have the
-acceptance framework assert the *post-fix* behavior.
+2026-07-28 wire migration (biggest — the acceptance suite verified legacy wire behavior when this
+plan was written), #13 HTTPS resource identifiers, #15 exact redirect URIs, #16 scheduling Origin
+guard. Recommendation: fix #15/#16 (small), schedule #8/#13 in parallel with Workstream A, and
+have the acceptance framework assert the *post-fix* behavior. **Status (2026-09-30):** #15 and #16
+fixed; #8 done (servers and the acceptance harness speak 2026-07-28); #13 kept as a documented
+deviation.
 
 **Order of execution:** A1 control catalog → A2–A4 blueprints + D12–13 suite split (in parallel,
 each validates the other) → B adapters (with one real Entra validation) → C compliance map → E
