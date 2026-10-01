@@ -19,7 +19,6 @@ import base64
 import hashlib
 import json
 import os
-import sys
 import time
 
 import requests
@@ -128,7 +127,7 @@ def main() -> None:
     while True:
         try:
             iteration()
-        except Exception as exc:  # keep looping; the gate reads the log stream
+        except Exception as exc:  # noqa: BLE001 — keep looping; the gate reads the log stream
             log(event="loop", ok=False, error=str(exc))
         time.sleep(INTERVAL)
 

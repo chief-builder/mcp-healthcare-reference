@@ -6,6 +6,7 @@ sunsetting" migration story. No new features get added here by design.
 """
 
 import base64
+import hmac
 import os
 import time
 import uuid
@@ -80,7 +81,7 @@ def userinfo(authorization: str = Header(default="")):
             audience=AUDIENCE,
         )
     except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=401, detail=f"invalid token: {exc}")
+        raise HTTPException(status_code=401, detail=f"invalid token: {exc}") from exc
     return {"sub": claims["sub"], "preferred_username": claims["sub"]}
 
 
@@ -101,7 +102,10 @@ def token(
 ):
     if grant_type != "client_credentials":
         return JSONResponse(status_code=400, content={"error": "unsupported_grant_type"})
-    if client_id != CLIENT_ID or client_secret != CLIENT_SECRET:
+    # Constant-time compare: the secret check must not leak a timing oracle.
+    id_ok = hmac.compare_digest(client_id.encode(), CLIENT_ID.encode())
+    secret_ok = hmac.compare_digest(client_secret.encode(), CLIENT_SECRET.encode())
+    if not (id_ok and secret_ok):
         return JSONResponse(status_code=401, content={"error": "invalid_client"})
 
     now = int(time.time())
