@@ -1,7 +1,7 @@
 # Build context is servers/ (the npm workspace), so @mcp-lab/shared is in scope:
 #   docker build -f servers/scheduling/Dockerfile servers
 # Build stage: compile TypeScript with dev dependencies present.
-FROM node:24.21.0-slim AS build
+FROM node:26.10.0-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json shared/
@@ -13,7 +13,7 @@ COPY scheduling scheduling
 RUN npx tsc -b scheduling
 
 # Runtime stage: production deps + compiled output only, run as non-root.
-FROM node:24.21.0-slim
+FROM node:26.10.0-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
