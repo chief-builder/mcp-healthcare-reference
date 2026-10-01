@@ -33,6 +33,10 @@ ISSUER = INTERNAL_URL
 CLIENT_ID = os.environ.get("MOCK_CLIENT_ID", "mcp-lab-broker")
 CLIENT_SECRET = os.environ.get("MOCK_CLIENT_SECRET", "mock-secret")
 AT_TTL = int(os.environ.get("MOCK_AT_TTL", "60"))
+# Like a real AS, redirect only to the client's registered callback(s).
+REDIRECT_URIS = os.environ.get(
+    "MOCK_REDIRECT_URIS", "http://localhost:8300/v1/callback/mockhub"
+).split(",")
 MOCK_USER = {"id": "mock-4217", "login": "octocat-lab"}
 
 app = FastAPI(title="mockhub")
@@ -102,6 +106,9 @@ async def authorize(
 ):
     counters["authorize"] += 1
     if client_id != CLIENT_ID or response_type != "code" or code_challenge_method != "S256":
+        return JSONResponse({"error": "invalid_request"}, status_code=400)
+    if redirect_uri not in REDIRECT_URIS:
+        # Never redirect to an unregistered URI (RFC 6749 §3.1.2.4).
         return JSONResponse({"error": "invalid_request"}, status_code=400)
     code = f"mock-code-{secrets.token_urlsafe(16)}"
     codes[code] = {
