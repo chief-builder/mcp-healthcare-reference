@@ -1,0 +1,33 @@
+name: Bug report
+description: Something in the lab behaves differently from the docs or the contract.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Security vulnerabilities: please do not file them here — use
+        Security → Report a vulnerability (see SECURITY.md).
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      description: e.g. servers/fhir-clinical, broker, plugins/dlp-egress, compose/phase3
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands, phase stack, and the failing test or gate output (redact tokens).
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
