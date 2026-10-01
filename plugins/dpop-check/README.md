@@ -11,7 +11,9 @@ What it does, in the `access` phase, when the access token carries `cnf.jkt`:
 
 - The token MUST be presented under the `DPoP` authorization scheme (RFC 9449
   §7.1) → else 401, reason `wrong_auth_scheme`.
-- Exactly one `DPoP` proof header → else `missing_proof` / `multiple_proofs`.
+- Exactly one `DPoP` proof header → else `missing_proof` / `multiple_proofs`
+  (read via `kong.request.get_headers()`, which keeps repeated headers;
+  `get_header()` returns only the first and would let a second proof through).
 - Proof header is a well-formed `dpop+jwt` with `alg=ES256` and a public EC
   P-256 `jwk` (no private `d` member) → else `bad_proof_header` / `bad_proof_jwk`.
 - RFC 7638 thumbprint of the proof's key equals the token's `cnf.jkt` → else
@@ -34,7 +36,8 @@ validation on first-party routes (the tier wall base64-decodes the access token
 without verifying its signature), this plugin does **not** verify the proof's
 ECDSA signature. It verifies structure, key-to-token binding, and request
 binding. The authoritative signature check is the servers' `requireDpop`
-(jose `EmbeddedJWK`, `plugins`… see `servers/*/src/dpop.ts`).
+middleware, which verifies the proof with jose's `EmbeddedJWK` (see
+`servers/*/src/dpop.ts`).
 
 The only attack this split leaves for the server to catch is a proof carrying the
 correct public key but an invalid signature — which requires possessing the
