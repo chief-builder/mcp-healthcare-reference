@@ -26,6 +26,12 @@ Notable changes to this repository. Dates are UTC. The format follows
 - Measured per-phase resource needs (memory, disk, ports, time) and pinned
   versions in `compose/README.md`; all phases verified from a clean clone.
 
+### Verified
+
+- All eight live gates green on 2026-10-01 on `main` (`0638fdf`): 159 of 159,
+  nothing skipped, including the real-GitHub egress leg (`list_issues` against
+  GitHub's MCP server through DLP, the broker, and Kong) and the Auth0 leg.
+
 ### Changed
 
 - Synthetic data made unambiguous: the DLP sample SSN is now `000-12-3456`

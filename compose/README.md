@@ -35,7 +35,7 @@ gate ran; first runs add image pulls (several GB).
 | 2 | Konnect | `deck` | 5.5 GiB | 161 s | 9 passed, 2 skipped (Auth0 leg) |
 | 3 | Konnect | `deck` | 4.4 GiB | 155 s | 10 passed, 2 skipped (Auth0 leg) |
 | 4 | Konnect | `deck`, `k3d`, `kubectl` | 5.7 GiB (k3d node 1.0 GiB) | 265 s | 9 passed |
-| 5 (+6, 7) | Konnect (GitHub App optional) | `deck`, `k3d`, `kubectl` | 5.0 GiB (k3d node 1.1 GiB) | 274 s | 16 passed + 1 skipped (GitHub leg); 6; 32 |
+| 5 (+6, 7) | Konnect (GitHub App optional) | `deck`, `k3d`, `kubectl` | 5.0 GiB (k3d node 1.1 GiB) | 274 s | 16 passed + 1 skipped (GitHub leg, no consent in a clean clone); 6; 32 |
 
 - **Memory:** give Docker at least 8 GB for phases 2–5. The two Kong data
   planes alone hold about 1.7 GiB and HAPI about 1.4 GiB. In a tight VM, seed
