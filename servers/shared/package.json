@@ -1,0 +1,25 @@
+{
+  "name": "@mcp-lab/shared",
+  "version": "2.0.0",
+  "private": true,
+  "description": "OAuth resource-server core shared by the first-party MCP servers",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/express": "^2.0.1",
+    "@modelcontextprotocol/node": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.2.0",
+    "express": "^5.2.1",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
+}

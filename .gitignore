@@ -21,6 +21,7 @@ compose/phase5/generated/
 # Dependencies and build output
 node_modules/
 servers/*/dist/
+*.tsbuildinfo
 __pycache__/
 .venv/
 .synthea/
@@ -40,3 +41,6 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+
+# Local agent worktrees
+.claude/worktrees/
