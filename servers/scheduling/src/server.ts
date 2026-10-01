@@ -129,6 +129,7 @@ export function createApp(config: SchedulingConfig, db: Db, deps: { keySet?: JWT
     allowedOrigins: config.allowedOrigins,
     resource: config.resource,
     dpopHtu: config.dpopHtu,
+    rateLimitPerMinute: config.rateLimitPerMinute,
     policyFor,
     mfaScopes: config.mfaScopes,
     onDeny: (auth, tool, reason) => auditToolCall(config.resource.resourceUri, auth, tool, 'deny', reason),

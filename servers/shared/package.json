@@ -17,6 +17,7 @@
     "@modelcontextprotocol/node": "^2.1.0",
     "@modelcontextprotocol/server": "^2.2.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "jose": "^6.2.12"
   },
   "devDependencies": {

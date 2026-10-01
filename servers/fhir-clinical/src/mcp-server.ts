@@ -133,6 +133,7 @@ export function createApp(config: FhirConfig, deps: { keySet?: JWTVerifyGetKey; 
     resource: config.resource,
     requiredScopes: config.requiredScopes,
     dpopHtu: config.dpopHtu,
+    rateLimitPerMinute: config.rateLimitPerMinute,
     policyFor,
     mfaScopes: config.mfaScopes,
     onDeny: (auth, tool, reason) => auditToolCall(config.resource.resourceUri, auth, tool, 'deny', reason),

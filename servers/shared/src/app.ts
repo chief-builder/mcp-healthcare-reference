@@ -3,6 +3,7 @@
  *
  * Request pipeline for POST /mcp:
  *   securityGuard   Host/Origin checks (DNS-rebinding defense)
+ *   rate limit      per-client ceiling (defense in depth; Kong limits first)
  *   dpopSchemeShim  `DPoP <t>` → `Bearer <t>` so the SDK parses it
  *   bearer          signature/issuer/expiry/audience + contract shape
  *   dpop            proof-of-possession for cnf.jkt-bound tokens
@@ -19,6 +20,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { createMcpHandler, type AuthInfo, type McpServer } from '@modelcontextprotocol/server';
 import { requireBearerAuth } from '@modelcontextprotocol/express';
 import { toNodeHandler } from '@modelcontextprotocol/node';
+import { rateLimit } from 'express-rate-limit';
 import type { JWTVerifyGetKey } from 'jose';
 import { dpopSchemeShim, requireDpop } from './dpop.js';
 import { enforceToolPolicy, type ToolPolicy } from './tool-policy.js';
@@ -41,6 +43,8 @@ export interface McpAppOptions {
   onDeny: (auth: AuthInfo | undefined, tool: string, reason: string) => void;
   /** Builds the per-request MCP server for the authenticated caller. */
   buildServer: (auth: AuthInfo | undefined) => McpServer;
+  /** Requests per minute per client address on /mcp; 0 disables. */
+  rateLimitPerMinute: number;
   /** Test seam: verify tokens against a local key set instead of the JWKS URL. */
   keySet?: JWTVerifyGetKey;
 }
@@ -120,11 +124,23 @@ export function createMcpApp(options: McpAppOptions): Express {
   const handler = toNodeHandler(createMcpHandler(({ authInfo }) => options.buildServer(authInfo)));
   const serve = (req: Request, res: Response) => handler(req, res, req.body);
 
-  app.post('/mcp', dpopSchemeShim, bearer, dpop, rejectBatch, toolPolicy, serve);
+  // Runs before token verification so a flood can't buy free signature checks.
+  // Behind Kong every request shares the DP's address, so this is a per-DP
+  // ceiling above the gateway's own per-route limits.
+  const limiter = rateLimit({
+    windowMs: 60_000,
+    limit: options.rateLimitPerMinute,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skip: () => options.rateLimitPerMinute === 0,
+    message: { error: 'rate_limited' },
+  });
+
+  app.post('/mcp', limiter, dpopSchemeShim, bearer, dpop, rejectBatch, toolPolicy, serve);
   // Stateless: no server-initiated GET stream and no session teardown — the
   // handler answers 405 for both after authentication.
-  app.get('/mcp', dpopSchemeShim, bearer, dpop, serve);
-  app.delete('/mcp', dpopSchemeShim, bearer, dpop, serve);
+  app.get('/mcp', limiter, dpopSchemeShim, bearer, dpop, serve);
+  app.delete('/mcp', limiter, dpopSchemeShim, bearer, dpop, serve);
 
   return app;
 }

@@ -324,3 +324,24 @@ describe('host hardening and audit hygiene', () => {
     }
   });
 });
+
+describe('rate limiting', () => {
+  it('answers 429 once a client exceeds MCP_RATE_LIMIT_PER_MIN, before token checks', async () => {
+    const limited = await listen(createApp(loadConfig({ MCP_RATE_LIMIT_PER_MIN: '2' }), { keySet: issuer.keySet }));
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 3; i++) {
+        const r = await fetch(`${limited.base}/mcp`, {
+          method: 'POST',
+          headers: { ...MODERN_HEADERS, 'mcp-method': 'tools/list' },
+          body: JSON.stringify(modernBody('tools/list')),
+        });
+        statuses.push(r.status);
+      }
+      // Two unauthenticated attempts reach the bearer check (401); the third is cut off.
+      expect(statuses).toEqual([401, 401, 429]);
+    } finally {
+      await limited.close();
+    }
+  });
+});

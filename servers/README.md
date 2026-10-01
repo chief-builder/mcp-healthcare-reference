@@ -55,23 +55,24 @@ bearer validation → DPoP proof → batch rejection → per-tool policy → MCP
 Read once at startup; an invalid value stops the server with a list of every
 problem. Defaults are the lab's.
 
-| Variable                                                        | Server     | Default                                                                   |
-| --------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------- |
-| `HOST` / `PORT`                                                 | both       | `127.0.0.1` / `3000` (loopback bind turns on the Host check)              |
-| `PUBLIC_BASE_URL`                                               | both       | `http://HOST:PORT` — what clients and DPoP proofs name                    |
-| `MCP_RESOURCE_URI`                                              | both       | `mcp://srv/fhir-clinical` / `mcp://srv/scheduling`                        |
-| `MCP_AUTHORIZATION_SERVERS`                                     | both       | fhir: `http://localhost:8080/realms/mcp-plane`; scheduling: **required**  |
-| `MCP_JWKS_URI`                                                  | both       | fhir: Keycloak `…/certs` on the compose network; scheduling: **required** |
-| `MCP_ISSUER`                                                    | both       | first authorization server                                                |
-| `ALLOWED_ORIGINS`                                               | both       | none (any browser `Origin` is refused)                                    |
-| `DPOP_HTU`                                                      | both       | `PUBLIC_BASE_URL/mcp`                                                     |
-| `MCP_MFA_SCOPES`                                                | both       | fhir: `mcp:fhir-clinical:everything:read`; scheduling: none               |
-| `MCP_REQUIRED_SCOPES`                                           | fhir       | none                                                                      |
-| `UPSTREAM_BASE_URL`                                             | fhir       | `http://hapi:8081/fhir`                                                   |
-| `UPSTREAM_API_KEY`                                              | fhir       | unset (server-owned credential; the caller's token is never forwarded)    |
-| `MAX_FHIR_COUNT` / `UPSTREAM_TIMEOUT_MS` / `MAX_UPSTREAM_BYTES` | fhir       | `100` / `10000` / `2000000`                                               |
-| `DATABASE_URL`                                                  | scheduling | **required** (`postgres://…`)                                             |
-| `HOLD_TTL_S`                                                    | scheduling | `300`                                                                     |
+| Variable                                                        | Server     | Default                                                                                |
+| --------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `HOST` / `PORT`                                                 | both       | `127.0.0.1` / `3000` (loopback bind turns on the Host check)                           |
+| `PUBLIC_BASE_URL`                                               | both       | `http://HOST:PORT` — what clients and DPoP proofs name                                 |
+| `MCP_RESOURCE_URI`                                              | both       | `mcp://srv/fhir-clinical` / `mcp://srv/scheduling`                                     |
+| `MCP_AUTHORIZATION_SERVERS`                                     | both       | fhir: `http://localhost:8080/realms/mcp-plane`; scheduling: **required**               |
+| `MCP_JWKS_URI`                                                  | both       | fhir: Keycloak `…/certs` on the compose network; scheduling: **required**              |
+| `MCP_ISSUER`                                                    | both       | first authorization server                                                             |
+| `ALLOWED_ORIGINS`                                               | both       | none (any browser `Origin` is refused)                                                 |
+| `DPOP_HTU`                                                      | both       | `PUBLIC_BASE_URL/mcp`                                                                  |
+| `MCP_RATE_LIMIT_PER_MIN`                                        | both       | `600` per client address on `/mcp` (`0` disables); Kong's per-route limits apply first |
+| `MCP_MFA_SCOPES`                                                | both       | fhir: `mcp:fhir-clinical:everything:read`; scheduling: none                            |
+| `MCP_REQUIRED_SCOPES`                                           | fhir       | none                                                                                   |
+| `UPSTREAM_BASE_URL`                                             | fhir       | `http://hapi:8081/fhir`                                                                |
+| `UPSTREAM_API_KEY`                                              | fhir       | unset (server-owned credential; the caller's token is never forwarded)                 |
+| `MAX_FHIR_COUNT` / `UPSTREAM_TIMEOUT_MS` / `MAX_UPSTREAM_BYTES` | fhir       | `100` / `10000` / `2000000`                                                            |
+| `DATABASE_URL`                                                  | scheduling | **required** (`postgres://…`)                                                          |
+| `HOLD_TTL_S`                                                    | scheduling | `300`                                                                                  |
 
 ## Develop and test
 
