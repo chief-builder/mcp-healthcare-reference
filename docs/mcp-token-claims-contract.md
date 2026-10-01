@@ -150,7 +150,7 @@ Validators MUST verify `cnf` against the client certificate on the mTLS connecti
 
 ### 6.4 Third parties — Keycloak native (ChatGPT, B2B partners)
 
-Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; Dynamic Client Registration is disabled (and is deprecated by the draft MCP authorization spec). Client ID Metadata Documents are accepted only from origin-allowlisted metadata URLs per Reference Architecture §5.1. Per-user consent screens are retained deliberately. (Lab delta: no third-party client is committed in the realm — the external tier is exercised by `patient-agent` (§6.5) and test clients; this profile is the production target.)
+Front leg: authorization code + PKCE directly at Keycloak. Clients are individually pre-registered with pinned redirect URIs; Dynamic Client Registration is disabled (and is deprecated by the MCP 2026-07-28 authorization spec). Client ID Metadata Documents are accepted only from origin-allowlisted metadata URLs per Reference Architecture §5.1. Per-user consent screens are retained deliberately. (Lab delta: no third-party client is committed in the realm — the external tier is exercised by `patient-agent` (§6.5) and test clients; this profile is the production target.)
 
 | Claim | Value on this path |
 |---|---|
