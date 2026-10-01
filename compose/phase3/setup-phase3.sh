@@ -89,6 +89,11 @@ for i in $(seq 1 60); do
 done
 COMPOSE_DIR="$(pwd)" ../phase1/setup-phase1.sh
 
+# Custom plugin schemas must exist on the CP before deck sync references them.
+# shellcheck source=../lib/konnect.sh
+source ../lib/konnect.sh
+register_custom_plugins
+
 export DECK_KONNECT_TOKEN="${KONNECT_TOKEN}"
 for tier in internal external; do
   echo "==> deck sync (${tier})..."

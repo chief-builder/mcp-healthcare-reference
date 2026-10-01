@@ -121,10 +121,20 @@ services:
       KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: cjson.safe
       KONG_PROXY_LISTEN: 0.0.0.0:8000
       KONG_STATUS_LISTEN: 0.0.0.0:8007
+      # Load every custom plugin deck/internal.yaml references (deck/ is one
+      # source of truth for all phases); each is inert where unused.
+      KONG_PLUGINS: bundled,cnf-check,dlp-egress,vendor-token,dpop-check
+      KONG_LUA_PACKAGE_PATH: /opt/kong-plugins/?.lua;;
+      # dpop-check's replay cache (single-entry DP: a shared dict is authoritative)
+      KONG_NGINX_HTTP_LUA_SHARED_DICT: "dpop_jti 5m"
     env_file:
       - path: ./generated/dp-internal.env
         required: false
     volumes:
+      - ../../plugins/cnf-check:/opt/kong-plugins/kong/plugins/cnf-check:ro
+      - ../../plugins/dlp-egress:/opt/kong-plugins/kong/plugins/dlp-egress:ro
+      - ../../plugins/vendor-token:/opt/kong-plugins/kong/plugins/vendor-token:ro
+      - ../../plugins/dpop-check:/opt/kong-plugins/kong/plugins/dpop-check:ro
       - ./certs:/certs:ro
     ports:
       - "8100:8000"

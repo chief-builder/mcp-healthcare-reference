@@ -127,6 +127,11 @@ sid=$($KCADM get client-scopes -r mcp-plane --fields id,name | jq -r '.[] | sele
 $KCADM update "clients/${cid}/default-client-scopes/${sid}" -r mcp-plane -n -s realm=mcp-plane
 echo "==> patient-agent now emits groups"
 
+# Custom plugin schemas must exist on the CP before deck sync references them.
+# shellcheck source=../lib/konnect.sh
+source ../lib/konnect.sh
+register_custom_plugins
+
 # --- C: gateway config from git ------------------------------------------------
 # token via env, not argv — keeps it out of process lists and error traces
 export DECK_KONNECT_TOKEN="${KONNECT_TOKEN}"

@@ -123,32 +123,10 @@ server_cert() {
 server_cert keycloak "DNS:localhost,DNS:keycloak,DNS:host.k3d.internal"
 server_cert kong-internal "DNS:localhost,DNS:kong-internal,DNS:host.k3d.internal"
 
-# ---------- cnf-check custom plugin schema on the internal CP ----------
-ensure_plugin_schema() {
-  local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' "${AUTH[@]}" \
-    "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas/cnf-check")
-  local body; body=$(jq -n --rawfile s ../../plugins/cnf-check/schema.lua '{lua_schema: $s}')
-  local resp
-  if [ "$code" = "404" ]; then
-    echo "==> Registering cnf-check plugin schema on mcp-internal..."
-    resp=$(curl -s -w '\n%{http_code}' "${AUTH[@]}" -H 'Content-Type: application/json' \
-      -d "$body" "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas")
-  else
-    echo "==> Updating cnf-check plugin schema on mcp-internal..."
-    resp=$(curl -s -w '\n%{http_code}' "${AUTH[@]}" -H 'Content-Type: application/json' -X PUT \
-      -d "$body" "${API}/control-planes/${INTERNAL_ID}/core-entities/plugin-schemas/cnf-check")
-  fi
-  code=$(echo "$resp" | tail -1)
-  case "$code" in
-    2*) ;;
-    *) echo "FAILED to register cnf-check schema (HTTP $code): $(echo "$resp" | head -1)" >&2
-       echo "    (if this Konnect tier rejects custom plugin schemas, fall back to a" >&2
-       echo "     pre-function port of plugins/cnf-check/handler.lua)" >&2
-       exit 1 ;;
-  esac
-}
-ensure_plugin_schema
+# ---------- Custom plugin schemas on the internal CP ----------
+# shellcheck source=../lib/konnect.sh
+source ../lib/konnect.sh
+register_custom_plugins
 
 # ---------- compose stack ----------
 if docker ps --format '{{.Names}}' | grep -q '^mcp-phase3-'; then
