@@ -123,7 +123,12 @@ jobs:
           tar -xzf deck.tgz -C "$RUNNER_TEMP" deck
           sudo install "$RUNNER_TEMP/deck" /usr/local/bin/deck
       - name: decK gateway state validates
-        run: deck file validate deck/internal.yaml deck/external.yaml
+        # One file per control plane: they share service names, and decK
+        # merges files passed together into a single state.
+        run: |
+          for f in deck/internal.yaml deck/external.yaml; do
+            deck file validate "$f"
+          done
       - name: Compose stacks resolve
         run: .github/scripts/compose-config.sh
 
