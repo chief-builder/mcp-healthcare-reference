@@ -14,16 +14,17 @@ Lab substitutions (documented, per prototype-plan §2):
 import asyncio
 import base64
 import hashlib
-import os
 import secrets
 import time
 from contextlib import asynccontextmanager
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from . import vendors
 from .audit import audit
+from .config import get_settings
 from .hub import HubAuthError, validate
 from .vault_store import (
     CasConflict,
@@ -34,20 +35,20 @@ from .vault_store import (
     write_entry,
 )
 
-BROKER_PUBLIC_URL = os.environ.get("BROKER_PUBLIC_URL", "http://localhost:8300")
-REFRESH_BUFFER_S = int(os.environ.get("REFRESH_BUFFER_S", "300"))
+# Protocol constants from the design doc; tunables live in config.Settings.
 CACHE_TTL_S = 60  # §7: in-memory cache TTL ≤ 60s (also the §10 grace cap)
 TXN_TTL_S = 600  # §4.2: transaction TTL 10 min
 LOCK_TIMEOUT_S = 10  # §9: hard timeout; waiters re-read on expiry
-SWEEP_INTERVAL_S = int(os.environ.get("SWEEP_INTERVAL_S", "60"))
-PROACTIVE_REFRESH_S = int(os.environ.get("PROACTIVE_REFRESH_S", "900"))  # §8: <15 min
-MASS_STALE_WINDOW_S = 60  # §8/§10: ≥3 STALEs for one vendor within a minute…
-MASS_STALE_THRESHOLD = int(os.environ.get("MASS_STALE_THRESHOLD", "3"))  # …→ page
+MASS_STALE_WINDOW_S = 60  # §8/§10: ≥ threshold STALEs for one vendor within a minute → page
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(_sweep_loop()) if SWEEP_INTERVAL_S > 0 else None
+    # Fail fast on bad configuration: settings and the registry are loaded
+    # (and validated) before the first request, not on it.
+    settings = get_settings()
+    vendors.registry()
+    task = asyncio.create_task(_sweep_loop()) if settings.sweep_interval_s > 0 else None
     try:
         yield
     finally:
@@ -73,6 +74,10 @@ def _problem(status: int, type_: str, detail: str = "", **extra) -> JSONResponse
     )
 
 
+def _authorize_uri(vendor: str, txn: str) -> str:
+    return f"{get_settings().broker_public_url}/v1/authorize/{vendor}?txn={txn}"
+
+
 def _lock(vendor: str, sub: str) -> asyncio.Lock:
     return _locks.setdefault((vendor, sub), asyncio.Lock())
 
@@ -91,7 +96,7 @@ def _needs_consent(
         404,
         "needs-consent",
         f"no usable grant for {vendor}",
-        authorize_uri=f"{BROKER_PUBLIC_URL}/v1/authorize/{vendor}?txn={txn}",
+        authorize_uri=_authorize_uri(vendor, txn),
     )
 
 
@@ -122,7 +127,7 @@ def _mark_stale(vendor: str, sub: str, generation: int) -> None:
     events.append(now)
     _stale_events[vendor] = events
     if (
-        len(events) >= MASS_STALE_THRESHOLD
+        len(events) >= get_settings().mass_stale_threshold
         and now - _paged_vendors.get(vendor, 0) > MASS_STALE_WINDOW_S
     ):
         _paged_vendors[vendor] = now
@@ -193,7 +198,7 @@ async def _sweep_once() -> None:
         for sub in subs:
             try:
                 await _sweep_entry(vendor, sub)
-            except Exception as exc:  # a bad entry must never kill the loop
+            except Exception as exc:  # noqa: BLE001 — a bad entry must never kill the loop
                 audit("broker.sweep.error", vendor=vendor, sub=sub, error=str(exc))
 
 
@@ -214,7 +219,8 @@ async def _sweep_entry(vendor: str, sub: str) -> None:
     if entry["state"] != "ACTIVE":
         return
     remaining = entry["expires_at"] - time.time()
-    if not (REFRESH_BUFFER_S < remaining <= PROACTIVE_REFRESH_S):
+    settings = get_settings()
+    if not (settings.refresh_buffer_s < remaining <= settings.proactive_refresh_s):
         return
     lock = _lock(vendor, sub)
     if lock.locked():
@@ -263,11 +269,33 @@ async def _sweep_entry(vendor: str, sub: str) -> None:
 
 async def _sweep_loop() -> None:
     while True:
-        await asyncio.sleep(SWEEP_INTERVAL_S)
+        await asyncio.sleep(get_settings().sweep_interval_s)
         try:
             await _sweep_once()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — the sweeper must outlive any one failure
             audit("broker.sweep.error", error=str(exc))
+
+
+def _parse_resolve_body(body: object) -> tuple[str, int, list[str]] | str:
+    """Validate the §4.1 resolve request. Returns (vendor, min_ttl_s,
+    required_scopes) or an error detail for a 400 problem."""
+    if not isinstance(body, dict):
+        return "body must be a JSON object"
+    vendor = body.get("vendor")
+    if not isinstance(vendor, str) or not vendor:
+        return "vendor is required"
+    min_ttl = body.get("min_ttl_s", 120)
+    if isinstance(min_ttl, float) and min_ttl.is_integer():
+        min_ttl = int(min_ttl)
+    if isinstance(min_ttl, bool) or not isinstance(min_ttl, int) or min_ttl < 0:
+        return "min_ttl_s must be a non-negative integer"
+    required = body.get("required_scopes", [])
+    # Kong's cjson encodes an empty Lua table (the plugin's default) as {}.
+    if required == {}:
+        required = []
+    if not isinstance(required, list) or not all(isinstance(s, str) for s in required):
+        return "required_scopes must be a list of strings"
+    return vendor, min_ttl, required
 
 
 @app.get("/healthz")
@@ -281,9 +309,23 @@ async def resolve(request: Request):
         claims = validate(request.headers.get("authorization"))
     except HubAuthError as exc:
         return _problem(401, "invalid-hub-token", str(exc))
-    body = await request.json()
-    vendor = body.get("vendor", "")
     sub = claims["sub"]  # the JWT is authoritative; the field is advisory
+    try:
+        body = await request.json()
+    except ValueError:
+        body = None
+    parsed = _parse_resolve_body(body)
+    if isinstance(parsed, str):
+        audit(
+            "broker.resolve",
+            decision="deny",
+            reason="bad_request",
+            detail=parsed,
+            hub_jti=claims.get("jti"),
+            sub=sub,
+        )
+        return _problem(400, "invalid-request", parsed)
+    vendor, min_ttl, required = parsed
     if body.get("sub") and body["sub"] != sub:
         audit(
             "broker.resolve",
@@ -295,13 +337,11 @@ async def resolve(request: Request):
             vendor=vendor,
         )
         return _problem(400, "sub-mismatch", "request sub does not match hub token")
-    min_ttl = int(body.get("min_ttl_s", 120))
     spec = vendors.get_vendor(vendor)
     if spec is None:
         return _problem(404, "unknown-vendor", f"vendor {vendor} not registered/enabled")
 
     ceiling = spec.get("scope_ceiling", [])
-    required = [s for s in body.get("required_scopes", []) if isinstance(s, str)]
     if not set(required) <= set(ceiling):
         # A caller can never widen past the registry ceiling (§4.2).
         audit(
@@ -349,7 +389,7 @@ async def resolve(request: Request):
             "needs-reconsent-scope",
             "grant does not cover the required scopes",
             missing_scopes=missing,
-            authorize_uri=f"{BROKER_PUBLIC_URL}/v1/authorize/{vendor}?txn={txn}",
+            authorize_uri=_authorize_uri(vendor, txn),
         )
 
     try:
@@ -370,7 +410,7 @@ async def resolve(request: Request):
             return insufficient
 
         remaining = entry["expires_at"] - time.time()
-        if remaining >= max(min_ttl, REFRESH_BUFFER_S):
+        if remaining >= max(min_ttl, get_settings().refresh_buffer_s):
             _audit("allow", "cache")
             return _ok_response(entry)
 
@@ -379,7 +419,7 @@ async def resolve(request: Request):
         lock = _lock(vendor, sub)
         try:
             await asyncio.wait_for(lock.acquire(), timeout=LOCK_TIMEOUT_S)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Lock-holder death path: re-read and serve if usable (§9 rules).
             _cache.pop((vendor, sub), None)
             found = _get_entry(vendor, sub)
@@ -473,8 +513,15 @@ async def authorize(vendor: str, txn: str):
     if spec is None:
         return _problem(404, "unknown-vendor", vendor)
 
-    eps = await vendors.endpoints(vendor)
-    creds = vendors.read_client(vendor) or {}
+    try:
+        eps = await vendors.endpoints(vendor)
+        creds = vendors.read_client(vendor) or {}
+    except vendors.VendorUnavailable as exc:
+        audit("broker.consent.fail", vendor=vendor, reason="vendor_unavailable", error=str(exc))
+        return _problem(502, "vendor-unavailable", "vendor authorization metadata unavailable")
+    except VaultUnavailable as exc:
+        audit("broker.consent.fail", vendor=vendor, reason="vault_unavailable", error=str(exc))
+        return _problem(503, "vault-unavailable", "credential store unavailable")
     verifier = secrets.token_urlsafe(48)
     challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
@@ -485,7 +532,6 @@ async def authorize(vendor: str, txn: str):
         "sub": record["sub"],
         "vendor": vendor,
         "pkce_verifier": verifier,
-        "nonce": secrets.token_urlsafe(16),
         "issuer": eps.get("issuer"),
         "created_at": time.time(),
         "consumed": False,
@@ -495,12 +541,10 @@ async def authorize(vendor: str, txn: str):
         "scopes": record["scopes"],
     }  # ≤ registry ceiling (§4.2)
     audit("broker.consent.start", sub=record["sub"], vendor=vendor)
-    from urllib.parse import urlencode
-
     params = {
         "client_id": creds.get("client_id", ""),
         "response_type": "code",
-        "redirect_uri": f"{BROKER_PUBLIC_URL}/v1/callback/{vendor}",
+        "redirect_uri": f"{get_settings().broker_public_url}/v1/callback/{vendor}",
         "scope": " ".join(record["scopes"]),
         "state": state,
         "code_challenge": challenge,
@@ -563,7 +607,7 @@ async def callback(vendor: str, request: Request):
             vendor,
             q.get("code", ""),
             record["pkce_verifier"],
-            f"{BROKER_PUBLIC_URL}/v1/callback/{vendor}",
+            f"{get_settings().broker_public_url}/v1/callback/{vendor}",
         )
         vendor_uid = await vendors.vendor_user_id(vendor, tok["access_token"])
         entry = _entry_from_token_response(tok, 1, vendor_uid, record["scopes"])
@@ -602,7 +646,14 @@ async def delete_grant(vendor: str, sub: str, request: Request):
         try:
             await vendors.revoke(vendor, entry)  # §4.4: revoke at vendor FIRST
         except vendors.VendorUnavailable as exc:
-            write_entry(vendor, sub, {**entry, "state": "REVOKE_PENDING"}, cas=ver)
+            try:
+                write_entry(vendor, sub, {**entry, "state": "REVOKE_PENDING"}, cas=ver)
+            except CasConflict:
+                # A concurrent refresh/re-consent moved the entry: nothing was
+                # revoked and nothing was marked; the caller retries.
+                _cache.pop((vendor, sub), None)
+                audit("broker.revoke", sub=sub, vendor=vendor, outcome="conflict")
+                return _problem(409, "grant-changed", "grant changed during revocation; retry")
             _cache.pop((vendor, sub), None)
             audit("broker.revoke", sub=sub, vendor=vendor, outcome="pending", error=str(exc))
             return _problem(502, "revoke-pending", "vendor revocation failed; will retry")
