@@ -6,7 +6,7 @@ PY_VENV := .venv
 PY := $(PY_VENV)/bin/python
 
 .PHONY: help install test test-servers test-broker test-kit test-plugins \
-        lint format format-check typecheck build clean
+        lint format format-check typecheck build linkcheck clean
 
 help:
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -55,6 +55,11 @@ typecheck: $(PY_VENV)/.installed servers/node_modules/.package-lock.json ## Type
 
 build: servers/node_modules/.package-lock.json ## Compile the MCP servers
 	cd servers && npm run build
+
+linkcheck: ## Check relative + external links in docs (lychee, see lychee.toml)
+	lychee --config lychee.toml --no-progress --root-dir "$(CURDIR)" \
+	  README.md overview.html '*.md' 'docs/**/*.md' 'docs/**/*.html' 'kit/**/*.md' \
+	  '*/README.md' '*/*/README.md' '*/*/*/README.md'
 
 clean:
 	rm -rf $(PY_VENV) servers/node_modules servers/*/dist coverage .coverage
