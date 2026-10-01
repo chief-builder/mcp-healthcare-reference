@@ -1,7 +1,12 @@
 # Repository audit — 2026-09-30
 
 Branch `hardening/2026-09-30`, audited at commit `5366956`. Phase 1 of the
-hardening pass: findings only, no code changes. Every "Verified" item cites a
+hardening pass: findings only, no code changes.
+
+> **Point-in-time record.** Everything below describes the repository *before*
+> the fixes. How each finding was resolved (or why it was deferred) is in
+> [`CHANGELOG.md`](CHANGELOG.md) under 2.0.0 and in the pull request's claims
+> table. Every "Verified" item cites a
 file, a test, or a command that was actually run on 2026-09-30; anything that
 could not be checked is marked Unverifiable with what would check it.
 
