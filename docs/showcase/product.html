@@ -340,7 +340,7 @@
               ["Maria, patient", "the human"],
               ["her health assistant", "the AI"],
               ["her record only", "the decision"],
-              ["list_medications", "the action"],
+              ["searchMedicationRequest", "the action"],
               ["her meds, explained", "the result"]
             ],
             lead: "A patient's assistant is only ever about that patient.",
@@ -421,7 +421,7 @@
       </div>
       <div class="door-col">
         <div class="door-item">Clinical systems <span class="sub">records, scheduling, formularies — as AI-callable tools</span></div>
-        <div class="door-item">SaaS vendors <span class="sub">GitHub, Notion, and friends — screened on the way out</span></div>
+        <div class="door-item">SaaS vendors <span class="sub">GitHub (and the lab&rsquo;s mock vendor) — screened on the way out</span></div>
       </div>
     </div>
   </section>
@@ -496,9 +496,10 @@
     <div class="gov-band">
       <p class="big">Enterprise admins decide which AI clients may connect to which systems — centrally,
       in the identity provider, before a single request flows.</p>
-      <p>That's the connection layer, and it follows the MCP Enterprise-Managed Authorization standard:
-      sign in once through the enterprise IdP, and sanctioned AI tools connect to sanctioned systems
-      with no per-app consent ceremony. What each request may <em>do</em> is then enforced again at the
+      <p>That's the connection layer: today, one brokered sign-in through the enterprise IdP; by
+      design, the MCP Enterprise-Managed Authorization standard, where sanctioned AI tools connect to
+      sanctioned systems with no per-app consent ceremony — an upgrade the hub absorbs once the IdPs
+      ship it, not yet built in the lab. What each request may <em>do</em> is then enforced again at the
       gateway and inside every tool — least privilege by scope, by role, by patient. Neither layer
       assumes the other did its job.</p>
       <p>And every transitional piece — brokered credentials for vendors that don't speak the standard
@@ -515,7 +516,7 @@
       tokens across boundaries, leak identifiers, and hijack consent flows.
     </p>
     <div class="proof">
-      <div class="item"><span class="dot"></span>Eight acceptance gates, all green — 154 tests on the last full run</div>
+      <div class="item"><span class="dot"></span>Eight acceptance gates, all green on the last full run (2026-07-12, 154 tests)</div>
       <div class="item"><span class="dot"></span>32 adversarial red-team probes, 0 failures</div>
       <div class="item"><span class="dot"></span>Real vendor, real consent, real revocation</div>
     </div>
