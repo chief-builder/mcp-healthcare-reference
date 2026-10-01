@@ -482,10 +482,10 @@
           </div>
         </div>
         <div class="status-grid" aria-label="Repository status">
-          <div class="metric"><strong>8 / 8</strong><span>phases complete, acceptance gates green (0–7)</span></div>
+          <div class="metric"><strong>8 / 8</strong><span>phases built; last full gate run (0–7) green on 2026-07-12</span></div>
           <div class="metric"><strong>7</strong><span>fidelity-contract properties enforced, never stubbed</span></div>
           <div class="metric"><strong>2</strong><span>first-party MCP servers</span></div>
-          <div class="metric"><strong>3</strong><span>bespoke Kong plugins</span></div>
+          <div class="metric"><strong>4</strong><span>bespoke Kong plugins</span></div>
         </div>
       </div>
       <aside class="visual">
@@ -499,7 +499,7 @@
       <div class="invariants">
         <div class="invariant">
           <h3>One MCP issuer</h3>
-          <p>Ping, Auth0, Athenz, and transitional homegrown identity paths normalize into Keycloak-issued MCP-plane JWTs.</p>
+          <p>A brokered workforce IdP, Auth0, SPIFFE workload certificates, and a transitional legacy issuer all normalize into Keycloak-issued MCP-plane JWTs.</p>
         </div>
         <div class="invariant">
           <h3>PHI boundary discipline</h3>
@@ -515,7 +515,7 @@
         </div>
         <div class="invariant">
           <h3>Planned exits</h3>
-          <p>Homegrown AS and brokered vendor tokens are transitional, with explicit migration paths to Athenz and EMA/ID-JAG.</p>
+          <p>The legacy in-house issuer and brokered vendor tokens are transitional, with explicit migration paths to attested workload identity and EMA/ID-JAG.</p>
         </div>
       </div>
     </section>
@@ -527,7 +527,7 @@
           <div class="lane">
             <div class="lane-title">Workforce</div>
             <div class="node blue">Claude Code / Codex / VS Code</div>
-            <div class="node green">Ping brokered by Keycloak</div>
+            <div class="node green">Workforce IdP brokered by Keycloak</div>
             <div class="node purple">Internal Kong DP</div>
             <div class="node teal">Scheduling / FHIR MCP</div>
             <div class="node orange">FHIR / EHR backend</div>
@@ -535,7 +535,7 @@
           <div class="lane">
             <div class="lane-title">Internal agents</div>
             <div class="node blue">Loop agent workload</div>
-            <div class="node green">Athenz or SPIFFE cert path</div>
+            <div class="node green">SPIFFE workload cert path</div>
             <div class="node purple">cnf-bound internal tier</div>
             <div class="node teal">Tool call with scopes</div>
             <div class="node orange">Shared state stores</div>
@@ -569,7 +569,7 @@
       <div class="callout">
         <h2>Security Boundary</h2>
         <p><strong>Tier replay is meant to fail.</strong> Tokens carry exactly one tier audience such as <code>mcp://tier/internal</code> or <code>mcp://tier/external</code>, plus one or more server resource audiences such as <code>mcp://srv/fhir-clinical</code>.</p>
-        <p><strong>The hub token stops at the validating component.</strong> MCP servers use their own backend credentials for FHIR calls, and the egress tier replaces the hub JWT with a vendor access token only after DLP and broker resolution.</p>
+        <p><strong>The hub token stops at the validating component.</strong> MCP servers never forward the caller&rsquo;s token to FHIR (the lab&rsquo;s HAPI needs no credential; an optional server-owned <code>UPSTREAM_API_KEY</code> covers backends that do), and the egress tier replaces the hub JWT with a vendor access token only after DLP and broker resolution.</p>
         <p><strong>Audit is joinable by design.</strong> The shared tuple uses <code>jti</code>, <code>sub</code>, <code>act.sub</code>, <code>azp</code>, <code>idp_origin</code>, tier, tool, server, and decision — and phase 6 proves it: one Loki query keyed by <code>jti</code> walks a vendor call across gateway, DLP, and broker records.</p>
       </div>
     </section>
@@ -638,12 +638,12 @@
           <ul>
             <li><code>compose/phase5/alloy</code></li>
             <li><code>compose/phase0/grafana/provisioning</code></li>
-            <li><code>servers/*/src/audit.ts</code></li>
+            <li><code>servers/shared/src/audit.ts</code></li>
           </ul>
         </article>
         <article class="component">
           <h3>Mock Vendor + Gates</h3>
-          <p>A mockhub authorization server with rotating refresh tokens drives the consent, refresh-race, and revocation gates fully headless; each phase ends in a green suite.</p>
+          <p>A mockhub authorization server with rotating refresh tokens drives the consent, refresh-race, and revocation gates fully headless; each phase ends in an acceptance suite.</p>
           <ul>
             <li><code>compose/phase5/mock-vendor</code></li>
             <li><code>tests/phase5.sh</code></li>
@@ -726,7 +726,7 @@
 
     <section class="panel">
       <h2>Prototype Phases</h2>
-      <p>Phases 0–7 are complete and each acceptance gate (<code>tests/phaseN.sh</code>) is green on the current stack. Phase 7, the red-team weekend, ran the arch §13 acceptance list plus the named probes; its findings were filed as GitHub issues and remediated in code. Conformance targets the draft MCP 2026-07-28 model, not a final certification.</p>
+      <p>Phases 0–7 are built; the last full run of every acceptance gate (<code>tests/phaseN.sh</code>) was green on 2026-07-12, and phases 0–1 were re-verified from a clean clone on 2026-09-30. Phase 7, the red-team weekend, ran the arch §13 acceptance list plus the named probes; its findings were filed as GitHub issues and remediated in code. The servers speak the released MCP 2026-07-28 revision (TypeScript SDK v2); this is evidence, not a certification.</p>
       <div class="phase-grid">
         <article class="phase">
           <div class="phase-head"><div class="number">0</div><span class="state done">gate green</span></div>
@@ -736,7 +736,7 @@
         <article class="phase">
           <div class="phase-head"><div class="number">1</div><span class="state done">gate green</span></div>
           <h3>Identity Hub</h3>
-          <p>Brokered workforce and customer flows plus homegrown token exchange all produce contract-conformant Keycloak JWTs, including a DPoP sender-constrained workforce path carrying <code>cnf.jkt</code>.</p>
+          <p>Brokered workforce and customer flows plus homegrown token exchange all produce contract-conformant Keycloak JWTs. (The DPoP-bound <code>workforce-dpop</code> client is proven in phase 7.)</p>
         </article>
         <article class="phase">
           <div class="phase-head"><div class="number">2</div><span class="state done">gate green</span></div>
@@ -751,7 +751,7 @@
         <article class="phase">
           <div class="phase-head"><div class="number">4</div><span class="state done">gate green</span></div>
           <h3>Cert-Bound M2M</h3>
-          <p>SPIFFE or Athenz-style certs produce <code>cnf</code>-bound tokens and the Kong plugin rejects channel mismatch.</p>
+          <p>SPIFFE certificates (SPIRE in k3d) produce <code>cnf</code>-bound tokens and the Kong plugin rejects channel mismatch.</p>
         </article>
         <article class="phase">
           <div class="phase-head"><div class="number">5</div><span class="state done">gate green</span></div>
@@ -761,7 +761,7 @@
         <article class="phase">
           <div class="phase-head"><div class="number">6</div><span class="state done">gate green</span></div>
           <h3>Audit Spine</h3>
-          <p>Gateway, server, broker, and identity events join by <code>jti</code> in one Loki query, with Kong traces in Tempo and a provisioned Grafana tuple dashboard.</p>
+          <p>Gateway, server, DLP, and broker events join by <code>jti</code> in one Loki query, with Kong traces in Tempo and a provisioned Grafana tuple dashboard.</p>
         </article>
         <article class="phase">
           <div class="phase-head"><div class="number">7</div><span class="state done">gate green</span></div>
@@ -804,12 +804,12 @@
           </tr>
           <tr>
             <td><code>plugins/</code></td>
-            <td>Kong Lua plugins for certificate binding, DLP screening, and vendor-token injection.</td>
+            <td>Kong Lua plugins for certificate binding, DPoP binding, DLP screening, and vendor-token injection.</td>
             <td><code>plugins/cnf-check/handler.lua</code></td>
           </tr>
           <tr>
             <td><code>tests/</code></td>
-            <td>Acceptance suites mapped to prototype phases; all gates 0–7 are green.</td>
+            <td>Acceptance suites mapped to prototype phases (live stack); offline suites run with <code>make test</code>.</td>
             <td><code>tests/phase5</code> and <code>tests/phase6</code></td>
           </tr>
         </tbody>
