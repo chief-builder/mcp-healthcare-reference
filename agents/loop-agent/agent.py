@@ -14,6 +14,7 @@ One JSON log line per iteration carries the presented-cert thumbprint and
 token jti, which the phase 4 acceptance suite (and later the audit spine)
 joins on.
 """
+
 import base64
 import hashlib
 import json
@@ -59,7 +60,7 @@ def jwt_payload(token: str) -> dict:
 def sse_json(text: str) -> dict:
     for line in text.splitlines():
         if line.startswith("data:"):
-            return json.loads(line[len("data:"):].strip())
+            return json.loads(line[len("data:") :].strip())
     return json.loads(text)
 
 
@@ -79,8 +80,12 @@ def call_tool(token: str, name: str, arguments: dict) -> dict:
     r = requests.post(
         MCP_URL,
         headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
-        json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-              "params": {"name": name, "arguments": arguments}},
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments},
+        },
         cert=CERT,
         verify=CA_BUNDLE,
         timeout=10,
@@ -104,9 +109,15 @@ def iteration() -> None:
     hold = call_tool(token, "hold-slot", {"slot_id": slots[0]["slot_id"]})
     call_tool(token, "release-hold", {"slot_hold_id": hold["slot_hold_id"]})
 
-    log(event="loop", ok=True, x5t=x5t, jti=claims.get("jti"),
-        azp=claims.get("azp"), idp_origin=claims.get("idp_origin"),
-        slot_hold_id=hold["slot_hold_id"])
+    log(
+        event="loop",
+        ok=True,
+        x5t=x5t,
+        jti=claims.get("jti"),
+        azp=claims.get("azp"),
+        idp_origin=claims.get("idp_origin"),
+        slot_hold_id=hold["slot_hold_id"],
+    )
 
 
 def main() -> None:

@@ -6,6 +6,7 @@ Endpoints come from RFC 8414 metadata when the vendor publishes it
 (mockhub); hardcoded registry endpoints are the documented deviation for
 vendors without metadata (GitHub).
 """
+
 import json
 import os
 import time
@@ -75,8 +76,9 @@ async def _token_request(vendor: str, form: dict) -> dict:
     form = {**form, "client_id": client_id, "client_secret": client_secret}
     try:
         async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.post(eps["token_endpoint"], data=form,
-                             headers={"Accept": "application/json"})
+            r = await c.post(
+                eps["token_endpoint"], data=form, headers={"Accept": "application/json"}
+            )
     except httpx.HTTPError as exc:
         raise VendorUnavailable(str(exc)) from exc
     if r.status_code >= 500:
@@ -92,19 +94,25 @@ async def _token_request(vendor: str, form: dict) -> dict:
 
 
 async def exchange_code(vendor: str, code: str, verifier: str, redirect_uri: str) -> dict:
-    return await _token_request(vendor, {
-        "grant_type": "authorization_code",
-        "code": code,
-        "code_verifier": verifier,
-        "redirect_uri": redirect_uri,
-    })
+    return await _token_request(
+        vendor,
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "code_verifier": verifier,
+            "redirect_uri": redirect_uri,
+        },
+    )
 
 
 async def refresh(vendor: str, refresh_token: str) -> dict:
-    return await _token_request(vendor, {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-    })
+    return await _token_request(
+        vendor,
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        },
+    )
 
 
 async def vendor_user_id(vendor: str, access_token: str) -> str:
@@ -116,8 +124,9 @@ async def vendor_user_id(vendor: str, access_token: str) -> str:
     if not url:
         return "unknown"
     async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(url, headers={"Authorization": f"Bearer {access_token}",
-                                      "Accept": "application/json"})
+        r = await c.get(
+            url, headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
+        )
         if r.status_code != 200:
             return "unknown"
         body = r.json()
@@ -138,16 +147,21 @@ async def revoke(vendor: str, entry: dict) -> None:
                     f"https://api.github.com/applications/{client_id}/grant",
                     auth=(client_id, client_secret),
                     json={"access_token": entry["access_token"]},
-                    headers={"Accept": "application/vnd.github+json"})
+                    headers={"Accept": "application/vnd.github+json"},
+                )
                 if r.status_code not in (204, 404, 422):
                     raise VendorUnavailable(f"github grant delete {r.status_code}")
             else:
                 eps = await endpoints(vendor)
-                r = await c.post(eps["revocation_endpoint"],
-                                 data={"token": entry["refresh_token"],
-                                       "token_type_hint": "refresh_token",
-                                       "client_id": client_id,
-                                       "client_secret": client_secret})
+                r = await c.post(
+                    eps["revocation_endpoint"],
+                    data={
+                        "token": entry["refresh_token"],
+                        "token_type_hint": "refresh_token",
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                    },
+                )
                 if r.status_code >= 400:
                     raise VendorUnavailable(f"revocation endpoint {r.status_code}")
     except httpx.HTTPError as exc:

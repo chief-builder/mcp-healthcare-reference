@@ -5,6 +5,7 @@ audience on every inbound call. (Production also verifies cnf against the
 caller's mTLS cert; the lab's callers are interactive workforce tokens,
 which carry no cnf — see README substitutions.)
 """
+
 import os
 
 import jwt
@@ -12,7 +13,8 @@ from jwt import PyJWKClient
 
 HUB_ISSUER = os.environ.get("HUB_ISSUER", "http://localhost:8080/realms/mcp-plane")
 HUB_JWKS_URI = os.environ.get(
-    "HUB_JWKS_URI", "http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs")
+    "HUB_JWKS_URI", "http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs"
+)
 TIER_AUDIENCE = os.environ.get("HUB_TIER_AUDIENCE", "mcp://tier/internal")
 
 _jwks = PyJWKClient(HUB_JWKS_URI, cache_keys=True)
@@ -36,7 +38,8 @@ def validate(authorization: str | None) -> dict:
     try:
         key = _jwks.get_signing_key_from_jwt(token).key
         claims = jwt.decode(
-            token, key,
+            token,
+            key,
             algorithms=["PS256", "ES256"],
             issuer=HUB_ISSUER,
             audience=TIER_AUDIENCE,

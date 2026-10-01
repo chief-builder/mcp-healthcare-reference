@@ -4,6 +4,7 @@ Deliberately minimal: one static client, client_credentials only, RS256 JWTs.
 It exists to exercise the RFC 8693 exchange leg at Keycloak — the "frozen,
 sunsetting" migration story. No new features get added here by design.
 """
+
 import base64
 import os
 import time
