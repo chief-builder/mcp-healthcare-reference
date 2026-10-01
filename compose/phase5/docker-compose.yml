@@ -249,7 +249,7 @@ services:
       - "8310:8310"
 
   cp-uplink:
-    image: nginx:1.30.5-alpine
+    image: nginx:1.31.0-alpine
     volumes:
       - ../phase2/uplink.conf:/etc/nginx/nginx.conf:ro
     networks:
