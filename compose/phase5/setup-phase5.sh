@@ -221,8 +221,10 @@ KCTL=(kubectl --context k3d-mcp-lab)
 # the loop agent then cannot reach Keycloak/Kong on the host. Verify the name
 # resolves in-cluster; restart CoreDNS once if it does not.
 dns_ok() {
+  # Bounded: a probe pod that never starts must not hang setup.
+  "${KCTL[@]}" delete pod k3d-dns-check --ignore-not-found --wait=false >/dev/null 2>&1
   "${KCTL[@]}" run k3d-dns-check --rm -i --restart=Never --image=busybox:1.37 \
-    --command -- nslookup host.k3d.internal >/dev/null 2>&1
+    --pod-running-timeout=60s --command -- nslookup host.k3d.internal >/dev/null 2>&1
 }
 # A ConfigMap change reaches the CoreDNS pod's mounted file only on the next
 # kubelet sync, so poll (~2 min) and restart CoreDNS once if it stays stale.
