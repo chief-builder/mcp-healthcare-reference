@@ -8,8 +8,20 @@
 # from ../phase3/.env if missing; deck, k3d, kubectl, openssl, jq.
 set -euo pipefail
 cd "$(dirname "$0")"
-[ -f .env ] || { echo "==> Copying ../phase3/.env"; cp ../phase3/.env .env; }
+if [ ! -f .env ]; then
+  # Reuse the previous phase's credentials when that phase was set up first;
+  # otherwise start from this phase's own template.
+  if [ -f ../phase3/.env ]; then
+    echo "==> Copying ../phase3/.env"; cp ../phase3/.env .env
+  else
+    echo "Missing .env: cp .env.example .env and fill it in (KONNECT_TOKEN etc.)" >&2
+    exit 1
+  fi
+fi
 set -a; source .env; set +a
+case "${KONNECT_TOKEN:-}" in
+  ""|kpat_change-me) echo "Set KONNECT_TOKEN in .env (Konnect personal access token)" >&2; exit 1 ;;
+esac
 
 for tool in deck k3d kubectl openssl jq; do
   command -v "$tool" >/dev/null || { echo "$tool required" >&2; exit 1; }

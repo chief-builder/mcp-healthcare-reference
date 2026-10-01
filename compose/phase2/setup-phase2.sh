@@ -11,7 +11,11 @@
 # deck installed (brew install deck), openssl, jq.
 set -euo pipefail
 cd "$(dirname "$0")"
+[ -f .env ] || { echo "Missing .env: cp .env.example .env and fill it in" >&2; exit 1; }
 set -a; source .env; set +a
+case "${KONNECT_TOKEN:-}" in
+  ""|kpat_change-me) echo "Set KONNECT_TOKEN in .env (Konnect personal access token)" >&2; exit 1 ;;
+esac
 
 API="https://${KONNECT_REGION}.api.konghq.com/v2"
 AUTH=(-H "Authorization: Bearer ${KONNECT_TOKEN}")
