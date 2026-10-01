@@ -55,7 +55,7 @@ spec:
         runAsGroup: 65534
       containers:
         - name: spiffe-helper
-          image: ghcr.io/spiffe/spiffe-helper:0.10.0
+          image: ghcr.io/spiffe/spiffe-helper:0.12.1
           args: ["-config", "/etc/spiffe-helper/helper.conf"]
           volumeMounts:
             - name: helper-config

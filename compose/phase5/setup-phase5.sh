@@ -218,7 +218,7 @@ done
 # ---------- k3d + SPIRE + loop agent (unchanged from phase 4) ----------
 if ! k3d cluster list 2>/dev/null | grep -q '^mcp-lab '; then
   echo "==> Creating k3d cluster mcp-lab..."
-  k3d cluster create mcp-lab --servers 1 --wait
+  k3d cluster create mcp-lab --servers 1 --wait --image rancher/k3s:v1.37.0-k3s1
 fi
 KCTL=(kubectl --context k3d-mcp-lab)
 
