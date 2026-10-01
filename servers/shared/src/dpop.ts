@@ -19,8 +19,9 @@
  */
 import { createHash } from 'node:crypto';
 import { jwtVerify, EmbeddedJWK, calculateJwkThumbprint } from 'jose';
-import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import type { Request, Response, NextFunction } from 'express';
+
+import type {} from '@modelcontextprotocol/express'; // req.auth augmentation
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -59,7 +60,8 @@ export function requireDpop(config: DpopConfig) {
   const iatWindow = config.iatWindowSec ?? 60;
 
   return async function dpop(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const jkt = (req.auth?.extra as Record<string, any> | undefined)?.cnf?.jkt;
+    const cnf = (req.auth?.extra as { cnf?: { jkt?: unknown } } | undefined)?.cnf;
+    const jkt = cnf?.jkt;
     // Not a sender-constrained token — the bearer path is untouched.
     if (typeof jkt !== 'string' || jkt.length === 0) return next();
 
@@ -126,9 +128,10 @@ export function requireDpop(config: DpopConfig) {
       }
 
       return next();
-    } catch (err) {
-      const description = err instanceof InvalidTokenError ? err.message : 'invalid DPoP proof';
-      return reject('invalid_dpop_proof', description);
+    } catch {
+      // jose rejects a bad signature, a private key in the header JWK, or a
+      // non-ES256 alg; the detail stays server-side.
+      return reject('invalid_dpop_proof', 'invalid DPoP proof');
     }
   };
 }

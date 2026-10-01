@@ -100,7 +100,9 @@ services:
         condition: service_healthy
 
   fhir-clinical:
-    build: ../../servers/fhir-clinical
+    build:
+      context: ../../servers
+      dockerfile: fhir-clinical/Dockerfile
     environment:
       HOST: 0.0.0.0
       PORT: "3000"
@@ -113,7 +115,9 @@ services:
       - keycloak
 
   scheduling:
-    build: ../../servers/scheduling
+    build:
+      context: ../../servers
+      dockerfile: scheduling/Dockerfile
     environment:
       HOST: 0.0.0.0
       PORT: "3000"
