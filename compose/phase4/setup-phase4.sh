@@ -165,6 +165,21 @@ if ! k3d cluster list 2>/dev/null | grep -q '^mcp-lab '; then
 fi
 KCTL=(kubectl --context k3d-mcp-lab)
 
+# k3d writes host.k3d.internal into CoreDNS's NodeHosts after the cluster is
+# up; with k3s newer than k3d's default the running CoreDNS can miss it, and
+# the loop agent then cannot reach Keycloak/Kong on the host. Verify the name
+# resolves in-cluster; restart CoreDNS once if it does not.
+dns_ok() {
+  "${KCTL[@]}" run k3d-dns-check --rm -i --restart=Never --image=busybox:1.37 \
+    --command -- nslookup host.k3d.internal >/dev/null 2>&1
+}
+if ! dns_ok; then
+  echo "==> host.k3d.internal not resolvable in-cluster; restarting CoreDNS..."
+  "${KCTL[@]}" -n kube-system rollout restart deploy/coredns > /dev/null
+  "${KCTL[@]}" -n kube-system rollout status deploy/coredns --timeout=120s
+  dns_ok || { echo "host.k3d.internal still unresolvable in k3d" >&2; exit 1; }
+fi
+
 echo "==> Deploying SPIRE..."
 "${KCTL[@]}" create namespace spire --dry-run=client -o yaml | "${KCTL[@]}" apply -f - > /dev/null
 "${KCTL[@]}" -n spire create secret generic spire-upstream-ca \
