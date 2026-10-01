@@ -1,0 +1,5 @@
+# Inherit the repo-wide config; only teach isort the broker's own packages.
+extend = "../pyproject.toml"
+
+[lint.isort]
+known-first-party = ["app", "tests"]
