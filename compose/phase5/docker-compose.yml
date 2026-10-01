@@ -223,7 +223,6 @@ services:
       HUB_ISSUER: http://localhost:8080/realms/mcp-plane
       HUB_JWKS_URI: http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      MCP_ADMIN_ISSUER: http://localhost:8080/realms/mcp-plane
     ports:
       - "8300:8300"
     healthcheck:
