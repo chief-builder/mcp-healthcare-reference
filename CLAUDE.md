@@ -20,11 +20,12 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phases 0–7 built. Last full run of all eight gates: green on 2026-07-12
-(154 items then; 159 now). The 2026-09-30 hardening branch re-verified
-phases 0–1 from a clean clone; phases 2–7 need a valid Konnect PAT in
-compose/phase{2..5}/.env and the vtb-* containers stopped (ports
-8210/8300/8310). Offline: `make test` (servers vitest 88, broker pytest 96,
+Phases 0–7 built. Last full run of all eight gates: green on 2026-09-30
+on the hardening branch (MCP 2026-07-28, Kong 3.16, current images):
+158 passed + 1 skipped of 159 (the skip is the optional real-GitHub leg,
+which needs a one-time browser consent), plus phase 0's 4 checks.
+Phases 2–7 need a valid Konnect PAT in compose/phase{2..5}/.env and free
+host ports 8210/8300/8310 (stop the vtb-* containers). Offline: `make test` (servers vitest 88, broker pytest 96,
 DB-less Kong plugin suite 47, kit vectors 15+4 skipped) — no accounts.
 
 Hardening (2026-09-30): MCP 2026-07-28 via @modelcontextprotocol/server

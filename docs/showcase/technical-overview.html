@@ -241,10 +241,10 @@
       Four client populations reach two classes of MCP destination through a Kong gateway estate,
       under a single-issuer token model (Keycloak), sender-constrained tokens (mTLS for workloads, DPoP for workforce), egress DLP,
       and a vault-backed vendor token broker. Every contested design decision runs as executable
-      acceptance gates — phases 0–7, all green on the last full run (2026-07-12).
+      acceptance gates — phases 0–7, all green on the last full run (2026-09-30).
     </p>
     <div class="status-strip">
-      <div class="item"><span class="dot"></span>Phases 0–7 green (last full run 2026-07-12)</div>
+      <div class="item"><span class="dot"></span>Phases 0–7 green (last full run 2026-09-30)</div>
       <div class="item"><span class="dot"></span>Red-team suite: 32 passed, 0 xfail</div>
       <div class="item"><span class="dot warn"></span>1 open gap: external-tier CIMD (#3); MCP 2026-07-28 wire migration (#8) done 2026-09-30</div>
       <div class="item"><span class="dot"></span>EMA (stable ext-auth spec) terminology aligned</div>
@@ -352,9 +352,8 @@
     <div class="eyebrow">Executable acceptance</div>
     <h2>Phase gates, in order</h2>
     <p class="section-intro">A phase is done only when <code>tests/phaseN.sh</code> is green. All eight were on the
-    last full run (2026-07-12): 154 tests across phases 1–7, plus the phase-0 smoke checks. The
-    2026-09-30 hardening pass added five live probes (159 now) and re-verified phases 0–1 from a
-    clean clone; phases 2–7 await a re-run against Konnect.</p>
+    last full run (2026-09-30, after the hardening pass): 159 tests across phases 1–7 — 158 passed,
+    1 skipped (the optional real-GitHub leg) — plus the phase-0 smoke checks.</p>
     <div class="phases">
       <div class="phase"><h3>0 · Skeleton</h3><p class="gate">tests/phase0.sh</p><p>Keycloak + Postgres + HAPI FHIR + Grafana stack; ~50 Synthea patients; hub realm from a git-tracked export.</p></div>
       <div class="phase"><h3>1 · Identity hub</h3><p class="gate">tests/phase1.sh · 72 tests</p><p>A fake-Ping Keycloak realm, real Auth0, and a toy homegrown issuer all normalize to contract-conformant JWTs from the single issuer.</p></div>

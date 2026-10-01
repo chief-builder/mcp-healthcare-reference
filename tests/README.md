@@ -14,8 +14,8 @@ rides the phase 5 stack), so re-run any earlier gate against the running
 stack to check for regressions. Current item counts: phase1 72, phase2 11,
 phase3 12, phase4 9, phase5 17, phase6 6, phase7 32 (159), plus phase 0's
 four shell checks. The last full run of all eight gates was green on
-2026-07-12 (154 items at the time); phases 0–1 were re-verified from a clean
-clone on 2026-09-30.
+2026-09-30: 158 passed, 1 skipped (phase 5's optional real-GitHub leg, which
+needs a one-time browser consent).
 
 `phase7.sh` is the red-team weekend (plan §3) — adversarial probes against
 the same stack; passing means the defense held. All probes are plain

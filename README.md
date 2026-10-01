@@ -173,10 +173,11 @@ token-in-log greps, the broker no-issuance rule, and DPoP probes. See
 
 ## Project status and limitations
 
-As of 2026-09-30: the offline suites and the phase 0–1 gates pass on this
-branch from a clean clone. All eight phase gates last passed together on 2026-07-12 (154 items then;
-159 now), before the MCP 2026-07-28 migration and the image upgrades; re-running them needs a valid
-Konnect token. Release history: [`CHANGELOG.md`](CHANGELOG.md).
+As of 2026-09-30, on this branch: the offline suites pass (`make test`), the
+phase 0–1 quickstart passes from a clean clone, and all eight live gates pass on
+the full lab — 158 of 159 items, plus phase 0's four checks. The one skip is the
+optional real-GitHub leg, which needs a one-time browser consent on a GitHub
+App (the mock vendor covers the same egress path). Release history: [`CHANGELOG.md`](CHANGELOG.md).
 
 Known limitations — this is a lab, not production software:
 

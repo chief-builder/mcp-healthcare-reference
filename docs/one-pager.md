@@ -1,6 +1,6 @@
 # MCP Healthcare Reference — One-Page Summary
 
-*A runnable reference implementation of governed, enterprise-grade MCP (Model Context Protocol) for regulated healthcare. Phases 0–7 built; the last full run of all eight acceptance gates (2026-07-12) was green. The live suites now hold 159 tests (incl. a 32-probe red-team suite), plus 246 offline tests (`make test`) that need no accounts.*
+*A runnable reference implementation of governed, enterprise-grade MCP (Model Context Protocol) for regulated healthcare. Phases 0–7 built; the last full run of all eight acceptance gates (2026-09-30) was green: 158 of 159 live tests, the one skip being the optional real-GitHub leg. The live suites now hold 159 tests (incl. a 32-probe red-team suite), plus 246 offline tests (`make test`) that need no accounts.*
 
 ## What it does
 
