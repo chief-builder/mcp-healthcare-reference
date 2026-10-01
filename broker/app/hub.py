@@ -6,18 +6,27 @@ caller's mTLS cert; the lab's callers are interactive workforce tokens,
 which carry no cnf — see README substitutions.)
 """
 
-import os
+from typing import Any
 
 import jwt
 from jwt import PyJWKClient
 
-HUB_ISSUER = os.environ.get("HUB_ISSUER", "http://localhost:8080/realms/mcp-plane")
-HUB_JWKS_URI = os.environ.get(
-    "HUB_JWKS_URI", "http://keycloak:8080/realms/mcp-plane/protocol/openid-connect/certs"
-)
-TIER_AUDIENCE = os.environ.get("HUB_TIER_AUDIENCE", "mcp://tier/internal")
+from .config import get_settings
 
-_jwks = PyJWKClient(HUB_JWKS_URI, cache_keys=True)
+_jwks: Any = None  # PyJWKClient, built on first use (tests inject a fake)
+
+
+def set_jwks_client(client: Any) -> None:
+    """Test seam: anything with get_signing_key_from_jwt(token) -> obj.key."""
+    global _jwks
+    _jwks = client
+
+
+def _jwks_client() -> Any:
+    global _jwks
+    if _jwks is None:
+        _jwks = PyJWKClient(get_settings().hub_jwks_uri, cache_keys=True)
+    return _jwks
 
 
 class HubAuthError(Exception):
@@ -35,23 +44,24 @@ def validate(authorization: str | None) -> dict:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HubAuthError("missing bearer token")
     token = authorization.split(None, 1)[1]
+    settings = get_settings()
     try:
-        key = _jwks.get_signing_key_from_jwt(token).key
+        key = _jwks_client().get_signing_key_from_jwt(token).key
         claims = jwt.decode(
             token,
             key,
             algorithms=["PS256", "ES256"],
-            issuer=HUB_ISSUER,
-            audience=TIER_AUDIENCE,
+            issuer=settings.hub_issuer,
+            audience=settings.hub_tier_audience,
             leeway=30,
             options={"require": ["exp", "iat", "sub", "jti"]},
         )
-    except Exception as exc:  # jwt raises many subclasses; all mean 401
+    except Exception as exc:  # noqa: BLE001 — jwt raises many subclasses; all mean 401
         raise HubAuthError(str(exc)) from exc
     if claims.get("mcp_contract") != "1.0":
         raise HubAuthError("unsupported mcp_contract")
     aud = claims.get("aud", [])
     aud = [aud] if isinstance(aud, str) else aud
-    if sum(a.startswith("mcp://tier/") for a in aud) != 1:
+    if sum(isinstance(a, str) and a.startswith("mcp://tier/") for a in aud) != 1:
         raise HubAuthError("token must carry exactly one tier audience")
     return claims
