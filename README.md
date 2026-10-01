@@ -175,11 +175,12 @@ token-in-log greps, the broker no-issuance rule, and DPoP probes. See
 
 ## Project status and limitations
 
-As of 2026-09-30, on this branch: the offline suites pass (`make test`), the
+As of 2026-10-01, on `main`: the offline suites pass (`make test`), the
 phase 0–1 quickstart passes from a clean clone, and all eight live gates pass on
-the full lab — 158 of 159 items, plus phase 0's four checks. The one skip is the
-optional real-GitHub leg, which needs a one-time browser consent on a GitHub
-App (the mock vendor covers the same egress path). Release history: [`CHANGELOG.md`](CHANGELOG.md).
+the full lab — all 159 items on 2026-10-01, nothing skipped, plus phase 0's four
+checks. That run includes the real-GitHub egress leg (a `list_issues` call to
+GitHub's MCP server with a broker-held token, after a one-time browser consent)
+and the Auth0 patient leg; both skip without those accounts. Release history: [`CHANGELOG.md`](CHANGELOG.md).
 
 Known limitations — this is a lab, not production software:
 
