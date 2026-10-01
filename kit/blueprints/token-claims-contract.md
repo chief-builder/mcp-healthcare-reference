@@ -143,6 +143,7 @@ scope ceiling is a contract change with the same sign-off.
 
 A deployment conforms when the Workstream-D acceptance probes for IDN-*,
 TIER-*, SC-*, and AZ-* pass against it. The claim-shape fixtures in
-`vectors/` are the unit-level input: every `valid/` fixture (signed with the
-deployment's issuer) MUST be accepted and every `invalid/` fixture rejected by
+`vectors/` are the unit-level input: every fixture in `vectors/valid.json`
+(signed with the deployment's issuer) MUST be accepted and every fixture in
+`vectors/invalid.json` rejected by
 each validating component.

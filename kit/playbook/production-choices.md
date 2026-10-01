@@ -12,7 +12,7 @@ never is.**
 | Decision | Lab reference | Production options | The property that must survive |
 |---|---|---|---|
 | Hub AS posture | Keycloak | Dedicated Keycloak/PingFederate hub · "IdP as hub" only if it clears `adapters/hub-requirements.md` | Single issuer; claim shaping; both `cnf` bindings (HUB-01..17) |
-| Workforce IdP leg | Dex as fake-Ping | Entra ID / Okta / Ping brokered per `adapters/idp-*.md`; ID-JAG leg when the vendor ships it | Brokered normalization; MFA surfaced in `amr` (IDN-05/08) |
+| Workforce IdP leg | A second Keycloak realm (`fake-ping`) standing in for Ping | Entra ID / Okta / Ping brokered per `adapters/idp-*.md`; ID-JAG leg when the vendor ships it | Brokered normalization; MFA surfaced in `amr` (IDN-05/08) |
 | Customer/patient IdP leg | Auth0 free tenant (real) | Auth0 / other CIAM | External tier only; `fhir_patient` linkage: no linkage → no token (AZ-04) |
 | Legacy issuer sunset | Toy FastAPI issuer | The org's actual legacy AS via RFC 8693, frozen | Exchange-only, no new onboarding; `idp_origin` marks it (IDN-09) |
 | Gateway platform | Kong Konnect hybrid | Kong / Envoy-Istio / Apigee / APIM per `adapters/gateway-capability-matrix.md` | Tier walls, claim-driven cnf checks, **fail-closed body DLP, ordered egress chain** — the matrix's red flags are disqualifiers, not notes |

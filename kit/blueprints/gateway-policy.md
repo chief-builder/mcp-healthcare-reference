@@ -86,7 +86,7 @@ else: pass untouched
 Division of labor (deliberate): the gateway is early rejection — structure,
 binding, request match, replay — and MAY skip proof-signature verification
 when the resource server authoritatively re-checks the proof **including the
-signature** (SC-04; in the lab, `servers/*/src/dpop.ts`). A deployment whose
+signature** (SC-04; in the lab, `servers/shared/src/dpop.ts`). A deployment whose
 servers cannot re-check MUST verify the signature at the gateway. The replay
 cache is per-entry single-use with TTL ≥ the `iat` window; cache pressure
 (evictions) is a degraded-mode audit event.
