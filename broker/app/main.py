@@ -74,6 +74,16 @@ def _problem(status: int, type_: str, detail: str = "", **extra) -> JSONResponse
     )
 
 
+# Client-facing problem details are fixed strings: exception text (JWT library
+# messages, vault and vendor errors) goes to the audit line, never the response.
+VAULT_DOWN = "credential store unavailable; retry later"
+
+
+def _hub_auth_failed(request: Request, exc: Exception) -> JSONResponse:
+    audit("broker.auth.deny", path=request.url.path, reason=str(exc))
+    return _problem(401, "invalid-hub-token", "hub token rejected")
+
+
 def _authorize_uri(vendor: str, txn: str) -> str:
     return f"{get_settings().broker_public_url}/v1/authorize/{vendor}?txn={txn}"
 
@@ -308,7 +318,7 @@ async def resolve(request: Request):
     try:
         claims = validate(request.headers.get("authorization"))
     except HubAuthError as exc:
-        return _problem(401, "invalid-hub-token", str(exc))
+        return _hub_auth_failed(request, exc)
     sub = claims["sub"]  # the JWT is authoritative; the field is advisory
     try:
         body = await request.json()
@@ -463,7 +473,7 @@ async def resolve(request: Request):
                 return _needs_consent(sub, vendor, spec, consent_scopes)
             except vendors.VendorUnavailable as exc:
                 _audit("deny", "vendor-unavailable", error=str(exc))
-                return _problem(503, "vendor-unavailable", str(exc))
+                return _problem(503, "vendor-unavailable", "vendor is unavailable; retry later")
 
             new_gen = entry["refresh_generation"] + 1
             new_entry = _entry_from_token_response(
@@ -496,7 +506,7 @@ async def resolve(request: Request):
     except VaultUnavailable as exc:
         # §10: fail closed — no grace beyond the in-memory cache TTL.
         _audit("deny", "vault-unavailable", error=str(exc))
-        return _problem(503, "vault-unavailable", str(exc))
+        return _problem(503, "vault-unavailable", VAULT_DOWN)
 
 
 @app.get("/v1/authorize/{vendor}")
@@ -633,7 +643,7 @@ async def delete_grant(vendor: str, sub: str, request: Request):
     try:
         claims = validate(request.headers.get("authorization"))
     except HubAuthError as exc:
-        return _problem(401, "invalid-hub-token", str(exc))
+        return _hub_auth_failed(request, exc)
     if claims["sub"] != sub:
         return _problem(403, "forbidden", "grants are self-service (sub must match)")
     if vendors.get_vendor(vendor) is None:
@@ -660,7 +670,8 @@ async def delete_grant(vendor: str, sub: str, request: Request):
         delete_entry(vendor, sub)
         _cache.pop((vendor, sub), None)
     except VaultUnavailable as exc:
-        return _problem(503, "vault-unavailable", str(exc))
+        audit("broker.vault.error", path=request.url.path, error=str(exc))
+        return _problem(503, "vault-unavailable", VAULT_DOWN)
     audit("broker.revoke", sub=sub, vendor=vendor, outcome="revoked", hub_jti=claims.get("jti"))
     return JSONResponse({"revoked": True})
 
@@ -670,7 +681,7 @@ async def list_grants(request: Request):
     try:
         claims = validate(request.headers.get("authorization"))
     except HubAuthError as exc:
-        return _problem(401, "invalid-hub-token", str(exc))
+        return _hub_auth_failed(request, exc)
     grants = []
     for vendor in vendors.registry():
         if vendors.get_vendor(vendor) is None:
@@ -678,7 +689,8 @@ async def list_grants(request: Request):
         try:
             found = read_entry(vendor, claims["sub"])
         except VaultUnavailable as exc:
-            return _problem(503, "vault-unavailable", str(exc))
+            audit("broker.vault.error", path=request.url.path, error=str(exc))
+            return _problem(503, "vault-unavailable", VAULT_DOWN)
         if found:
             entry, _ = found
             grants.append(
@@ -701,7 +713,7 @@ async def vendor_record(vendor: str, request: Request):
     try:
         claims = validate(request.headers.get("authorization"))
     except HubAuthError as exc:
-        return _problem(401, "invalid-hub-token", str(exc))
+        return _hub_auth_failed(request, exc)
     if ADMIN_GROUP not in (claims.get("groups") or []):
         audit(
             "broker.admin.deny", sub=claims.get("sub"), vendor=vendor, reason="not_platform_admin"

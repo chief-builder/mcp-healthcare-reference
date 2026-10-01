@@ -243,3 +243,12 @@ def test_cached_entry_is_served_within_cache_ttl_even_if_vault_drops(client, key
     entry, ver, _ = main._cache[key]
     main._cache[key] = (entry, ver, time.time() - main.CACHE_TTL_S - 1)
     assert resolve(client, keys.mint()).status_code == 503
+
+
+def test_rejected_hub_token_detail_hides_library_text(client, keys, capsys):
+    """The client gets a fixed detail; the JWT library's reason is audited."""
+    r = resolve(client, keys.mint(iss="http://evil.example/realms/x"), vendor="mockhub")
+    assert r.status_code == 401
+    assert r.json()["detail"] == "hub token rejected"
+    denied = [a for a in audit_lines(capsys) if a.get("audit") == "broker.auth.deny"]
+    assert denied and "issuer" in denied[0]["reason"].lower()
