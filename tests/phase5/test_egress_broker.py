@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 import requests
 
-from conftest import (BROKER, EGRESS_GITHUB, EGRESS_MOCKHUB, MOCK, broker_audit,
+from conftest import (ACCEPT, BROKER, EGRESS_GITHUB, EGRESS_MOCKHUB, MOCK, broker_audit,
                       do_consent, kong_audit, mcp_call, mock_state, resolve,
                       sub_of, wait_for)
 
@@ -98,6 +98,24 @@ def test_planted_mrn_is_blocked_and_audited(alice):
     assert events[-1]["token_id"], "audit record must be jti-joinable"
     # The audit record must not leak what it blocked.
     assert "MRN-1234567" not in json.dumps(events)
+
+
+def test_json_escaped_mrn_is_blocked(alice):
+    # "MRN-1234567" carries no literal hyphen on the wire but decodes to
+    # MRN-1234567 at the vendor: dlp-egress must screen the decoded strings,
+    # not just the raw bytes (AUDIT.md S2).
+    do_consent(alice)
+    before = mock_state()["counters"]["mcp_calls"]
+    body = ('{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_issue",'
+            '"arguments":{"title":"follow-up","body":"Patient MRN\\u002d1234567"}}}')
+    assert "MRN-1234567" not in body
+    r = requests.post(EGRESS_MOCKHUB, data=body, timeout=15,
+                      headers={"Authorization": f"Bearer {alice}", "Accept": ACCEPT,
+                               "Content-Type": "application/json"})
+    assert r.status_code == 403
+    assert r.json()["error"] == "dlp_blocked"
+    assert r.json()["pattern"] == "mrn"
+    assert mock_state()["counters"]["mcp_calls"] == before  # never left the DP
 
 
 def test_ssn_pattern_also_blocked(alice):
