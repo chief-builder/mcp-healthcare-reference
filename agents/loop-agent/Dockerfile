@@ -1,5 +1,5 @@
-FROM python:3.12-slim
-RUN pip install --no-cache-dir 'requests==2.32.*'
+FROM python:3.14.7-slim
+RUN pip install --no-cache-dir 'requests==2.34.*'
 WORKDIR /app
 COPY agent.py .
 USER 65534
