@@ -12,6 +12,7 @@ Three acquisition modes (environment.schema.json → identities.*.acquire):
 A DPoP identity also carries an EC key so probes can mint matching proofs;
 resolve() returns an Identity holding both.
 """
+
 from __future__ import annotations
 
 import os
@@ -36,7 +37,7 @@ class Identity:
     expects_compartment: bool = False
     _spec: dict = field(default_factory=dict)
 
-    def fresh(self, descriptor) -> "Identity":
+    def fresh(self, descriptor) -> Identity:
         """A newly minted token for the same identity (some probes need two,
         e.g. DPoP jti-replay or a second login). Falls back to self when the
         acquire mode cannot re-mint on demand."""
@@ -84,11 +85,12 @@ def resolve(descriptor, name: str, _key=None) -> Identity:
     issuer = descriptor.issuer
     grant = s.get("grant", "authorization_code")
     if grant == "client_credentials":
-        token = oidc.client_credentials(
-            issuer, s["client_id"], _env(s, "client_secret_env", s))
+        token = oidc.client_credentials(issuer, s["client_id"], _env(s, "client_secret_env", s))
         return Identity(name, token, tier, None, expects, spec)
 
-    username = s.get("username") or (os.environ.get(s["username_env"]) if s.get("username_env") else None)
+    username = s.get("username") or (
+        os.environ.get(s["username_env"]) if s.get("username_env") else None
+    )
     if not username:
         raise MissingIdentity(f"{name}: no username / username_env")
     password_var = s.get("password_env")
@@ -100,7 +102,13 @@ def resolve(descriptor, name: str, _key=None) -> Identity:
     if spec.get("dpop"):
         key = _key or dpop_lib.make_key()
     token = oidc.authorization_code(
-        issuer, s["client_id"], s["redirect_uri"], username, password,
-        idp_hint=s.get("idp_hint"), scope=s.get("scope", "openid"), dpop_key=key,
+        issuer,
+        s["client_id"],
+        s["redirect_uri"],
+        username,
+        password,
+        idp_hint=s.get("idp_hint"),
+        scope=s.get("scope", "openid"),
+        dpop_key=key,
     )
     return Identity(name, token, tier, key, expects, spec)

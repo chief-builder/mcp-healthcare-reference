@@ -2,16 +2,17 @@
 fhir_patient compartment (contract §6.5). Enforced by the FHIR server's
 authz-hook; the patient reaches the server through the EXTERNAL tier.
 """
-from conftest import FHIR_MCP_EXTERNAL
 
 import mcp_http
+from conftest import FHIR_MCP_EXTERNAL
 
 
 def test_search_is_hard_scoped_to_the_token_patient(patient_token, seeded_patients):
     mine, other = seeded_patients[0], seeded_patients[1]
     # Ask for another patient's observations; the hook overrides `patient` to mine.
-    r = mcp_http.call_tool(FHIR_MCP_EXTERNAL, patient_token, "searchObservation",
-                           {"patient": other, "_count": 20})
+    r = mcp_http.call_tool(
+        FHIR_MCP_EXTERNAL, patient_token, "searchObservation", {"patient": other, "_count": 20}
+    )
     assert r.status_code == 200
     bundle = mcp_http.tool_result(r)
     subjects = {

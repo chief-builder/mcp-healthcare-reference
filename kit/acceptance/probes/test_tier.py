@@ -4,6 +4,7 @@ Portable equivalents of tests/phase2/test_tier_wall.py. The headline probe
 (TIER-02) replays an internal-tier token at the external gateway and requires
 a 401 with no token echo.
 """
+
 import pytest
 import requests
 
@@ -49,8 +50,9 @@ def test_aud_exactly_one_tier_plus_server(descriptor, claims, identity):
     auds = _aud_list(c)
     tier_auds = [a for a in auds if "tier" in a]
     assert len(tier_auds) == 1, f"TIER-01: expected one tier audience, got {tier_auds}"
-    assert tier_auds[0] == descriptor.audience(c["mcp_tier"]), \
+    assert tier_auds[0] == descriptor.audience(c["mcp_tier"]), (
         "TIER-01: tier audience does not match mcp_tier"
+    )
 
 
 def test_internal_token_admitted_at_internal_dp(acl_internal, identity):

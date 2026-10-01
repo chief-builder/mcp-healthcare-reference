@@ -4,6 +4,7 @@ Portable equivalents of phase-2/3/7 authorization probes. The scope-vs-group
 probe needs a 'workforce_nonclinical' identity; the compartment probe needs a
 'patient' identity declaring expects_compartment.
 """
+
 import pytest
 import requests
 
@@ -24,8 +25,7 @@ def test_group_gate_is_authorization_not_authentication(descriptor, identity):
         pytest.skip("probe_endpoints.acl_resource not set")
     ident = identity("workforce_nonclinical")
     r = _get(url, ident.token)
-    assert r.status_code == 403, \
-        f"AZ-01: non-authorized identity got {r.status_code}, expected 403"
+    assert r.status_code == 403, f"AZ-01: non-authorized identity got {r.status_code}, expected 403"
 
 
 def test_customer_token_carries_compartment(descriptor, claims, identity):
@@ -38,8 +38,9 @@ def test_customer_token_carries_compartment(descriptor, claims, identity):
     assert pc, "AZ-04: customer token missing the fhir_patient compartment"
 
     wf = identity("workforce_clinical")
-    assert "fhir_patient" not in claims(wf.token), \
+    assert "fhir_patient" not in claims(wf.token), (
         "AZ-04 (forbidden direction): workforce token carries fhir_patient"
+    )
 
 
 def test_customer_token_rejected_at_internal_tier(descriptor, identity):

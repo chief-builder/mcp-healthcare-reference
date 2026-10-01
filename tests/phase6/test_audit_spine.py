@@ -8,15 +8,24 @@ a DLP block joins the same way; first-party MCP tool calls carry the
 Requires the compose/phase5 stack up (re-run ./setup-phase5.sh after
 pulling phase 6: it rebuilds the servers and syncs the otel deck config).
 """
-import requests
 
-from conftest import (EGRESS_MOCKHUB, GRAFANA, SCHED_MCP, TEMPO, claims_of,
-                      do_consent, loki_query, mcp_call, tuple_records, wait_for)
+import requests
+from conftest import (
+    EGRESS_MOCKHUB,
+    GRAFANA,
+    SCHED_MCP,
+    TEMPO,
+    claims_of,
+    do_consent,
+    loki_query,
+    mcp_call,
+    tuple_records,
+    wait_for,
+)
 
 
 def audits(records: list[tuple[dict, dict]]) -> set[tuple[str, str]]:
-    return {(rec.get("audit", ""), rec.get("decision", rec.get("audit", "")))
-            for _, rec in records}
+    return {(rec.get("audit", ""), rec.get("decision", rec.get("audit", ""))) for _, rec in records}
 
 
 def test_vendor_call_walks_back_in_one_query(alice):
@@ -34,7 +43,9 @@ def test_vendor_call_walks_back_in_one_query(alice):
         need = {("vendor-token", "allow"), ("dlp-egress", "allow"), ("broker.resolve", "allow")}
         return records if need <= seen else None
 
-    records = wait_for(complete, 90, what="vendor-token + dlp-egress + broker.resolve joined on jti")
+    records = wait_for(
+        complete, 90, what="vendor-token + dlp-egress + broker.resolve joined on jti"
+    )
 
     # The tuple crosses shipping paths: Kong via OTLP, broker via container logs.
     assert {s.get("service_name") for s, _ in records} >= {"kong-internal", "broker"}
@@ -48,15 +59,22 @@ def test_vendor_call_walks_back_in_one_query(alice):
 
 
 def test_dlp_block_joins_on_the_same_jti(alice):
-    r = mcp_call(EGRESS_MOCKHUB, alice, "create_issue",
-                 {"title": "chart note", "body": "patient MRN-1234567"})
+    r = mcp_call(
+        EGRESS_MOCKHUB,
+        alice,
+        "create_issue",
+        {"title": "chart note", "body": "patient MRN-1234567"},
+    )
     assert r.status_code == 403, r.text
     jti = claims_of(alice)["jti"]
 
     def blocked():
         for _, rec in tuple_records(jti):
-            if (rec.get("audit"), rec.get("decision"), rec.get("pattern")) == \
-                    ("dlp-egress", "deny", "mrn"):
+            if (rec.get("audit"), rec.get("decision"), rec.get("pattern")) == (
+                "dlp-egress",
+                "deny",
+                "mrn",
+            ):
                 return rec
         return None
 
@@ -85,9 +103,11 @@ def test_first_party_tool_call_carries_the_tuple(alice_internal):
 
 def test_kong_traces_reach_tempo():
     def traces():
-        r = requests.get(f"{TEMPO}/api/search",
-                         params={"q": '{resource.service.name="kong-internal"}',
-                                 "limit": "5"}, timeout=15)
+        r = requests.get(
+            f"{TEMPO}/api/search",
+            params={"q": '{resource.service.name="kong-internal"}', "limit": "5"},
+            timeout=15,
+        )
         if r.status_code != 200:
             return None
         return r.json().get("traces") or None
@@ -96,8 +116,11 @@ def test_kong_traces_reach_tempo():
 
 
 def test_tuple_dashboard_is_provisioned(env):
-    r = requests.get(f"{GRAFANA}/api/dashboards/uid/mcp-audit-tuple",
-                     auth=("admin", env["GRAFANA_ADMIN_PASSWORD"]), timeout=15)
+    r = requests.get(
+        f"{GRAFANA}/api/dashboards/uid/mcp-audit-tuple",
+        auth=("admin", env["GRAFANA_ADMIN_PASSWORD"]),
+        timeout=15,
+    )
     assert r.status_code == 200, r.text
     assert r.json()["dashboard"]["title"] == "MCP Audit Tuple"
 

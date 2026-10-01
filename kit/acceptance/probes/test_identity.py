@@ -4,14 +4,23 @@ Portable equivalents of tests/phase1/test_contract.py, parameterized on the
 descriptor. These inspect the token any declared internal identity carries;
 they do not depend on which grant path minted it.
 """
+
 import jwt
 import pytest
 import requests
 
 pytestmark = pytest.mark.identity
 
-PII_CLAIMS = ("email", "name", "given_name", "family_name",
-              "preferred_username", "phone_number", "birthdate", "address")
+PII_CLAIMS = (
+    "email",
+    "name",
+    "given_name",
+    "family_name",
+    "preferred_username",
+    "phone_number",
+    "birthdate",
+    "address",
+)
 
 
 @pytest.fixture(scope="module")
@@ -28,8 +37,11 @@ def test_signature_alg_and_issuer(descriptor, a_token):
     jwks = requests.get(descriptor.jwks_uri, timeout=15).json()
     key = next(k for k in jwks["keys"] if k["kid"] == header["kid"])
     verified = jwt.decode(
-        raw, jwt.PyJWK(key).key, algorithms=["PS256", "ES256"],
-        issuer=descriptor.issuer, options={"verify_aud": False},
+        raw,
+        jwt.PyJWK(key).key,
+        algorithms=["PS256", "ES256"],
+        issuer=descriptor.issuer,
+        options={"verify_aud": False},
     )
     assert verified["iss"] == descriptor.issuer, "IDN-01: iss is not the hub issuer"
 
@@ -63,5 +75,6 @@ def test_groups_normalized(claims, a_token):
     groups = claims(a_token.token).get("groups")
     if groups is None:
         pytest.skip("token carries no groups claim")
-    assert all(g.startswith("mcp-") for g in groups), \
+    assert all(g.startswith("mcp-") for g in groups), (
         f"IDN-05: non-normalized group names present: {groups}"
+    )

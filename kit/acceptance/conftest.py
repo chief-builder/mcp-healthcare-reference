@@ -4,6 +4,7 @@ Loads the environment descriptor (--environment, default environments/lab.yaml),
 exposes it plus token/claim helpers, and provides an identity() factory that
 skips a probe cleanly when the descriptor does not declare the identity it needs.
 """
+
 from __future__ import annotations
 
 import base64
@@ -11,7 +12,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from harness import audit as audit_mod
 from harness import descriptor as descriptor_mod
 from harness import identities as id_mod

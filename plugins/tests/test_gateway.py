@@ -59,18 +59,29 @@ def bearer(token: str) -> dict:
 
 # --- DPoP helpers -----------------------------------------------------------
 
+
 class DpopKey:
     def __init__(self) -> None:
         self.key = ec.generate_private_key(ec.SECP256R1())
         jwk = json.loads(jwt.algorithms.ECAlgorithm.to_jwk(self.key.public_key()))
         self.jwk = {k: jwk[k] for k in ("kty", "crv", "x", "y")}
         canonical = json.dumps(
-            {k: self.jwk[k] for k in ("crv", "kty", "x", "y")}, separators=(",", ":"))
+            {k: self.jwk[k] for k in ("crv", "kty", "x", "y")}, separators=(",", ":")
+        )
         self.jkt = b64url(hashlib.sha256(canonical.encode()).digest())
 
-    def proof(self, token: str, htm: str = "POST", htu: str | None = None, *,
-              iat: float | None = None, jti: str | None = None, typ: str = "dpop+jwt",
-              ath: str | None = None, jwk: dict | None = None) -> str:
+    def proof(
+        self,
+        token: str,
+        htm: str = "POST",
+        htu: str | None = None,
+        *,
+        iat: float | None = None,
+        jti: str | None = None,
+        typ: str = "dpop+jwt",
+        ath: str | None = None,
+        jwk: dict | None = None,
+    ) -> str:
         payload = {
             "htm": htm,
             "htu": htu if htu is not None else f"{KONG_URL}/echo",
@@ -78,8 +89,9 @@ class DpopKey:
             "jti": jti or str(uuid.uuid4()),
             "ath": ath if ath is not None else b64url(hashlib.sha256(token.encode()).digest()),
         }
-        return jwt.encode(payload, self.key, algorithm="ES256",
-                          headers={"typ": typ, "jwk": jwk or self.jwk})
+        return jwt.encode(
+            payload, self.key, algorithm="ES256", headers={"typ": typ, "jwk": jwk or self.jwk}
+        )
 
 
 def dpop_call(token: str, proof: str | None, scheme: str = "DPoP") -> requests.Response:
@@ -94,6 +106,7 @@ def reason_of(resp: requests.Response) -> str:
 
 
 # --- tier wall (deck/internal.yaml global pre-function) ---------------------
+
 
 def test_tier_wall_internal_audience_passes():
     r = requests.get(f"{KONG_URL}/echo", headers=bearer(mint()), timeout=10)
@@ -128,6 +141,7 @@ def test_tier_wall_checks_dpop_scheme_too():
 
 # --- cnf-check ---------------------------------------------------------------
 
+
 def test_cnf_bearer_token_passes():
     r = requests.get(f"{KONG_URL}/echo", headers=bearer(mint()), timeout=10)
     assert r.status_code == 200
@@ -141,6 +155,7 @@ def test_cnf_bound_token_over_plaintext_rejected():
 
 
 # --- dpop-check --------------------------------------------------------------
+
 
 def test_dpop_plain_bearer_untouched():
     token = mint()
@@ -245,15 +260,24 @@ def test_dpop_jti_replay_rejected():
 
 # --- dlp-egress --------------------------------------------------------------
 
+
 def dlp_post(data, content_type: str = "application/json") -> requests.Response:
     body = data if isinstance(data, (str, bytes)) else json.dumps(data)
-    return requests.post(f"{KONG_URL}/dlp", data=body, timeout=10,
-                         headers={**bearer(mint()), "Content-Type": content_type})
+    return requests.post(
+        f"{KONG_URL}/dlp",
+        data=body,
+        timeout=10,
+        headers={**bearer(mint()), "Content-Type": content_type},
+    )
 
 
 def tool_call(text: str) -> dict:
-    return {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-            "params": {"name": "create_issue", "arguments": {"body": text}}}
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {"name": "create_issue", "arguments": {"body": text}},
+    }
 
 
 def test_dlp_clean_body_passes():
@@ -271,8 +295,10 @@ def test_dlp_raw_mrn_blocked():
 def test_dlp_json_escaped_mrn_blocked():
     # "MRN-1234567" is the raw-scan bypass (AUDIT.md S2): no literal hyphen
     # on the wire, but the vendor's JSON parser yields MRN-1234567.
-    body = '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"x",' \
-           '"arguments":{"body":"MRN\\u002d1234567"}}}'
+    body = (
+        '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"x",'
+        '"arguments":{"body":"MRN\\u002d1234567"}}}'
+    )
     assert "MRN-1234567" not in body
     r = dlp_post(body)
     assert r.status_code == 403
@@ -325,6 +351,7 @@ def test_dlp_get_passes():
 
 
 # --- vendor-token ------------------------------------------------------------
+
 
 def vt(route: str, token: str | None = None, scheme: str = "Bearer") -> requests.Response:
     headers = {"Authorization": f"{scheme} {token}"} if token else {}
@@ -389,9 +416,11 @@ def test_vendor_token_refuses_dpop_scheme():
 
 # --- audit hygiene (keep last) -----------------------------------------------
 
+
 def test_no_token_material_in_gateway_logs():
-    logs = subprocess.run(["docker", "logs", KONG_CONTAINER], capture_output=True,
-                          text=True, check=True)
+    logs = subprocess.run(
+        ["docker", "logs", KONG_CONTAINER], capture_output=True, text=True, check=True
+    )
     text = logs.stdout + logs.stderr
     assert '"audit":"dlp-egress"' in text  # the audit lines are actually there
     assert '"audit":"vendor-token"' in text

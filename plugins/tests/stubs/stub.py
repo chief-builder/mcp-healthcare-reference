@@ -41,12 +41,15 @@ class Handler(BaseHTTPRequestHandler):
             vendor = json.loads(body or "{}").get("vendor", "")
             status, payload = RESOLVE.get(vendor, (500, {"title": "unknown stub vendor"}))
             return self._send(status, payload)
-        self._send(200, {
-            "method": self.command,
-            "path": self.path,
-            "authorization": self.headers.get("Authorization"),
-            "body": body,
-        })
+        self._send(
+            200,
+            {
+                "method": self.command,
+                "path": self.path,
+                "authorization": self.headers.get("Authorization"),
+                "body": body,
+            },
+        )
 
     do_GET = do_POST = do_DELETE = _handle
 

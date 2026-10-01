@@ -5,6 +5,7 @@ PyJWT[crypto], no extra dependency. Every field is overridable so the
 sender-constraint probes can tamper htm/htu/iat/ath/jti/jwk independently. The
 RFC 7638 `jkt` computed here matches what the issuer stamps into cnf.jkt.
 """
+
 from __future__ import annotations
 
 import base64

@@ -1,5 +1,6 @@
 """Phase 6 fixtures: tokens, the mockhub consent dance, and query helpers
 for the audit spine (Loki logs, Tempo traces, Grafana provisioning)."""
+
 import base64
 import json
 import re
@@ -48,8 +49,14 @@ def env() -> dict[str, str]:
 
 def _login(env, user, scope) -> str:
     return oidc_flows.authorization_code_login(
-        KC_BASE, REALM, "claude-code", "http://localhost:8765/callback",
-        user, env["FAKE_PING_PASSWORD"], idp_hint="ping", scope=scope,
+        KC_BASE,
+        REALM,
+        "claude-code",
+        "http://localhost:8765/callback",
+        user,
+        env["FAKE_PING_PASSWORD"],
+        idp_hint="ping",
+        scope=scope,
     )["access_token"]
 
 
@@ -71,17 +78,26 @@ def claims_of(token: str) -> dict:
 
 
 def mcp_call(url: str, token: str, tool: str, args: dict) -> requests.Response:
-    return requests.post(url, headers={"Authorization": f"Bearer {token}",
-                                       "Accept": ACCEPT},
-                         json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-                               "params": {"name": tool, "arguments": args}},
-                         timeout=15)
+    return requests.post(
+        url,
+        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool, "arguments": args},
+        },
+        timeout=15,
+    )
 
 
 def resolve(token: str, vendor: str) -> requests.Response:
-    return requests.post(f"{BROKER}/v1/tokens/resolve",
-                         json={"vendor": vendor, "min_ttl_s": 30},
-                         headers={"Authorization": f"Bearer {token}"}, timeout=15)
+    return requests.post(
+        f"{BROKER}/v1/tokens/resolve",
+        json={"vendor": vendor, "min_ttl_s": 30},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
 
 
 def do_consent(token: str) -> None:
@@ -96,12 +112,13 @@ def do_consent(token: str) -> None:
 
 def loki_query(logql: str, since: str = "15m") -> list[tuple[dict, str]]:
     """(stream labels, raw line) for every entry the query matches."""
-    r = requests.get(f"{LOKI}/loki/api/v1/query_range",
-                     params={"query": logql, "since": since, "limit": "1000"},
-                     timeout=15)
+    r = requests.get(
+        f"{LOKI}/loki/api/v1/query_range",
+        params={"query": logql, "since": since, "limit": "1000"},
+        timeout=15,
+    )
     r.raise_for_status()
-    return [(s["stream"], v[1])
-            for s in r.json()["data"]["result"] for v in s["values"]]
+    return [(s["stream"], v[1]) for s in r.json()["data"]["result"] for v in s["values"]]
 
 
 def tuple_records(jti: str) -> list[tuple[dict, dict]]:

@@ -2,11 +2,11 @@
 drop a replica; the surviving replica confirms the hold using the explicit
 slot_hold_id handle (state lives in Postgres, not server memory).
 """
+
 import subprocess
 
-from conftest import SCHED_MCP_INTERNAL
-
 import mcp_http
+from conftest import SCHED_MCP_INTERNAL
 
 
 def _running_scheduling_replicas() -> list[str]:
@@ -14,17 +14,21 @@ def _running_scheduling_replicas() -> list[str]:
     (same stack-agnostic pattern as the phase 2 severance test)."""
     return subprocess.run(
         ["docker", "ps", "--filter", "name=scheduling", "--format", "{{.Names}}"],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.split()
 
 
 def test_hold_survives_replica_loss(alice_scheduling):
     slots = mcp_http.tool_result(
-        mcp_http.call_tool(SCHED_MCP_INTERNAL, alice_scheduling, "find-slots", {}))
+        mcp_http.call_tool(SCHED_MCP_INTERNAL, alice_scheduling, "find-slots", {})
+    )
     slot_id = slots[0]["slot_id"]
 
     held = mcp_http.tool_result(
-        mcp_http.call_tool(SCHED_MCP_INTERNAL, alice_scheduling, "hold-slot", {"slot_id": slot_id}))
+        mcp_http.call_tool(SCHED_MCP_INTERNAL, alice_scheduling, "hold-slot", {"slot_id": slot_id})
+    )
     slot_hold_id = held["slot_hold_id"]
     assert slot_hold_id
 
@@ -35,8 +39,9 @@ def test_hold_survives_replica_loss(alice_scheduling):
     try:
         # The surviving replica has never seen this hold in memory — it must read
         # it from Postgres via the handle.
-        r = mcp_http.call_tool(SCHED_MCP_INTERNAL, alice_scheduling, "confirm-hold",
-                               {"slot_hold_id": slot_hold_id})
+        r = mcp_http.call_tool(
+            SCHED_MCP_INTERNAL, alice_scheduling, "confirm-hold", {"slot_hold_id": slot_hold_id}
+        )
         assert r.status_code == 200
         result = mcp_http.tool_result(r)
         assert result.get("status") == "confirmed"

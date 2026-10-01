@@ -9,6 +9,7 @@ SSE-framed or plain JSON.
 Supports the DPoP scheme (RFC 9449) so sender-constraint probes can present a
 key-bound token with a fresh proof.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,14 +30,22 @@ def envelope(method: str, params: dict | None = None, request_id: int | str = 1)
         "io.modelcontextprotocol/clientInfo": CLIENT_INFO,
         "io.modelcontextprotocol/clientCapabilities": {},
     }
-    return {"jsonrpc": "2.0", "id": request_id, "method": method,
-            "params": {**(params or {}), "_meta": meta}}
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "method": method,
+        "params": {**(params or {}), "_meta": meta},
+    }
 
 
 def headers_for(body: dict) -> dict:
     """The 2026-07-28 routing headers that must mirror the body."""
-    h = {"Content-Type": "application/json", "Accept": ACCEPT,
-         "MCP-Protocol-Version": PROTOCOL_VERSION, "Mcp-Method": body["method"]}
+    h = {
+        "Content-Type": "application/json",
+        "Accept": ACCEPT,
+        "MCP-Protocol-Version": PROTOCOL_VERSION,
+        "Mcp-Method": body["method"],
+    }
     if body["method"] == "tools/call":
         h["Mcp-Name"] = body["params"]["name"]
     return h
@@ -46,7 +55,7 @@ def parse_sse(text: str) -> dict:
     """The JSON payload of the first SSE `data:` line (or plain JSON)."""
     for line in text.splitlines():
         if line.startswith("data:"):
-            return json.loads(line[len("data:"):].strip())
+            return json.loads(line[len("data:") :].strip())
     return json.loads(text)
 
 

@@ -3,8 +3,8 @@
 Gate (prototype plan §3): an internal-tier token replayed at the external DP
 fails with 401 — the audiences are a cryptographic wall, not a convention.
 """
-import requests
 
+import requests
 from conftest import EXTERNAL_GW, INTERNAL_GW
 
 

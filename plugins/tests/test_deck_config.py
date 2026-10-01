@@ -15,8 +15,9 @@ def routes():
                 yield path.name, route
 
 
-@pytest.mark.parametrize("deck_file,route", list(routes()),
-                         ids=lambda v: v if isinstance(v, str) else v["name"])
+@pytest.mark.parametrize(
+    "deck_file,route", list(routes()), ids=lambda v: v if isinstance(v, str) else v["name"]
+)
 def test_every_route_declares_http(deck_file, route):
     # Kong 3.14+ defaults a route without `protocols` to https only, which
     # would 426 every request on the DPs' plain-HTTP :8000 listener.

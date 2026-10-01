@@ -17,7 +17,9 @@ from conftest import FHIR_MCP_INTERNAL
 def test_clinician_lists_clinical_tools(alice_floor):
     tools = mcp_http.list_tools(FHIR_MCP_INTERNAL, alice_floor)
     # floor read tools plus the clinical-only broad tool
-    assert {"getPatient", "searchObservation", "searchCondition", "searchMedicationRequest"} <= set(tools)
+    assert {"getPatient", "searchObservation", "searchCondition", "searchMedicationRequest"} <= set(
+        tools
+    )
     assert "patientEverything" in tools  # clinical group present
 
 
@@ -37,8 +39,9 @@ def test_under_scoped_call_triggers_insufficient_scope_challenge(alice_floor):
 
 def test_step_up_token_is_accepted(alice_everything, seeded_patients):
     # Same tool, now with the stepped-up scope: no 403 (it dispatches to the server).
-    r = mcp_http.call_tool(FHIR_MCP_INTERNAL, alice_everything, "patientEverything",
-                           {"id": seeded_patients[0]})
+    r = mcp_http.call_tool(
+        FHIR_MCP_INTERNAL, alice_everything, "patientEverything", {"id": seeded_patients[0]}
+    )
     assert r.status_code != 403
     result = mcp_http.tool_result(r)
     assert result.get("resourceType") == "Bundle"

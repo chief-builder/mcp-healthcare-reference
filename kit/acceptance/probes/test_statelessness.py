@@ -7,8 +7,8 @@ that needs orchestration control the descriptor does not model, so this probe
 asserts the observable property — stateless per-request operation — that the
 replica-kill test relies on.)
 """
-import pytest
 
+import pytest
 from harness import mcp as mcp_lib
 
 pytestmark = pytest.mark.statelessness

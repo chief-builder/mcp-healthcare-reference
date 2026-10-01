@@ -5,9 +5,9 @@ samples (from the descriptor) and require a block; they never send a real
 identifier. Broker probes require a 'broker' section. All require an 'egress'
 section; absent it, the module skips.
 """
+
 import pytest
 import requests
-
 from harness import mcp as mcp_lib
 
 pytestmark = pytest.mark.egress
@@ -41,13 +41,16 @@ def test_planted_sample_is_blocked_and_audited(egress, identity):
     _consent_if_needed(route, token)
 
     for pattern in egress["dlp_patterns"]:
-        r = mcp_lib.call_tool(route, token, tool,
-                              {"title": "probe", "body": f"contains {pattern['sample']}"})
-        assert r.status_code == 403, \
+        r = mcp_lib.call_tool(
+            route, token, tool, {"title": "probe", "body": f"contains {pattern['sample']}"}
+        )
+        assert r.status_code == 403, (
             f"EG-01: sample for {pattern['name']} was not blocked ({r.status_code})"
+        )
         body = r.json()
-        assert body.get("pattern") == pattern["name"], \
+        assert body.get("pattern") == pattern["name"], (
             f"EG-01: block reported pattern {body.get('pattern')}, expected {pattern['name']}"
+        )
 
 
 def test_clean_payload_passes(egress, identity):
@@ -58,13 +61,22 @@ def test_clean_payload_passes(egress, identity):
     if not _consent_if_needed(route, token):
         pytest.skip("vendor consent cannot complete headlessly in this environment")
     r = mcp_lib.call_tool(route, token, tool, egress.get("clean_args", {"title": "clean"}))
-    assert r.status_code == 200, f"EG-02: clean payload was not forwarded ({r.status_code}): {r.text[:200]}"
+    assert r.status_code == 200, (
+        f"EG-02: clean payload was not forwarded ({r.status_code}): {r.text[:200]}"
+    )
 
 
-@pytest.mark.parametrize("path", [
-    "/oauth/token", "/token", "/keys", "/v1/tokens/issue",
-    "/.well-known/jwks.json", "/.well-known/openid-configuration",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/oauth/token",
+        "/token",
+        "/keys",
+        "/v1/tokens/issue",
+        "/.well-known/jwks.json",
+        "/.well-known/openid-configuration",
+    ],
+)
 def test_broker_exposes_no_issuance_endpoint(descriptor, path):
     """EG-04: the broker is a custodian, not an issuer — no token/JWKS surface."""
     broker = descriptor.section("broker")
@@ -83,6 +95,9 @@ def test_broker_resolve_requires_valid_hub_token(descriptor, egress):
     broker = descriptor.section("broker")
     if not broker:
         pytest.skip("descriptor has no 'broker' section")
-    r = requests.post(f"{broker['url'].rstrip('/')}/v1/tokens/resolve",
-                      json={"vendor": egress["vendor"], "min_ttl_s": 30}, timeout=15)
+    r = requests.post(
+        f"{broker['url'].rstrip('/')}/v1/tokens/resolve",
+        json={"vendor": egress["vendor"], "min_ttl_s": 30},
+        timeout=15,
+    )
     assert r.status_code == 401, f"EG-05: unauthenticated resolve got {r.status_code}, expected 401"

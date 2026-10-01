@@ -1,6 +1,7 @@
 """Phase 4 fixtures: the loop agent's SVID (read out of the pod), cert-bound
 tokens minted host-side with it, and helpers for Kong mTLS calls + audit log
 inspection."""
+
 import base64
 import hashlib
 import json
@@ -41,7 +42,9 @@ def pod_file(path: str) -> str:
 
 
 def agent_pod() -> dict:
-    pods = json.loads(kubectl("-n", NS, "get", "pods", "-l", "app=loop-agent", "-o", "json"))["items"]
+    pods = json.loads(kubectl("-n", NS, "get", "pods", "-l", "app=loop-agent", "-o", "json"))[
+        "items"
+    ]
     assert len(pods) == 1
     return pods[0]
 
@@ -80,7 +83,9 @@ def mint_token(cert: tuple[str, str] | None, scope: str = SCOPE) -> requests.Res
     )
 
 
-def call_find_slots(token: str, cert: tuple[str, str] | None, url: str = SCHED_MCP_TLS) -> requests.Response:
+def call_find_slots(
+    token: str, cert: tuple[str, str] | None, url: str = SCHED_MCP_TLS
+) -> requests.Response:
     body = mcp_http.envelope("tools/call", {"name": "find-slots", "arguments": {}})
     return requests.post(
         url,
@@ -97,7 +102,10 @@ def _kong_internal_container() -> str:
     up (stack-agnostic, like the phase 2/3 tests)."""
     out = subprocess.run(
         ["docker", "ps", "--filter", "name=kong-internal", "--format", "{{.Names}}"],
-        check=True, capture_output=True, text=True).stdout.split()
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
     assert out, "no running kong-internal container found"
     return out[0]
 
@@ -108,7 +116,9 @@ def kong_audit_events(since: str = "3m") -> list[dict]:
     container log."""
     out = subprocess.run(
         ["docker", "logs", "--since", since, _kong_internal_container()],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     events = []
     marker = "[cnf-check] "
@@ -116,9 +126,9 @@ def kong_audit_events(since: str = "3m") -> list[dict]:
         idx = line.find(marker)
         if idx == -1:
             continue
-        payload = line[idx + len(marker):]
+        payload = line[idx + len(marker) :]
         try:  # nginx appends ", client: ..." after the JSON; no braces in it
-            events.append(json.loads(payload[payload.find("{"):payload.rfind("}") + 1]))
+            events.append(json.loads(payload[payload.find("{") : payload.rfind("}") + 1]))
         except json.JSONDecodeError:
             continue
     return events

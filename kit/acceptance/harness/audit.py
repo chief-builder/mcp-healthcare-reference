@@ -5,6 +5,7 @@ probes need two capabilities: join records by a token's jti, and grep the
 whole log corpus for a needle (token-material leak check). This adapter
 implements them for Loki; other backends implement the same two methods.
 """
+
 from __future__ import annotations
 
 import time
@@ -14,6 +15,7 @@ import requests
 
 class NullAudit:
     """No audit backend declared — AU probes skip."""
+
     available = False
 
     def query_by_jti(self, jti, timeout=90):  # pragma: no cover

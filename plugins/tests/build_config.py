@@ -43,11 +43,18 @@ def vendor_route(name: str, vendor: str, broker_url: str = STUB) -> dict:
         "name": f"vt-{name}",
         "url": f"{STUB}/echo",
         "routes": [route(f"vt-{name}", f"/vt/{name}")],
-        "plugins": [{
-            "name": "vendor-token",
-            "config": {"broker_url": broker_url, "vendor": vendor, "min_ttl_s": 30,
-                       "timeout_ms": 2000, "required_scopes": ["issues:read"]},
-        }],
+        "plugins": [
+            {
+                "name": "vendor-token",
+                "config": {
+                    "broker_url": broker_url,
+                    "vendor": vendor,
+                    "min_ttl_s": 30,
+                    "timeout_ms": 2000,
+                    "required_scopes": ["issues:read"],
+                },
+            }
+        ],
     }
 
 
