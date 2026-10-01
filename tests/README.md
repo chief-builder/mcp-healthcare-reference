@@ -2,12 +2,20 @@
 
 Acceptance gates, one per phase (docs/prototype-plan.md §3). `phaseN.sh`
 is the gate; a phase is done only when it is green. Phase 0 is plain
-shell checks; phases 1–6 each create a venv in `phaseN/` and run its
-pytest suite.
+shell checks; phases 1–7 run pytest suites from one shared venv
+(`phase1/.venv`, created by `phase1.sh` and reused by the others).
 
-Gates are cumulative: phases 0–6 all pass on the current stack (phase 5
-plus the phase 6 audit spine). Re-run any earlier gate against the running
-stack to check for regressions.
+These gates need the live stack (Docker; Kong Konnect from phase 2;
+k3d from phase 4). The offline suites that need no accounts — servers,
+broker, gateway plugins, kit vectors — run with `make test` at the repo root.
+
+Gates are cumulative: each phase's stack is a superset of the last (phase 6
+rides the phase 5 stack), so re-run any earlier gate against the running
+stack to check for regressions. Current item counts: phase1 72, phase2 11,
+phase3 12, phase4 9, phase5 17, phase6 6, phase7 32 (159), plus phase 0's
+four shell checks. The last full run of all eight gates was green on
+2026-07-12 (154 items at the time); phases 0–1 were re-verified from a clean
+clone on 2026-09-30.
 
 `phase7.sh` is the red-team weekend (plan §3) — adversarial probes against
 the same stack; passing means the defense held. All probes are plain

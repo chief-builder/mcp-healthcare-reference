@@ -53,8 +53,10 @@ their cached config.
   audience mismatch as an authorization failure (403 `insufficient_scope`).
   Per RFC 6750 a token minted for another tier is `invalid_token` → 401, and
   the prototype-plan gate says 401. A small `pre-function` in each deck file
-  enforces the tier audience with correct semantics (signature is still
-  verified by openid-connect on every request). Same pattern as the
+  enforces the tier audience with correct semantics. On this phase's `/fhir`
+  routes the signature is still verified by openid-connect; the phase 3+ MCP
+  routes carry only this wall, and the MCP servers verify the signature
+  themselves (claims contract §8, lab delta). Same pattern as the
   production `cnf` check (arch doc §A.4). Requires
   `KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES=cjson.safe` on the DPs.
 - **Issuer alias.** Tokens are minted via `http://localhost:8080` but DPs

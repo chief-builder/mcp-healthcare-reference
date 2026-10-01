@@ -20,73 +20,55 @@ single-flight refresh · jti-joinable audit. Never stub these — enforce them.
   §9 refresh race, no-issuance rule §11).
 
 ## Current status
-Phase 6 complete (tests/phase6.sh green: one Loki query keyed by jti walks
-a vendor call back through vendor-token allow + dlp-egress verdict +
-broker.resolve; a planted-MRN block joins the same way; first-party
-tools/call carries the §9 tuple; Kong traces in Tempo; the "MCP Audit
-Tuple" Grafana dashboard is provisioned; no token material on the spine;
-phases 0–5 still green). The audit spine rides the phase5 stack (no
+Phases 0–7 built. Last full run of all eight gates: green on 2026-07-12
+(154 items then; 159 now). The 2026-09-30 hardening branch re-verified
+phases 0–1 from a clean clone; phases 2–7 need a valid Konnect PAT in
+compose/phase{2..5}/.env and the vtb-* containers stopped (ports
+8210/8300/8310). Offline: `make test` (servers vitest 88, broker pytest 96,
+DB-less Kong plugin suite 47, kit vectors 15+4 skipped) — no accounts.
+
+Hardening (2026-09-30): MCP 2026-07-28 via @modelcontextprotocol/server
+2.x + /express + /node, zod 4 (#8 resolved; createMcpHandler with the SDK's
+stateless 2025-11-25 fallback); shared resource-server core in
+servers/shared (token-verifier, dpop, audit, app guards, tool-policy) —
+the old per-server copies are gone. Fixed: JSON-RPC batch bypassed per-tool
+scope (batches refused + handler-level re-check); dlp-egress now screens
+JSON-decoded strings (escaped-MRN bypass); dpop-check now sees a second
+DPoP header; vendor-token refuses DPoP-scheme tokens. New: clinical
+step-up scopes (MCP_MFA_SCOPES) require amr∋mfa → 401
+insufficient_user_authentication (RFC 9470). Node 24, Python 3.14, Kong
+3.16.0.0 (3.14+ defaults routes to https — every deck route declares
+protocols [http, https]). Broker: validated config (app/config.py),
+injectable clients, 4xx problems for bad input.
+
+Layout reminders: the audit spine rides the phase5 stack (no
 compose/phase6): Kong DPs export traces + kong.log audit records via a
-global opentelemetry plugin in deck/*.yaml (KONG_TRACING_* env in
-compose); everything else (broker, servers, mock-vendor) emits one JSON
-audit line per event on stdout, shipped by Alloy
-(compose/phase5/alloy/config.alloy) over the Docker API to Loki. Grafana
-provisioning (datasources + tuple dashboard) = compose/phase0/grafana/.
-MCP servers emit §9 records per tools/call (servers/*/src/audit.ts);
-dlp-egress logs allow verdicts on clean passes too.
-Phase 5 unchanged: Vendor Token Broker (broker/) over OpenBao custody;
-dlp-egress + vendor-token plugins on the egress routes; mockhub vendor AS
-(compose/phase5/mock-vendor) drives the gates headless; real GitHub leg
-activates when GITHUB_CLIENT_ID/SECRET set. Cert-bound m2m (phase 4) =
-SPIRE in k3d → Keycloak client-x509 :8443 → Kong :8143 + plugins/cnf-check.
+global opentelemetry plugin in deck/*.yaml; broker, servers, mock-vendor
+emit one JSON audit line per event on stdout, shipped by Alloy
+(compose/phase5/alloy/config.alloy) to Loki; Grafana provisioning =
+compose/phase0/grafana/. mockhub (compose/phase5/mock-vendor) drives the
+egress gates headless; the real GitHub leg activates when
+GITHUB_CLIENT_ID/SECRET are set. Cert-bound m2m (phase 4) = SPIRE in k3d →
+Keycloak client-x509 :8443 → Kong :8143 + plugins/cnf-check.
 Canonical identity config = realm/*.json + compose/phase1/setup-phase1.sh.
 Canonical gateway config = deck/*.yaml + compose/phaseN/setup-phaseN.sh.
 Canonical workload config = compose/phase4/k8s/*.yaml. Broker/vendor config =
 broker/registry.json + compose/phase5/setup-phase5.sh (vault provisioning).
-First-party MCP servers = servers/; loop agent = agents/loop-agent.
-Phase 7 (red-team weekend, plan §3): tests/phase7.sh green (32 passed, 0
-xfail). Arch §13 list + cross-tier replay, scope-ceiling, broker state
-replay, RFC 9207 iss tamper/omission, per-entry + mass STALE, token-in-log
-grep, broker no-issuance all hold. P8 = DPoP sender-constraint (11 probes):
-bound-token-as-bearer, missing/wrong-htu/htm/ath proofs, stale iat, jti
-replay, thumbprint mismatch, and server-revalidates-without-gateway.
+Server images build with context servers/ (npm workspace).
 
-DPoP (RFC 9449) sender-constraint for interactive tokens: parallel public
-client `workforce-dpop` (dpop.bound.access.tokens=true → cnf.jkt; needs
-KC_FEATURES+=dpop, enabled in compose). Enforced gateway-first —
-plugins/dpop-check (structure + jkt binding + htm/htu/iat/ath + jti replay
-via a KONG_NGINX_HTTP_LUA_SHARED_DICT dpop_jti dict; does NOT verify the
-proof signature, matching the DP's no-crypto-on-first-party-routes posture)
-AND authoritatively re-checked by servers/*/src/dpop.ts (jose EmbeddedJWK +
-calculateJwkThumbprint; the dpopSchemeShim rewrites `DPoP <t>`→`Bearer <t>`
-so requireBearerAuth still parses it). The deck tier-wall pre-function now
-accepts both Bearer and DPoP schemes (else DPoP requests bypass the wall).
-claude-code stays bearer (real Claude Code sends no proofs) — tracked gap.
+DPoP (RFC 9449): parallel public client `workforce-dpop`
+(dpop.bound.access.tokens=true → cnf.jkt). Gateway-first plugins/dpop-check
+(structure + jkt binding + htm/htu/iat/ath + jti replay via the dpop_jti
+shared dict; no signature check, matching the DP's
+no-crypto-on-first-party-routes posture), authoritatively re-checked by
+servers/shared/src/dpop.ts (jose EmbeddedJWK). The deck tier-wall accepts
+both Bearer and DPoP schemes. claude-code stays bearer — tracked gap.
 
-An external review (fully triaged into GitHub issues; the sol-rec*.md
-notes were removed from the repo after triage) drove a remediation pass —
-all gates 0–7 green after it. Landed: contract-exact token validation
-(broker + servers pin PS256/ES256, drop RS256, enforce mcp_contract +
-exactly-one tier aud + forbidden fhir_patient); per-resource patient scopes
-(realm + fhir server); outcome-accurate audit (allow only after success);
-FHIR _count/timeout/size guardrails; broker RFC 9207 iss-omission defense
-(#1), mass-STALE paging (#2), required_scopes + 409 needs-reconsent-scope
-(#9), background sweeper (#10, no Redis — single-replica scoping kept);
-scheduling hold lifecycle (#12, held-only uniqueness + pg advisory-lock
-migration; loop agent books its own SCHED_PROVIDER namespace); PRM at the
-path-inserted well-known URI + documented mcp:// deviation (#13); ops batch
-(#14: Kong rate-limits, broker compose healthcheck, multi-stage non-root
-Node images, .github/workflows/ci.yml, refreshed README/overview, authed
-broker admin GET). GitHub #1,#2,#4-#7,#9-#14 closed. Still open: #3 (Low,
-external-tier CIMD control — tracked gap) and #8 (MCP 2026-07-28 wire
-migration to @modelcontextprotocol/server@2.0 — deferred off an unstable
-12h-old beta; statelessness already holds on SDK 1.29). #15 and #16
-closed: exact-match redirect URIs (realm export + live kcadm client
-update, no re-import needed) and the scheduling Origin/Host rebinding
-guard; phase-3 gate and the phase-7 DPoP subset re-run green after both. Applying the
-gateway-side changes live needs setup-phase5.sh (vendor-token schema
-re-register + deck sync + internal DP restart); the realm scope additions
-need a realm re-import (not done live — avoids a destructive re-import of
-the Auth0-federated user). Note: HAPI may be OOM-down (Exited 137) in a
-tight Docker VM — restart before FHIR gates; stopping k3d frees enough RAM
-for it to stay up.
+Issues: #1–#2, #4–#7, #9–#16 closed; #8 resolved on the hardening branch
+(closes on merge); #3 (external-tier CIMD control) open — tracked gap.
+#13 (mcp:// resource URIs) is a documented deviation. Applying
+gateway-side changes live needs setup-phase5.sh (plugin schema
+re-register + deck sync + DP restart); realm scope additions need a realm
+re-import (avoid re-importing over the Auth0-federated user; kcadm client
+updates are the non-destructive path). HAPI may OOM (Exited 137) in a tight
+Docker VM — restart it before FHIR gates; stopping k3d frees RAM.
