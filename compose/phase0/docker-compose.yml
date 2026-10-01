@@ -30,6 +30,11 @@ services:
       KC_TRACING_ENDPOINT: http://otel-collector:4317
       KC_TRACING_SERVICE_NAME: keycloak
       PHASE0_CLIENT_SECRET: ${PHASE0_CLIENT_SECRET}
+      # The shared realm export brokers Auth0 (phase 1+); its URLs must parse
+      # even when the Auth0 leg is not configured, or the import aborts.
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-auth0-not-configured.invalid}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-not-configured}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET:-not-configured}
     volumes:
       - ../../realm/mcp-plane.json:/opt/keycloak/data/import/mcp-plane.json:ro
     ports:
