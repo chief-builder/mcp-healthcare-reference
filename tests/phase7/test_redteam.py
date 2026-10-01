@@ -12,6 +12,7 @@ real defenses. The remaining known gap is the external-tier CIMD control
 """
 import base64
 import hashlib
+import json
 import secrets
 import subprocess
 import time
@@ -27,6 +28,7 @@ from conftest import (BROKER, EXTERNAL, INTERNAL, KC_BASE, MOCK, REALM,
                       grep_loki, login, mock_reset, mock_state,
                       new_consent_state, resolve, wait_for)
 import dpop as dpop_lib
+import mcp_http
 
 
 # ── P1. Cross-tier replay (arch §13 tier isolation; Appendix A.5) ─────────────
@@ -248,13 +250,12 @@ def test_broker_resolve_requires_valid_hub_token():
 # DP; a passing test means the defense held.
 
 DPOP_MCP = f"{INTERNAL}/scheduling/mcp"
-LIST = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+LIST = mcp_http.envelope("tools/list")
 
 
 def _send(token, *, scheme="DPoP", proof=None):
     """Raw tools/list with explicit auth scheme and optional DPoP header."""
-    headers = {"Content-Type": "application/json", "Accept": C.ACCEPT,
-               "Authorization": f"{scheme} {token}"}
+    headers = {**mcp_http.headers_for(LIST), "Authorization": f"{scheme} {token}"}
     if proof is not None:
         headers["DPoP"] = proof
     return requests.post(DPOP_MCP, headers=headers, json=LIST, timeout=15)
@@ -342,9 +343,10 @@ def test_dpop_server_revalidates_without_gateway(alice_dpop):
     _key, token = alice_dpop
     node = (
         "const http=require('http');"
-        "const body=JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'});"
+        f"const body={json.dumps(json.dumps(LIST))};"
         "const req=http.request('http://127.0.0.1:3000/mcp',"
         "{method:'POST',headers:{'Content-Type':'application/json',"
+        "'MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/list',"
         f"'Authorization':'Bearer {token}'}}}},"
         "res=>{process.stdout.write(String(res.statusCode));process.exit(0);}); "
         "req.on('error',()=>{process.stdout.write('ERR');process.exit(0);}); "
@@ -363,7 +365,6 @@ def test_bearer_client_unaffected(alice):
     """Regression: the plain claude-code bearer token (no cnf.jkt) is not
     subject to DPoP and still reaches the server (not 401 at the DP)."""
     r = requests.post(DPOP_MCP,
-                      headers={"Content-Type": "application/json", "Accept": C.ACCEPT,
-                               "Authorization": f"Bearer {alice}"},
+                      headers={**mcp_http.headers_for(LIST), "Authorization": f"Bearer {alice}"},
                       json=LIST, timeout=15)
     assert r.status_code != 401, r.text

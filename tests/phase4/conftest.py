@@ -5,11 +5,15 @@ import base64
 import hashlib
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import pytest
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase3"))
+import mcp_http  # noqa: E402
 
 KC_TOKEN_URL_TLS = "https://localhost:8443/realms/mcp-plane/protocol/openid-connect/token"
 EXPECTED_ISS = "http://localhost:8080/realms/mcp-plane"
@@ -77,11 +81,11 @@ def mint_token(cert: tuple[str, str] | None, scope: str = SCOPE) -> requests.Res
 
 
 def call_find_slots(token: str, cert: tuple[str, str] | None, url: str = SCHED_MCP_TLS) -> requests.Response:
+    body = mcp_http.envelope("tools/call", {"name": "find-slots", "arguments": {}})
     return requests.post(
         url,
-        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
-        json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-              "params": {"name": "find-slots", "arguments": {}}},
+        headers={**mcp_http.headers_for(body), "Authorization": f"Bearer {token}"},
+        json=body,
         cert=cert,
         verify=CA if url.startswith("https") else None,
         timeout=10,

@@ -35,13 +35,11 @@ def bound(identity):
 
 
 def _send(url, token, *, scheme="DPoP", proof=None):
-    headers = {"Content-Type": "application/json", "Accept": mcp_lib.ACCEPT,
-               "Authorization": f"{scheme} {token}"}
+    body = mcp_lib.envelope("tools/list")
+    headers = {**mcp_lib.headers_for(body), "Authorization": f"{scheme} {token}"}
     if proof is not None:
         headers["DPoP"] = proof
-    return requests.post(url, headers=headers,
-                         json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-                         timeout=15)
+    return requests.post(url, headers=headers, json=body, timeout=15)
 
 
 def test_token_carries_cnf_jkt(claims, bound):
@@ -114,8 +112,8 @@ def test_plain_bearer_identity_unaffected(dpop_endpoint, identity):
     """SC-03: a non-bound bearer identity is not subject to DPoP (not 401 at
     the gateway on the constraint)."""
     ident = identity("workforce_clinical")
+    body = mcp_lib.envelope("tools/list")
     r = requests.post(dpop_endpoint,
-                      headers={"Content-Type": "application/json", "Accept": mcp_lib.ACCEPT,
-                               "Authorization": f"Bearer {ident.token}"},
-                      json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, timeout=15)
+                      headers={**mcp_lib.headers_for(body), "Authorization": f"Bearer {ident.token}"},
+                      json=body, timeout=15)
     assert r.status_code != 401, r.text

@@ -23,7 +23,7 @@ def sched(descriptor):
 
 
 def test_tools_list_needs_no_session(sched, identity):
-    """ST-01: a bare POST returns the tool list with no prior initialize/session."""
+    """ST-01: a single 2026-07-28 POST returns the tool list — no initialize, no session."""
     tools = mcp_lib.list_tools(sched, identity("workforce_clinical").token)
     assert tools, "no tools returned"
 

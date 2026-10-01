@@ -36,6 +36,7 @@ PROVIDER = os.environ.get("SCHED_PROVIDER", "loop-agent")
 
 CERT = (f"{SVID_DIR}/svid.pem", f"{SVID_DIR}/svid_key.pem")
 ACCEPT = "application/json, text/event-stream"
+PROTOCOL_VERSION = "2026-07-28"
 
 
 def log(**fields):
@@ -76,15 +77,32 @@ def get_token() -> str:
 
 
 def call_tool(token: str, name: str, arguments: dict) -> dict:
+    # MCP 2026-07-28: no initialize/session; the request carries its own
+    # protocol-version envelope and the routing headers that mirror it.
+    body = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": name,
+            "arguments": arguments,
+            "_meta": {
+                "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+                "io.modelcontextprotocol/clientInfo": {"name": CLIENT_ID, "version": "2.0"},
+                "io.modelcontextprotocol/clientCapabilities": {},
+            },
+        },
+    }
     r = requests.post(
         MCP_URL,
-        headers={"Authorization": f"Bearer {token}", "Accept": ACCEPT},
-        json={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": name, "arguments": arguments},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": ACCEPT,
+            "MCP-Protocol-Version": PROTOCOL_VERSION,
+            "Mcp-Method": "tools/call",
+            "Mcp-Name": name,
         },
+        json=body,
         cert=CERT,
         verify=CA_BUNDLE,
         timeout=10,
