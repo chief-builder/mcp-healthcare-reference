@@ -6,8 +6,8 @@
 <title>Governed MCP for Healthcare — Product Overview</title>
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-16",
-  "commit": "3d4eaa079ff24a5eb42362f62b70fcd33703a875",
+  "generated": "2026-10-03",
+  "commit": "1cceb35356ef4c6280f025787be3c044a7b1a53b",
   "phase": 7,
   "sections": {
     "why": "docs/prototype-plan.md",
@@ -500,7 +500,8 @@
       design, the MCP Enterprise-Managed Authorization standard, where sanctioned AI tools connect to
       sanctioned systems with no per-app consent ceremony — an upgrade the hub absorbs once the IdPs
       ship it, not yet built in the lab. What each request may <em>do</em> is then enforced again at the
-      gateway and inside every tool — least privilege by scope, by role, by patient. Neither layer
+      gateway and inside every tool — least privilege by scope, by role, by patient, with an
+      MFA-backed sign-in required for the most sensitive clinical reads. Neither layer
       assumes the other did its job.</p>
       <p>And every transitional piece — brokered credentials for vendors that don't speak the standard
       yet — is built with a defined exit, shrinking as the ecosystem adopts it.</p>
@@ -518,7 +519,8 @@
     <div class="proof">
       <div class="item"><span class="dot"></span>Eight acceptance gates, all green on the last full run (2026-10-01, 159 of 159 tests)</div>
       <div class="item"><span class="dot"></span>32 adversarial red-team probes, 0 failures</div>
-      <div class="item"><span class="dot"></span>Real vendor, real consent, real revocation</div>
+      <div class="item"><span class="dot"></span>A real vendor call (GitHub) after real user consent; revocation and re-consent tested end to end</div>
+      <div class="item"><span class="dot"></span>248 offline tests that run without any accounts</div>
     </div>
     <p class="section-intro" style="margin-top:1.4rem;">
       For the architecture, the token contract, and the engineering detail behind each promise, see the
@@ -547,7 +549,7 @@
   <footer>
     Governed MCP for healthcare — a reference implementation of enterprise AI connectivity with
     HIPAA-shaped controls. Names in scenarios are illustrative; patient data in the lab is synthetic.
-    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-16
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-10-03
   </footer>
 </main>
 

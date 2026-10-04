@@ -20,7 +20,8 @@
   <text x="460" y="112" fill="#EFE5D6" font-size="25" font-weight="700">Kong internal DP</text>
   <rect x="460" y="136" width="340" height="96" rx="10" fill="#2A2013" stroke="#77603A"/>
   <text x="478" y="172" fill="#EFE5D6" font-size="21" font-weight="650">dlp-egress</text>
-  <text x="478" y="202" fill="#B5A08A" font-size="17">scans raw body for MRN/SSN · fails closed</text>
+  <text x="478" y="200" fill="#B5A08A" font-size="17">scans body + decoded JSON for MRN/SSN</text>
+  <text x="478" y="222" fill="#B5A08A" font-size="17">fails closed</text>
   <rect x="460" y="248" width="340" height="96" rx="10" fill="#2A2013" stroke="#77603A"/>
   <text x="478" y="284" fill="#EFE5D6" font-size="21" font-weight="650">vendor-token</text>
   <text x="478" y="314" fill="#B5A08A" font-size="17">asks the broker · swaps Authorization</text>

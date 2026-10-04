@@ -6,8 +6,8 @@
 <title>Anatomy of a Tool Call — Token Lifecycle</title>
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-14",
-  "commit": "af47bcee855663266ee820b188eb13d8432f444c",
+  "generated": "2026-10-03",
+  "commit": "1cceb35356ef4c6280f025787be3c044a7b1a53b",
   "phase": 7,
   "sections": {
     "connect": "realm/, servers/, docs/mcp-token-claims-contract.md",
@@ -266,9 +266,9 @@
       <div class="arrow">→</div>
       <div class="hop"><b>Private ingress</b><span>VPN in production — the internal tier is unreachable from the public internet (the lab binds it to a local port)</span></div>
       <div class="arrow">→</div>
-      <div class="hop"><b>Internal gateway</b><span>tier wall: exactly one tier audience, and it must be <code>internal</code> — a replayed external token dies here</span></div>
+      <div class="hop"><b>Internal gateway</b><span>tier wall: exactly one tier audience, and it must be <code>internal</code> — a replayed external token dies here; per-route rate limits apply</span></div>
       <div class="arrow">→</div>
-      <div class="hop"><b>MCP server</b><span>re-validates everything: signature, issuer, own audience, contract, scope-for-this-tool</span></div>
+      <div class="hop"><b>MCP server</b><span>re-validates everything: signature, issuer, own audience, mandatory claims, contract, scope-for-this-tool — and refuses JSON-RPC batches, so no call skips that check</span></div>
       <div class="arrow">→</div>
       <div class="hop"><b>Audit spine</b><span>one record per call, keyed by the token's <code>jti</code></span></div>
     </div>
@@ -315,10 +315,10 @@
     <p class="section-intro">
       The default token authorizes floor tools only. Sensitive tools (confirm a booking, read a full
       patient record) require optional scopes. Calling one under-scoped returns a single-shot
-      <code>403 insufficient_scope</code> naming the complete required set; Claude Code re-runs the
+      <code>403 insufficient_scope</code> naming the scope that tool requires; Claude Code re-runs the
       authorization flow requesting exactly those scopes — usually a blink, since the SSO session
       exists. The elevated token is scoped to what was asked, the escalation is consented and audited,
-      and clinical scopes additionally require the <code>mfa</code> mark the IdP stamped at login — the FHIR server checks <code>amr</code> for the scopes in <code>MCP_MFA_SCOPES</code> and answers <code>401 insufficient_user_authentication</code> (RFC 9470) without it.
+      and clinical scopes additionally require the <code>mfa</code> mark the IdP stamped at login — the servers check <code>amr</code> for the scopes in <code>MCP_MFA_SCOPES</code> (by default the FHIR full-record scope) and answers <code>401 insufficient_user_authentication</code> (RFC 9470) without it.
       This is the platform's minimum-necessary mechanism, not a UX accident.
     </p>
   </section>
@@ -348,7 +348,7 @@
     This page follows the workforce path end to end; the certificate-bound workload and governed vendor
     paths are traced in the <a href="../walkthrough/overall-technical.html#flows">Overall Technical walkthrough</a>.
     Lifetimes are the lab realm's actual configuration; production targets noted where they differ.
-    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-14
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-10-03
   </footer>
 </main>
 
