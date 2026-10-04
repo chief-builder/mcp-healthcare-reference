@@ -204,8 +204,8 @@
 
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-16",
-  "commit": "3d4eaa079ff24a5eb42362f62b70fcd33703a875",
+  "generated": "2026-10-03",
+  "commit": "1cceb35356ef4c6280f025787be3c044a7b1a53b",
   "phase": 7,
   "sections": {
     "invariants": "docs/prototype-plan.md, docs/mcp-e2e-reference-architecture.md",
@@ -213,7 +213,7 @@
     "ema": "docs/mcp-e2e-reference-architecture.md, broker/",
     "token": "docs/mcp-token-claims-contract.md, servers/, plugins/",
     "phases": "tests/, docs/prototype-plan.md",
-    "review": "docs/, servers/, broker/, realm/",
+    "review": "docs/, servers/, broker/, realm/, plugins/, AUDIT.md, CHANGELOG.md",
     "docs": "docs/, kit/",
     "glossary": "docs/"
   }
@@ -246,7 +246,7 @@
     <div class="status-strip">
       <div class="item"><span class="dot"></span>Phases 0–7 green (last full run 2026-10-01)</div>
       <div class="item"><span class="dot"></span>Red-team suite: 32 passed, 0 xfail</div>
-      <div class="item"><span class="dot warn"></span>1 open gap: external-tier CIMD (#3); MCP 2026-07-28 wire migration (#8) done 2026-09-30</div>
+      <div class="item"><span class="dot warn"></span>1 open gap: external-tier CIMD origin allowlist (#3, follow-up #23); MCP 2026-07-28 migration (#8) done 2026-09-30</div>
       <div class="item"><span class="dot"></span>EMA (stable ext-auth spec) terminology aligned</div>
       <div class="item"><span class="dot"></span>DPoP sender-constraint (RFC 9449) proven end-to-end</div>
     </div>
@@ -330,7 +330,7 @@
       <div class="card">
         <h3>Always present</h3>
         <p>
-          <code>iss</code> exact issuer · <code>aud</code> = exactly one tier audience (<code>mcp://tier/*</code>)
+          <code>iss</code> exact issuer · <code>sub</code>, <code>azp</code>, <code>exp</code>, <code>iat</code> — servers reject a token missing any of them · <code>aud</code> = exactly one tier audience (<code>mcp://tier/*</code>)
           plus server URIs (<code>mcp://srv/*</code>) · <code>jti</code> joins every audit record ·
           <code>mcp_tier</code>, <code>idp_origin</code>, <code>mcp_contract</code> pins ·
           <code>PS256</code>/<code>ES256</code> only, 5–10 minute lifetimes.
@@ -342,6 +342,8 @@
           <code>cnf</code> sender-constraint — <code>x5t#S256</code> (mTLS) on the m2m path and <code>jkt</code> (DPoP, RFC 9449) on the DPoP workforce path, each rejected without its matching binding ·
           <code>fhir_patient</code> mandatory on the patient path, forbidden elsewhere — a hard
           compartment filter on every FHIR query · <code>act</code> carries delegation chains ·
+          <code>amr</code> on interactive paths — clinical step-up scopes (<code>MCP_MFA_SCOPES</code>) are refused without <code>mfa</code>
+          (401 <code>insufficient_user_authentication</code>, RFC 9470) ·
           directory PII is forbidden in access tokens.
         </p>
       </div>
@@ -357,16 +359,16 @@
     <div class="phases">
       <div class="phase"><h3>0 · Skeleton</h3><p class="gate">tests/phase0.sh</p><p>Keycloak + Postgres + HAPI FHIR + Grafana stack; ~50 Synthea patients; hub realm from a git-tracked export.</p></div>
       <div class="phase"><h3>1 · Identity hub</h3><p class="gate">tests/phase1.sh · 72 tests</p><p>A fake-Ping Keycloak realm, real Auth0, and a toy homegrown issuer all normalize to contract-conformant JWTs from the single issuer.</p></div>
-      <div class="phase"><h3>2 · Gateway tiers</h3><p class="gate">tests/phase2.sh · 11 tests</p><p>Konnect CP + local DPs; internal-tier token replayed at the external DP fails; DPs keep serving with the CP uplink severed.</p></div>
-      <div class="phase"><h3>3 · First-party MCP</h3><p class="gate">tests/phase3.sh · 12 tests</p><p>Generated FHIR server + hand-built stateless scheduling server; scope step-up via single-shot <code>insufficient_scope</code> challenges; replica kill mid-conversation survives.</p></div>
+      <div class="phase"><h3>2 · Gateway tiers</h3><p class="gate">tests/phase2.sh · 11 tests</p><p>Konnect CP + local DPs; cross-tier replay fails in both directions; ACL misses are 403, not 401; DPs keep serving with the CP uplink severed.</p></div>
+      <div class="phase"><h3>3 · First-party MCP</h3><p class="gate">tests/phase3.sh · 12 tests</p><p>Generated FHIR server + hand-built stateless scheduling server; speaks MCP 2026-07-28 through the gateway and still serves 2025-era clients; scope step-up via single-shot <code>insufficient_scope</code> challenges, an MFA mark on the clinical step-up token, and JSON-RPC batches refused so no call slips past it; replica kill mid-conversation survives.</p></div>
       <div class="phase"><h3>4 · Cert-bound m2m</h3><p class="gate">tests/phase4.sh · 9 tests</p><p>SPIRE-issued SPIFFE certs; <code>client-x509</code> at Keycloak; the <code>cnf-check</code> plugin rejects tokens without the presenting cert.</p></div>
-      <div class="phase"><h3>5 · Egress + broker</h3><p class="gate">tests/phase5.sh · 17 tests</p><p>Vendor Token Broker over OpenBao custody; DLP blocks planted MRNs; 20 parallel resolves produce exactly one vendor refresh (single-flight + generation CAS).</p></div>
+      <div class="phase"><h3>5 · Egress + broker</h3><p class="gate">tests/phase5.sh · 17 tests</p><p>Vendor Token Broker over OpenBao custody; DLP blocks planted MRNs and SSNs, JSON-escaped ones included; 20 parallel resolves produce exactly one vendor refresh (single-flight + generation CAS).</p></div>
       <div class="phase"><h3>6 · Audit spine</h3><p class="gate">tests/phase6.sh · 6 tests</p><p>One Loki query keyed by <code>jti</code> walks a vendor call across gateway verdicts, broker resolve, and the vendor action.</p></div>
-      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh · 32 tests</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, and DPoP sender-constraint (RFC 9449).</p></div>
+      <div class="phase"><h3>7 · Red team</h3><p class="gate">tests/phase7.sh · 32 tests</p><p>Cross-tier replay, scope-ceiling probes, broker state replay, RFC 9207 <code>iss</code> tamper and omission, mass-STALE storm, token-in-log grep, URL-form <code>client_id</code> (CIMD) refusal, the broker's no-issuance rule, and DPoP sender-constraint (RFC 9449).</p></div>
     </div>
   </section>
 
-  <section id="review" data-sources="docs/, servers/, broker/, realm/">
+  <section id="review" data-sources="docs/, servers/, broker/, realm/, plugins/, AUDIT.md, CHANGELOG.md">
     <div class="eyebrow">Verification</div>
     <h2>Code ↔ docs consistency review</h2>
     
@@ -389,6 +391,26 @@
           <tr><td>Wildcard redirect URIs in the realm (RFC 9700 exact-match)</td><td>Fixed — exact <code>/callback</code> registrations, crafted paths refused at the auth endpoint (issue #15 closed 2026-07-16)</td></tr>
           <tr><td>Scheduling server lacks the Origin/Host rebinding guard fhir-clinical has</td><td>Fixed — guard ported verbatim; both servers reject rebound Host / foreign Origin; phase-3 gate green (issue #16 closed 2026-07-16)</td></tr>
           <tr><td><code>sol-rec*.md</code> external-review scratch files, fully triaged</td><td>Removed; every open finding now lives in the issue tracker</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 style="margin-top:1.6rem;">Repository audit — September 30, 2026</h3>
+    <p class="section-intro">
+      A full repository audit (<code>AUDIT.md</code>, a point-in-time record taken before the fixes) re-read the code,
+      reproduced findings on a fresh clone, and checked every claim in the docs. Its fixes shipped as release 2.0.0
+      (<code>CHANGELOG.md</code>); a second pass (2.0.1) made every phase start from a clean clone. The security findings:
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Finding</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td><strong>High:</strong> wrapping a tool call in a JSON-RPC batch skipped the per-tool scope check, so a token without the step-up scope could call <code>patientEverything</code></td><td>Fixed — batches are refused (<code>-32600</code>) and every tool handler re-checks the policy; a phase-3 probe proves it</td></tr>
+          <tr><td><strong>Medium:</strong> egress DLP matched raw bytes only, so a JSON-escaped MRN passed and decoded at the vendor</td><td>Fixed — <code>dlp-egress</code> also screens every JSON-decoded string and key, and denies declared-JSON bodies that do not parse; a phase-5 probe proves it</td></tr>
+          <tr><td>Clinical scopes were documented as needing an MFA mark, but nothing enforced it</td><td>Fixed — the FHIR server refuses <code>MCP_MFA_SCOPES</code> calls without <code>amr</code>∋<code>mfa</code> (401 <code>insufficient_user_authentication</code>, RFC 9470)</td></tr>
+          <tr><td><code>dpop-check</code> read only the first <code>DPoP</code> header; <code>vendor-token</code> had no explicit handling for DPoP-scheme tokens</td><td>Fixed — the gateway sees every <code>DPoP</code> header; <code>vendor-token</code> refuses DPoP-scheme tokens with a clear 401 and malformed broker replies with 502</td></tr>
+          <tr><td>Servers spoke MCP 2025-11-25 while docs claimed 2026-07-28 (#8)</td><td>Fixed — both servers run MCP 2026-07-28 on SDK v2 from one shared resource-server core; verifiers now require every contract-mandatory claim</td></tr>
+          <tr><td>Dependency advisories (npm, PyJWT, starlette); broker 500s on bad input; non-constant-time secret compare in the legacy issuer stand-in</td><td>Fixed — advisories cleared and CI fails on new high-severity ones; broker returns 4xx problems without exception text; constant-time compare, non-root image</td></tr>
+          <tr><td>No offline tests; phases 0 and 2–4 failed from a clean clone</td><td>Fixed — <code>make test</code> runs 248 offline tests (servers 89, broker 97, Kong plugins 47, kit vectors 15); CI adds lint, CodeQL, Dependabot, and phase 0–1 clean-clone smoke runs</td></tr>
         </tbody>
       </table>
     </div>
@@ -441,6 +463,7 @@
       <li><span class="path">Hub JWT</span> — <span class="why">the Keycloak-issued MCP-plane access token every request carries; "hub" distinguishes it from upstream IdP tokens (which never cross into the plane) and vendor tokens (which exist only past the egress boundary)</span></li>
       <li><span class="path">jti</span> — <span class="why">the token's unique ID; the join key that lets one query walk an action across gateway, broker, and server audit records</span></li>
       <li><span class="path">PRM</span> — <span class="why">Protected Resource Metadata (RFC 9728): a server's machine-readable statement of which authorization server protects it — how clients discover where to log in</span></li>
+      <li><span class="path">Step-up</span> — <span class="why">asking for more authorization only when a tool needs it: a 403 <code>insufficient_scope</code> challenge names the missing scope, and for designated clinical scopes a 401 <code>insufficient_user_authentication</code> (RFC 9470) demands a token minted after MFA</span></li>
       <li><span class="path">Tier wall</span> — <span class="why">the gateway check that a token carries exactly the tier audience (internal or external) of the gateway it arrived at, so cross-tier replay fails</span></li>
       <li><span class="path">SPIFFE / SVID</span> — <span class="why">the workload-identity framework and its short-lived X.509 certificates (issued in this lab by SPIRE) — how services authenticate with no secrets</span></li>
       <li><span class="path">DLP</span> — <span class="why">data-loss prevention: pattern screening of outbound vendor-bound request bodies (medical record numbers, SSNs) before they leave the boundary</span></li>
@@ -454,7 +477,7 @@
   <footer>
     Reference lab · design authority lives in the source repository's <code>docs/</code>, executable proof in its <code>tests/</code> suites.
     The servers speak the released MCP 2026-07-28 revision (evidence, not certification); intentional substitutions are documented in the prototype plan.
-    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-07-16
+    <br><a href="../index.html">Back to the documentation index</a> · Documents the lab as of Phase 7 · 2026-10-03
   </footer>
 </main>
 

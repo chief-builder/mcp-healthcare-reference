@@ -2,8 +2,8 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP Healthcare Reference — Overall Technical Walkthrough</title><link rel="icon" href="data:,">
 <script type="application/json" id="canvas-manifest">
 {
-  "generated": "2026-07-16",
-  "commit": "3d81f502ed9780d85c7d1edbca453483f53c016d",
+  "generated": "2026-10-03",
+  "commit": "1cceb35356ef4c6280f025787be3c044a7b1a53b",
   "phase": 7,
   "sections": {
     "architecture": "compose/phase5/, deck/, docs/mcp-e2e-reference-architecture.md",
@@ -14,7 +14,7 @@
     "mcp": "servers/, docs/prototype-plan.md",
     "oauth": "broker/, realm/, servers/",
     "audit": "servers/, plugins/, broker/, compose/phase5/",
-    "verification": ".github/workflows/, tests/"
+    "verification": ".github/workflows/, tests/, Makefile"
   }
 }
 </script>
@@ -115,7 +115,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <h3>Workforce clinical call</h3><div class="sequence">
 <div class="actor">Client</div><div class="msg">Authorization code + PKCE via Keycloak, optionally brokered to fake Ping/Auth0. Receives a hub access token.</div>
 <div class="actor">Internal Kong</div><div class="msg">Global tier pre-function requires <code>mcp://tier/internal</code>. The claim-driven sender-constraint plugins (<code>cnf-check</code>, <code>dpop-check</code>) pass plain bearer tokens untouched and enforce only when the token carries a binding. Rate limit applies. First-party route forwards to FHIR server.</div>
-<div class="actor">FHIR server</div><div class="msg">A DPoP scheme shim normalizes any <code>DPoP</code> auth header before bearer middleware verifies signature/issuer/expiry/resource audience; when the token carries <code>cnf.jkt</code>, <code>requireDpop</code> re-validates the proof. For <code>tools/call</code>, required scope is checked. Tool list is group-shaped.</div>
+<div class="actor">FHIR server</div><div class="msg">A Host/Origin guard and a per-client rate limit (<code>MCP_RATE_LIMIT_PER_MIN</code>, default 600) run before any token work. A DPoP scheme shim then normalizes any <code>DPoP</code> auth header before bearer middleware verifies signature/issuer/expiry/resource audience; when the token carries <code>cnf.jkt</code>, <code>requireDpop</code> re-validates the proof. JSON-RPC batch arrays are refused. For <code>tools/call</code>, required scope (and <code>amr</code>&ni;<code>mfa</code> for MFA-gated scopes) is checked at the HTTP layer and again inside the tool handler. Tool list is group-shaped.</div>
 <div class="actor">Authorization hook</div><div class="msg">When a patient claim exists, by-ID equality or forced search parameter is applied.</div>
 <div class="actor">HAPI</div><div class="msg">Receives a bounded GET request. Response is capped and converted to MCP text content. Final status determines audit allow/deny.</div>
 </div>
@@ -128,8 +128,8 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 </div>
 
 <h3>Governed vendor call</h3><div class="sequence">
-<div class="actor">Internal Kong</div><div class="msg">OIDC validates the egress resource audience. DLP scans the raw JSON body and records allow/deny.</div>
-<div class="actor">vendor-token</div><div class="msg">Calls broker resolve with hub Authorization plus vendor, subject, JTI, TTL, and required scopes.</div>
+<div class="actor">Internal Kong</div><div class="msg">OIDC validates the egress resource audience. DLP scans the raw body and every JSON-decoded string and key (so escapes cannot hide a match; a declared-JSON body that does not parse is denied) and records allow/deny.</div>
+<div class="actor">vendor-token</div><div class="msg">Refuses a DPoP-scheme token (401; the broker does not check proofs). Otherwise calls broker resolve with hub Authorization plus vendor, subject, JTI, TTL, and required scopes; an unreachable broker or a malformed reply is a 502.</div>
 <div class="actor">Broker</div><div class="msg">Revalidates hub JWT; reads OpenBao; returns token, consent URL, re-consent URL, or a closed failure. Refresh is single-flight per process and CAS-protected in OpenBao.</div>
 <div class="actor">Kong</div><div class="msg">Replaces the hub Authorization header with the vendor access token.</div>
 <div class="actor">Vendor</div><div class="msg">Receives screened MCP body and its own credential only.</div>
@@ -151,14 +151,14 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <div class="grid">
 <article class="card"><h3 class="ok">Current wire behavior (since 2026-09-30)</h3><ul><li>Official v2 server packages; fresh <code>McpServer</code> per request via <code>createMcpHandler</code>.</li><li>2026-07-28 requests carry protocol version, clientInfo and clientCapabilities in <code>_meta</code>; <code>server/discover</code> answers with supported versions.</li><li>The SDK checks the <code>MCP-Protocol-Version</code> / <code>Mcp-Method</code> / <code>Mcp-Name</code> headers against the body.</li><li>2025-era requests are still served, by the SDK&rsquo;s stateless legacy fallback.</li><li>The acceptance clients send the 2026-07-28 shape; phase 3 probes discovery and the fallback.</li></ul></article>
 <article class="card"><h3 class="ok">Required modern behavior (all but the conformance gate done)</h3><ul><li>Upgrade to the official v2 client/server packages supporting modern and legacy eras.</li><li>Implement <code>server/discover</code> and advertise supported versions/capabilities/serverInfo.</li><li>Require protocol version, clientInfo, and clientCapabilities in request <code>_meta</code>.</li><li>Validate <code>MCP-Protocol-Version</code>, <code>Mcp-Method</code>, and conditional <code>Mcp-Name</code> against the body.</li><li>Return modern HTTP status and JSON-RPC error codes.</li><li>Update all clients/tests and add a conformance gate.</li></ul></article>
-<article class="card"><h3>Transport lifecycle</h3><p>Modern HTTP exposes POST only; GET/DELETE should return 405 for older traffic. Request-scoped SSE remains optional. Client disconnect should cancel work. The FHIR fetch currently has a timeout signal but is not wired to the client disconnect signal.</p></article>
+<article class="card"><h3>Transport lifecycle</h3><p>Modern HTTP exposes POST only; GET and DELETE on <code>/mcp</code> answer 405 after authentication (no server-initiated stream, no session teardown). Request-scoped SSE remains optional. Client disconnect should cancel work: the FHIR fetch has a timeout signal but is still not wired to the client disconnect signal.</p></article>
 <article class="card"><h3>Backward compatibility</h3><p>If legacy support is required, v2 auto-negotiation should probe modern discovery and fall back to initialize-era behavior. The server must distinguish modern protocol errors from legacy endpoint absence.</p></article>
 </div></section>
 
 <section id="oauth" data-sources="broker/, realm/, servers/"><h2>OAuth 2.1 / related RFC compliance delta</h2>
 <div class="table-wrap"><table class="tbl"><thead><tr><th>Area</th><th>Present</th><th>Required remediation</th></tr></thead><tbody>
 <tr><td>PKCE</td><td>Public clients and broker use S256; mockhub enforces verifier</td><td>Broker must verify discovered AS metadata advertises S256 before starting authorization</td></tr>
-<tr><td>Protected Resource Metadata</td><td>path-inserted and root routes; authorization server list; header method</td><td>Use canonical HTTPS MCP endpoint as <code>resource</code>; omit empty arrays; match retrieval/request URL exactly</td></tr>
+<tr><td>Protected Resource Metadata</td><td>path-inserted and root routes; authorization server list; header method; DPoP signing algorithms; empty scope lists omitted</td><td>Use canonical HTTPS MCP endpoint as <code>resource</code> (the <code>mcp://</code> form is a documented deviation, issue #13); match retrieval/request URL exactly</td></tr>
 <tr><td>Resource indicators</td><td>server audience is checked</td><td>Replace <code>mcp://srv/*</code> PRM resource with HTTPS endpoint resource; retain tier audience separately if desired</td></tr>
 <tr><td>Authorization server discovery</td><td>Keycloak OIDC discovery; vendor RFC 8414 fetch</td><td>Validate metadata issuer and HTTPS endpoints; implement MCP-prescribed discovery behavior in clients</td></tr>
 <tr><td>Issuer identification</td><td>broker validates RFC 9207 issuer when advertised</td><td>Ensure every operated OAuth client validates issuer, including errors; production issuer must be HTTPS</td></tr>
@@ -166,7 +166,7 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
 <tr><td>Transport security</td><td>mTLS workload leg; otherwise HTTP lab</td><td>Production TLS everywhere with consistent public issuer/resource URLs</td></tr>
 <tr><td>Refresh protection</td><td>mock rotation/replay burn; broker CAS/single-flight</td><td>Distributed lock for multi-replica broker; sender constrain or rotate public-client refresh tokens at AS</td></tr>
 <tr><td>Sender-constrained tokens</td><td>DPoP enforced at the internal DP and re-checked at the servers for <code>workforce-dpop</code>; mTLS <code>cnf</code> binding for workloads</td><td>Extend to <code>claude-code</code> when the client ships proof support; production should enforce DPoP at the AS for all public interactive clients</td></tr>
-<tr><td>Token passthrough</td><td>vendor route replaces hub token; FHIR mode hardcoded none</td><td>Delete dormant passthrough branch so it cannot be enabled</td></tr>
+<tr><td>Token passthrough</td><td>vendor route replaces hub token; the FHIR server never forwards the caller&rsquo;s token (optional server-owned <code>UPSTREAM_API_KEY</code> only)</td><td>Done — the dormant passthrough branch was deleted in the 2026-09-30 server rewrite</td></tr>
 </tbody></table></div></section>
 
 <section id="audit" data-sources="servers/, plugins/, broker/, compose/phase5/"><h2>Audit tuple and evidence path</h2>
@@ -175,18 +175,18 @@ h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Geor
                      → server / route → tool → decision / reason → timestamp</pre>
 <div class="grid">
 <article class="card"><h3>Server evidence</h3><p>FHIR and scheduling audit the final tool outcome. FHIR distinguishes compartment, upstream exception, and upstream HTTP denial. Scope middleware audits insufficient scope.</p></article>
-<article class="card"><h3>Gateway evidence</h3><p>cnf-check logs certificate-binding denials. dpop-check logs proof rejections and degraded-cache events. DLP logs both clean passes and blocks. vendor-token logs broker decisions. OpenTelemetry adds request traces.</p></article>
+<article class="card"><h3>Gateway evidence</h3><p>cnf-check logs certificate-binding denials. dpop-check logs proof rejections and degraded-cache events. DLP logs both clean passes and blocks. vendor-token logs broker decisions and DPoP-scheme refusals. OpenTelemetry adds request traces.</p></article>
 <article class="card"><h3>Broker evidence</h3><p>Consent, resolve path, refresh generation, stale transition, mass-stale page, revoke, security callback failures, and admin denial are JSON events.</p></article>
 <article class="card"><h3>Limitations</h3><p>The lab is not an immutable SIEM, has no production retention policy, and uses unauthenticated local Loki/Tempo. Audit completeness still depends on every rejection path emitting a record.</p></article>
 </div></section>
 
-<section id="verification" data-sources=".github/workflows/, tests/"><h2>Verification and next assessment gate</h2>
+<section id="verification" data-sources=".github/workflows/, tests/, Makefile"><h2>Verification and next assessment gate</h2>
 <div class="grid">
-<article class="card"><h3>Current checks</h3><p>All eight phase gates were green on the last full run (2026-10-01: 159 of 159 tests, nothing skipped, the real-GitHub egress leg included); phases 0–1 also pass from a clean clone, and an offline suite (<code>make test</code>: servers, broker, gateway plugins, kit vectors) was added. Two TypeScript builds are clean. On 2026-09-30, npm audit and pip-audit reported zero known vulnerabilities, and CI now fails on any high-severity advisory.</p></article>
-<article class="card"><h3>CI boundary</h3><p>GitHub Actions performs offline build/compile/config parsing. npm audit is non-blocking. Live Docker/Konnect/Auth0/GitHub/k3d acceptance remains manual.</p></article>
+<article class="card"><h3>Current checks</h3><p>All eight phase gates were green on the last full run (2026-10-01 on <code>main</code> 0638fdf: 159 of 159 tests, nothing skipped, the real-GitHub egress and Auth0 legs included — phase 1: 72, 2: 11, 3: 12, 4: 9, 5: 17, 6: 6, 7: 32, plus phase 0&rsquo;s 4 smoke checks). Every phase also starts from a clean clone. The offline suite (<code>make test</code>, no accounts) holds 248 tests: servers 89, broker 97, DB-less Kong plugins 47, kit claim vectors 15 (plus 4 skipped). The npm workspace build (shared core and both servers) is clean. On 2026-09-30, npm audit and pip-audit reported zero known vulnerabilities, and CI now fails on any high-severity advisory.</p></article>
+<article class="card"><h3>CI boundary</h3><p>GitHub Actions runs lint, types, the offline suites, image builds, decK/compose/realm validation, link and shell checks, and blocking <code>npm audit</code> / <code>pip-audit</code>; CodeQL and Dependabot run alongside. CI also brings up the phase 0 and phase 1 quickstarts from a clean checkout and runs gates 0–1. Konnect/Auth0/GitHub/k3d acceptance (phases 2–7) remains manual.</p></article>
 <article class="card"><h3>Reassessment prerequisites</h3><ol><li>Modern SDK/wire migration and conformance tests. <em>Migration done (2026-09-30); a formal conformance suite remains.</em></li><li>HTTPS canonical resource migration.</li><li>Central contract-exact token validation. <em>Done — one shared verifier (2026-09-30).</em></li><li>Scheduling Origin and booking-state fixes. <em>Done — hold lifecycle (issue #12) and the Origin/Host guard (issue #16, 2026-07-16).</em></li><li>OAuth metadata/redirect/TLS hardening. <em>Redirect exact-match landed (issue #15); metadata and TLS items remain.</em></li></ol></article>
 <article class="card"><h3>Required evidence</h3><p>Run builds, dependency audits, new unit tests, modern MCP conformance, Origin negatives, OAuth discovery/PKCE/redirect tests, phases 0–7, race tests, and a fresh token-in-log scan. Record exact versions and the deployed configuration commit.</p></article>
 </div>
 <div class="callout danger"><strong>No current certification claim:</strong> the architecture is well developed and several controls are genuinely implemented, but the current repository cannot accurately claim MCP 2026-07-28, RFC 9728, or production OAuth 2.1 compliance until the listed deltas are closed and verified.</div></section>
-</main><footer><div class="shell">Technical system view verified from repository source and live read-only probes on 2026-07-10. This page intentionally preserves known gaps as reassessment criteria.<br>Documents the lab as of Phase 7 · 2026-07-16 <a href="../index.html">Back to the documentation index.</a></div></footer>
+</main><footer><div class="shell">Technical system view verified from repository source and live read-only probes on 2026-07-10; re-verified against source at 1cceb35 on 2026-10-03. This page intentionally preserves known gaps as reassessment criteria.<br>Documents the lab as of Phase 7 · 2026-10-03 <a href="../index.html">Back to the documentation index.</a></div></footer>
 </body></html>
