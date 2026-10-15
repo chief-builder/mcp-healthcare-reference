@@ -1,4 +1,4 @@
-FROM python:3.14.7-slim
+FROM python:3.14.8-slim
 
 RUN pip install --no-cache-dir "fastapi==0.142.*" "uvicorn==0.54.*" "pyjwt==2.15.*" "cryptography==50.0.*" "python-multipart==0.0.*"
 
