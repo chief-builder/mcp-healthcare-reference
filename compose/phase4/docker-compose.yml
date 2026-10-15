@@ -27,7 +27,7 @@ services:
       retries: 12
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.5
+    image: quay.io/keycloak/keycloak:26.8.1
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
@@ -202,7 +202,7 @@ services:
           - ${EXT_TELEMETRY_HOST:-ext-telemetry.unset.invalid}
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.161.0
+    image: otel/opentelemetry-collector-contrib:0.162.0
     command: ["--config=/etc/otel/otel-collector.yaml"]
     volumes:
       - ../phase0/otel/otel-collector.yaml:/etc/otel/otel-collector.yaml:ro
