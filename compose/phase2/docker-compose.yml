@@ -20,7 +20,7 @@ services:
       retries: 12
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.5
+    image: quay.io/keycloak/keycloak:26.8.1
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
@@ -159,7 +159,7 @@ services:
           - ${EXT_TELEMETRY_HOST:-ext-telemetry.unset.invalid}
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.161.0
+    image: otel/opentelemetry-collector-contrib:0.163.1-386
     command: ["--config=/etc/otel/otel-collector.yaml"]
     volumes:
       - ../phase0/otel/otel-collector.yaml:/etc/otel/otel-collector.yaml:ro
@@ -189,7 +189,7 @@ services:
       - "3200:3200"
 
   grafana:
-    image: grafana/grafana:13.2.3
+    image: grafana/grafana:13.2.4
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
