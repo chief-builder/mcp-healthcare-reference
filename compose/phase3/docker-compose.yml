@@ -20,7 +20,7 @@ services:
       retries: 12
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.5
+    image: quay.io/keycloak/keycloak:26.8.1-1
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
@@ -178,7 +178,7 @@ services:
           - ${EXT_TELEMETRY_HOST:-ext-telemetry.unset.invalid}
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.161.0
+    image: otel/opentelemetry-collector-contrib:0.163.2-386
     command: ["--config=/etc/otel/otel-collector.yaml"]
     volumes:
       - ../phase0/otel/otel-collector.yaml:/etc/otel/otel-collector.yaml:ro
@@ -190,7 +190,7 @@ services:
       - tempo
 
   loki:
-    image: grafana/loki:3.7.8
+    image: grafana/loki:3.7.9
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
       - ../phase0/loki/loki.yaml:/etc/loki/loki.yaml:ro
@@ -199,7 +199,7 @@ services:
       - "3100:3100"
 
   tempo:
-    image: grafana/tempo:3.1.0
+    image: grafana/tempo:3.1.1
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ../phase0/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
@@ -208,7 +208,7 @@ services:
       - "3200:3200"
 
   grafana:
-    image: grafana/grafana:13.2.3
+    image: grafana/grafana:13.2.4
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
